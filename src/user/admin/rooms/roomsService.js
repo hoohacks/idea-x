@@ -56,6 +56,45 @@ export function moveCollisions({ from, to, teamsData }) {
 }
 
 /**
+ * Which teams are seated in which room for the FINAL round. Pure.
+ *
+ * Kept separate from roomsInUse rather than folded into it. A final slot has
+ * no batch -- the final round runs once, not in waves -- so a shared shape
+ * would leave moveCollisions comparing `undefined === undefined` for every
+ * pair of final entries and calling that a match, or every pair NOT a
+ * collision if batch stayed required. Two counts, two collision checks, one
+ * kept the first round's existing batch semantics untouched.
+ */
+export function finalRoomsInUse(teamsData) {
+  const byRoom = {};
+  for (const [teamId, team] of Object.entries(teamsData ?? {})) {
+    const finalSlot = team?.finalSlot;
+    if (!finalSlot?.room) continue;
+    (byRoom[finalSlot.room] ??= []).push({
+      teamId,
+      teamName: team?.name ?? "Unnamed team",
+      timeslot: finalSlot.timeslot,
+    });
+  }
+  return byRoom;
+}
+
+/**
+ * The final-round twin of moveCollisions: which finalists would end up
+ * sharing a room if everyone in `from` moved to `to`. Timeslot stands in for
+ * batch -- it is what a final-round seat is actually keyed on. Pure.
+ */
+export function finalMoveCollisions({ from, to, teamsData }) {
+  const byRoom = finalRoomsInUse(teamsData);
+  const moving = byRoom[from] ?? [];
+  const sitting = byRoom[to] ?? [];
+
+  return moving
+    .map((team) => ({ team, blockedBy: sitting.find((other) => other.timeslot === team.timeslot) }))
+    .filter((pair) => pair.blockedBy);
+}
+
+/**
  * Every path that has to move when a room is renamed or vacated. Pure, so the
  * fan-out is testable without a database.
  */
@@ -189,12 +228,19 @@ export async function removeRoom(name, { moveTo } = {}) {
   if (!rooms.includes(name)) return { ok: false, error: `${name} is not on the list.` };
 
   const inUse = roomsInUse(teamsData)[name] ?? [];
+  const finalInUse = finalRoomsInUse(teamsData)[name] ?? [];
+  const totalInUse = inUse.length + finalInUse.length;
 
-  if (inUse.length && !moveTo) {
+  // A room the final round is using alone had nothing in `inUse` -- roomsInUse
+  // only looks at team.schedule -- so this gate used to pass silently and the
+  // remap below never ran, leaving every finalist's finalSlot, finalRound/teams
+  // entry, and judges' finalAssignments pointed at a room no longer on the list.
+  if (totalInUse && !moveTo) {
     return {
       ok: false,
       inUse,
-      error: `${inUse.length} team(s) are scheduled in ${name}. Choose where they should go.`,
+      finalInUse,
+      error: `${totalInUse} team(s) are scheduled in ${name}. Choose where they should go.`,
     };
   }
   if (moveTo && !rooms.includes(moveTo)) {
@@ -218,14 +264,30 @@ export async function removeRoom(name, { moveTo } = {}) {
     };
   }
 
-  const moved = inUse.length
+  const finalCollisions = moveTo ? finalMoveCollisions({ from: name, to: moveTo, teamsData }) : [];
+  if (finalCollisions.length) {
+    const [first] = finalCollisions;
+    return {
+      ok: false,
+      collisions: finalCollisions,
+      error:
+        `${moveTo} is not free for the final round: ${first.blockedBy.teamName} is already there at ` +
+        `${first.team.timeslot}` +
+        (finalCollisions.length > 1 ? `, and ${finalCollisions.length - 1} more would clash` : "") +
+        `. Pick a room that is empty at that time.`,
+    };
+  }
+
+  // Either round in use is enough to require the fan-out: remapChanges itself
+  // decides what actually needs to move.
+  const moved = totalInUse
     ? remapChanges({ from: name, to: moveTo, teamsData, judgesData, finalRoundTeams })
     : [];
 
   return applyAdminAction({
     action: "room.remove",
     summary: moved.length
-      ? `Removed ${name}, moving ${inUse.length} team(s) to ${moveTo}`
+      ? `Removed ${name}, moving ${totalInUse} team(s) to ${moveTo}`
       : `Removed ${name}`,
     changes: [
       { path: "config/judgingRooms", before: rooms, after: rooms.filter((r) => r !== name) },
