@@ -1,5 +1,5 @@
 import { assignmentList } from "../../judge/assignmentList";
-import { calculateAverageScore, countFundableVotes, scoredJudgeCount } from "../../judge/scoreRubric";
+import { calculateAverageScore, countFundableVotes } from "../../judge/scoreRubric";
 
 /**
  * Turns the raw judging nodes into the two questions an organizer actually has
@@ -97,7 +97,11 @@ export function buildProgress({
         .map((uid) => ({ judgeId: uid, judgeName: judgeName(judges[uid], uid.slice(0, 8)) }));
 
       const outstanding = assigned.filter((a) => !scoredBy.has(a.judgeId));
-      const received = scoredJudgeCount(cards);
+      // received has to be counted over the same population as expected --
+      // the assigned panel -- or a card from someone off it (see
+      // unassignedScorers above) can stand in for an assigned judge's still-
+      // missing card and mark a team complete that a real judge hasn't scored
+      const received = assigned.length - outstanding.length;
 
       let status = TEAM_OK;
       if (received === 0) status = TEAM_UNJUDGED;

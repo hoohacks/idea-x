@@ -1,4 +1,4 @@
-import { compareForRanking, rankingEntry, scoredJudgeCount } from "../../judge/scoreRubric.js";
+import { compareForRanking, rankingEntry, scoreCard, scoredJudgeCount } from "../../judge/scoreRubric.js";
 
 /**
  * Who won.
@@ -29,8 +29,17 @@ export function finalStandings({ finalRoundTeams = {}, finalScores = {}, panels 
   return Object.entries(finalRoundTeams)
     .map(([teamId, standing]) => {
       const cards = finalScores[teamId] ?? {};
-      const expected = (panels[teamId] ?? []).length;
-      const received = scoredJudgeCount(cards);
+      const assigned = panels[teamId] ?? [];
+      const expected = assigned.length;
+      // `expected` and `received` have to be counts over the same population --
+      // the assigned panel -- or a card from a judge who isn't on it can stand
+      // in for the assigned judge's still-missing one and complete a team that
+      // has not actually been heard from by everyone who owes it a score.
+      const received = assigned.filter((judgeId) => scoreCard(cards[judgeId]) !== null).length;
+      // raw card count, not scoped to the panel -- deactivating the round wipes
+      // every judge's finalAssignments but not the cards already written, so
+      // this is the only proof of work standingsState has left once closed
+      const cardsFiled = scoredJudgeCount(cards);
 
       return {
         ...rankingEntry(teamId, standing?.name, cards),
@@ -45,6 +54,7 @@ export function finalStandings({ finalRoundTeams = {}, finalScores = {}, panels 
         room: standing?.room ?? null,
         expected,
         received,
+        cardsFiled,
         // a ranking that is still missing cards is a running total, not a result
         complete: expected > 0 && received >= expected,
       };
@@ -93,15 +103,19 @@ export function panelsFrom(judges = {}) {
  */
 export function standingsState(standings, { closed = false } = {}) {
   const outstanding = standings.filter((team) => !team.complete);
-  const cards = standings.reduce((sum, team) => sum + team.received, 0);
   const expected = standings.reduce((sum, team) => sum + team.expected, 0);
 
   // A closed round is settled by definition: no further card can be written,
   // because the assignments the rules treat as proof of assignment are gone.
+  // `received` is panel-scoped and the panel is exactly what deactivation
+  // wipes, so it reads as zero here whether or not cards exist -- `cardsFiled`
+  // is the raw count that survives the panel being gone.
   if (closed) {
+    const cards = standings.reduce((sum, team) => sum + team.cardsFiled, 0);
     return { settled: cards > 0, cards, expected, waitingOn: [] };
   }
 
+  const cards = standings.reduce((sum, team) => sum + team.received, 0);
   return {
     settled: standings.length > 0 && outstanding.length === 0,
     cards,
