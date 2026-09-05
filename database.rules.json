@@ -1,5 +1,5 @@
 {
-  // rulesVersion: 5 -- bump this whenever anything below changes, and republish
+  // rulesVersion: 6 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
   // drifted from the ones in git. See "Publishing the rules" in the README.
@@ -80,11 +80,23 @@
 
     "competitors": {
       "$uid": {
-        // Yourself, or someone on your team. The teamId comparison is guarded
-        // on the reader having a team at all: without that guard two
-        // competitors who are both teamless compare null === null and every
-        // unteamed competitor becomes readable by every other one.
-        ".read": "auth != null && ($uid === auth.uid || (root.child('competitors').child(auth.uid).child('teamId').exists() && root.child('competitors').child($uid).child('teamId').val() === root.child('competitors').child(auth.uid).child('teamId').val()))",
+        // Yourself, or someone genuinely on your team.
+        //
+        // Comparing teamId to teamId settled nothing, because teamId is a
+        // field you write about yourself: the write rule below pins only
+        // checkedIn and foodCheckIn, so a competitor on no team could type
+        // another team's id into their own record -- ids circulate, they are
+        // the join code -- and read every member of it, email and major and
+        // dietary restriction included. Membership is teams/{id}/members,
+        // which only that person or an admin can add to, and which
+        // teamMembership.js already calls "what the rules read". Both sides
+        // are checked against it rather than against what either one claims.
+        //
+        // The exists() guard still matters, for the reason it always did:
+        // with no team there is no key to look up, and two teamless records
+        // compared null === null, opening every unteamed competitor to every
+        // other one.
+        ".read": "auth != null && ($uid === auth.uid || (root.child('competitors').child(auth.uid).child('teamId').exists() && root.child('teams').child(root.child('competitors').child(auth.uid).child('teamId').val()).child('members').hasChild(auth.uid) && root.child('teams').child(root.child('competitors').child(auth.uid).child('teamId').val()).child('members').hasChild($uid)))",
 
         // Own record only, and never your own check-in state.
         ".write": "auth != null && $uid === auth.uid && ((!data.exists() && newData.child('checkedIn').val() === false && newData.child('foodCheckIn').val() === false) || (data.exists() && newData.child('checkedIn').val() === data.child('checkedIn').val() && newData.child('foodCheckIn').val() === data.child('foodCheckIn').val()))"
