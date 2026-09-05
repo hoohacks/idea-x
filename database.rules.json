@@ -1,5 +1,5 @@
 {
-  // rulesVersion: 6 -- bump this whenever anything below changes, and republish
+  // rulesVersion: 7 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
   // drifted from the ones in git. See "Publishing the rules" in the README.
@@ -143,7 +143,28 @@
             //
             // Admins are unaffected by any of this: the root rule grants them
             // write here, so an organizer can still add someone to a closed team.
-            ".write": "auth != null && $memberUid === auth.uid && root.child('competitors').child(auth.uid).exists() && (!newData.exists() || root.child('teams').child($teamId).child('submitted').val() !== true)"
+            ".write": "auth != null && $memberUid === auth.uid && root.child('competitors').child(auth.uid).exists() && (!newData.exists() || root.child('teams').child($teamId).child('submitted').val() !== true)",
+
+            // The create rule above only checks that the creator is AMONG
+            // members, never that they are the ONLY thing seeded there --
+            // and RTDB rules cascade, so a write granted at teams/$teamId
+            // covers this whole node without ever consulting the .write rule
+            // just above. Without this, a competitor creating a team could
+            // set members: { self: true, victim: true } in the same call and
+            // silently enrol anyone else on the roster, handing them the
+            // team's read access and skipping the "already submitted" join
+            // check entirely. .validate cannot be bypassed by an ancestor
+            // write, admin or not, which is what makes it the right place
+            // for this: it is checked against whatever landed here, no
+            // matter which .write rule let the call through.
+            //
+            // Admins still get through, deliberately: moveMemberChanges adds
+            // someone to a team from the dashboard, uid !== auth.uid, and the
+            // rule would otherwise block the organizer along with the
+            // attacker. This does not run on a delete -- RTDB skips .validate
+            // entirely when the new value is null -- so leaving a team, which
+            // nulls this same path, is untouched by it either way.
+            ".validate": "$memberUid === auth.uid || root.child('admins').hasChild(auth.uid)"
           }
         },
 

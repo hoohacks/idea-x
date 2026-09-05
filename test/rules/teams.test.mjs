@@ -76,6 +76,22 @@ describe("creating a team", () => {
     await assertFails(set(ref(db("dave"), "teams/team3"), newTeam({ members: { alice: true } })));
   });
 
+  /**
+   * The create rule only ever checked that the creator was AMONG the members,
+   * never that they were the ONLY thing being seeded there. A team's .write
+   * grant covers its whole subtree, so a create that also plants someone else
+   * under members/ never touches the per-member rule at
+   * teams/$teamId/members/$memberUid at all -- that rule is only consulted for
+   * a write that targets that path directly. Without a members-level
+   * .validate, this silently enrolled carol on a team she never asked to join,
+   * handing her team's-eye read access to whoever created it.
+   */
+  test("but not seeding a member who never agreed to join", async () => {
+    await assertFails(
+      set(ref(db("dave"), "teams/team3"), newTeam({ members: { dave: true, carol: true } }))
+    );
+  });
+
   test("a judge who is not a competitor cannot create a team", async () => {
     await assertFails(
       set(ref(db("judge1"), "teams/team3"), {
@@ -241,6 +257,29 @@ describe("a judge reads the submissions they are assigned", () => {
 
   test("an assigned judge still cannot write the submission", async () => {
     await assertFails(set(ref(db("judge1"), "teams/team1/submission/ideaName"), "Mine now"));
+  });
+});
+
+/**
+ * Whether .validate runs on a delete, checked empirically rather than assumed,
+ * because the members/$memberUid fix below relies on it: leaveTeam() nulls a
+ * member entry it does not otherwise have standing to "revalidate", and if
+ * .validate ran on deletes the same way it does on writes, a delete that
+ * cannot satisfy it would be rejected.
+ *
+ * finalSlot already carries a `.validate` requiring hasChildren(['room',
+ * 'timeslot']) -- newData is empty on a delete, so if validate ran on
+ * deletes this delete would fail that check. It does not fail, which is the
+ * proof: RTDB skips .validate entirely when the write removes data.
+ */
+describe(".validate does not run on deletions (empirical)", () => {
+  test("deleting an existing finalSlot succeeds despite its own hasChildren validate", async () => {
+    const world = baseWorld();
+    world.teams.team1.finalSlot = { room: "Rice 110", timeslot: "Slot 1" };
+    await testEnv.clearDatabase();
+    await seed(testEnv, world);
+
+    await assertSucceeds(set(ref(db("admin"), "teams/team1/finalSlot"), null));
   });
 });
 
