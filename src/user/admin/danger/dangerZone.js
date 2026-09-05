@@ -271,6 +271,36 @@ export async function clearSchedule({ includeScores = false } = {}) {
 export async function forceIntoFinalRound({ teamId, teamName, room, timeslot, judgeUids = [] }) {
   if (!room || !timeslot) return { ok: false, error: "Give the team a room and a timeslot." };
 
+  const teamsSnap = await get(ref(database, "teams"));
+  const teamsData = teamsSnap.exists() ? teamsSnap.val() : {};
+
+  /*
+   * Two finalists cannot present in one room at one time.
+   *
+   * This writes finalSlot straight from TeamEditDrawer's free-text room and
+   * timeslot fields with no check against any other finalist's seat -- the
+   * same gap overrideTeamSlot had for the first round before 27182ff. Same
+   * shape here: room and timeslot together are the seat, so a collision is
+   * another team holding both at once.
+   *
+   * Only when the seat actually changes. A finalist re-saved with the slot it
+   * already has -- to add a judge, say -- should not be blocked by a clash
+   * that was already there before this call.
+   */
+  const existingSlot = teamsData?.[teamId]?.finalSlot;
+  if (room !== existingSlot?.room || timeslot !== existingSlot?.timeslot) {
+    const clash = Object.entries(teamsData ?? {}).find(
+      ([id, other]) =>
+        id !== teamId && other?.finalSlot?.room === room && other?.finalSlot?.timeslot === timeslot
+    );
+    if (clash) {
+      return {
+        ok: false,
+        error: `${clash[1]?.name ?? "Another team"} is already in ${room} at ${timeslot}.`,
+      };
+    }
+  }
+
   const paths = [
     `finalRound/teams/${teamId}`,
     `teams/${teamId}/finalSlot`,

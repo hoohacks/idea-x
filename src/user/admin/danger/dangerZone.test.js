@@ -33,6 +33,7 @@ const {
   deleteScore,
   setTeamSubmitted,
   clearSchedule,
+  forceIntoFinalRound,
 } = require("./dangerZone");
 const { requireAdmin } = require("../../../roles.js");
 
@@ -369,5 +370,65 @@ describe("moving a team that is already scheduled", () => {
     const paths = Object.keys(mockUpdate.mock.calls[0][1]);
     expect(paths).toContain("teams/team-clearing/schedule/time");
     expect(paths).not.toContain("teams/team-clearing/schedule/room");
+  });
+});
+
+/**
+ * Two finalists cannot present in one room at one time, same as the first
+ * round -- but forceIntoFinalRound writes teams/{id}/finalSlot straight from
+ * TeamEditDrawer's free-text room/timeslot fields with no check against every
+ * other finalist's seat. Two teams typed into the same room at the same
+ * timeslot both reported success and double-booked the room.
+ */
+describe("forcing a team into the final round by hand", () => {
+  const world = {
+    teams: {
+      "team-clearing": { name: "Clearing" },
+      "team-rootstock": { name: "Rootstock", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } },
+      "team-almanac": { name: "Almanac", finalSlot: { room: "Rice 342", timeslot: "Slot 2" } },
+    },
+  };
+
+  beforeEach(() => {
+    mockGet.mockImplementation(async (r) => {
+      const value = world[r.path];
+      return { exists: () => value !== undefined, val: () => value };
+    });
+  });
+
+  const force = (teamId, room, timeslot) =>
+    forceIntoFinalRound({ teamId, teamName: world.teams[teamId]?.name, room, timeslot });
+
+  test("refuses a room and timeslot another finalist already holds", async () => {
+    const result = await force("team-clearing", "Rice 344", "Slot 1");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Rootstock is already in Rice 344 at Slot 1/);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("allows the same room at a different timeslot", async () => {
+    const result = await force("team-clearing", "Rice 344", "Slot 2");
+    expect(result.ok).toBe(true);
+  });
+
+  test("allows a free room and timeslot", async () => {
+    const result = await force("team-clearing", "Rice 999", "Slot 1");
+    expect(result.ok).toBe(true);
+  });
+
+  /**
+   * The check is on the seat actually changing, not on every save. A finalist
+   * re-saved with the exact slot it already has -- to add a judge, say -- should
+   * not be blocked by a clash that was already there before this call.
+   */
+  test("a team already sitting in its own slot is not blocked from being touched again", async () => {
+    world.teams["team-clearing"] = {
+      name: "Clearing",
+      finalSlot: { room: "Rice 344", timeslot: "Slot 1" },
+    };
+
+    const result = await force("team-clearing", "Rice 344", "Slot 1");
+    expect(result.ok).toBe(true);
   });
 });
