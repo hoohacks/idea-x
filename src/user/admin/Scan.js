@@ -7,7 +7,7 @@ import { database } from "../../firebase";
 import { ref, get, update } from "firebase/database";
 import { Box, Container, Stack, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { tokens } from "../../theme";
-import { personName } from "../../roles";
+import { personName, mergeRoleProfiles } from "../../roles";
 
 /**
  * The check-in desk.
@@ -33,6 +33,51 @@ const OUTCOMES = {
 // how long the verdict stays up, and how long decoding stays paused with it
 const HOLD_MS = 2500;
 
+/**
+ * Which role node(s) a scanned uid's check-in should land on, and what the
+ * scanner should tell the organizer.
+ *
+ * Roles are additive by design (roles.js): one uid can hold both a
+ * competitor and a judge record, and someone holding both is one person who
+ * walked through one door. This used to resolve to whichever snapshot
+ * existed first -- competitor always won -- and wrote only that one, so a
+ * dual-role judge's `judges/{uid}/checkedIn` could never be set by scanning.
+ * planSchedule.js filters round-one judges by exactly that flag, so that
+ * judge was silently dropped from panel allocation while the scanner told
+ * the organizer "Checked in" with their name on it.
+ *
+ * The fix checks in every role the uid actually holds, and calls it
+ * "already done" only once every one of them already had the field set --
+ * so someone who holds both roles but was only ever scanned (or checked in
+ * by hand) as a competitor still picks up their judge check-in here, instead
+ * of being waved through as a repeat while the judge half stays false.
+ *
+ * Pure and synchronous, so the decision is testable without a camera or a
+ * database: `competitor` and `judge` are record values (or null), never
+ * snapshots.
+ */
+export function resolveCheckIn({ competitor, judge, field }) {
+    const holdings = [];
+    if (competitor) holdings.push({ role: "competitors", person: competitor });
+    if (judge) holdings.push({ role: "judges", person: judge });
+
+    if (!holdings.length) return { found: false };
+
+    // merged the same way the rest of the app merges a multi-role profile
+    // (roles.js) -- an organizer-created record has blank name fields, and a
+    // blank verdict is no use to somebody confirming who they just scanned
+    const name = personName(mergeRoleProfiles(holdings.map((h) => h.person)), "Name not on file");
+    const pendingRoles = holdings.filter((h) => h.person[field] !== true).map((h) => h.role);
+
+    return {
+        found: true,
+        name,
+        dual: holdings.length > 1,
+        alreadyDone: pendingRoles.length === 0,
+        pendingRoles,
+    };
+}
+
 function AdminScan() {
     const [paused, setPaused] = useState(false);
     const [result, setResult] = useState(null);
@@ -49,15 +94,20 @@ function AdminScan() {
             setPaused(true);
 
             try {
-                // could be either a judge or a competitor
-                const [competitor, judge] = await Promise.all([
+                // could be either a judge or a competitor -- or, since roles are
+                // additive (roles.js), both at once
+                const [competitorSnap, judgeSnap] = await Promise.all([
                     get(ref(database, `competitors/${userId}`)),
                     get(ref(database, `judges/${userId}`)),
                 ]);
 
-                const snapshot = competitor.exists() ? competitor : judge.exists() ? judge : null;
+                const decision = resolveCheckIn({
+                    competitor: competitorSnap.exists() ? competitorSnap.val() : null,
+                    judge: judgeSnap.exists() ? judgeSnap.val() : null,
+                    field,
+                });
 
-                if (!snapshot) {
+                if (!decision.found) {
                     setResult({
                         kind: "missing",
                         name: "No competitor or judge holds that code",
@@ -66,29 +116,33 @@ function AdminScan() {
                     return;
                 }
 
-                const person = snapshot.val();
-                const role = competitor.exists() ? "competitors" : "judges";
-                // a record an organizer created has empty name fields, and a blank
-                // verdict is no use to somebody confirming who they just scanned
-                const name = personName(person, "Name not on file");
+                const action = checkinType === "event" ? "Event check-in" : "Food check-in";
+                const already =
+                    checkinType === "event" ? "Already checked in for the event" : "Already collected food";
 
-                if (person[field] === true) {
+                if (decision.alreadyDone) {
                     setResult({
                         kind: "repeat",
-                        name,
-                        detail:
-                            checkinType === "event"
-                                ? "Already checked in for the event"
-                                : "Already collected food",
+                        name: decision.name,
+                        // dual-role people carry two copies of this flag; say so, or
+                        // "already done" reads like it only checked the one node
+                        detail: decision.dual ? `${already} (both their records)` : already,
                     });
                     return;
                 }
 
-                await update(ref(database, `${role}/${userId}`), { [field]: true });
+                // one multi-path update, so a dual-role person's two records land
+                // together rather than one landing and the scanner erroring out
+                // before the second reaches the database
+                await update(
+                    ref(database),
+                    Object.fromEntries(decision.pendingRoles.map((role) => [`${role}/${userId}/${field}`, true]))
+                );
+
                 setResult({
                     kind: "success",
-                    name,
-                    detail: checkinType === "event" ? "Event check-in" : "Food check-in",
+                    name: decision.name,
+                    detail: decision.dual ? `${action} (recorded for both their records)` : action,
                 });
             } catch (err) {
                 console.error("Check-in failed:", err);
