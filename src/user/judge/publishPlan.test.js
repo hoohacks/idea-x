@@ -19,6 +19,20 @@ jest.mock("firebase/database", () => ({
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "generated-id" }),
   serverTimestamp: () => 1700000000000,
+  // publishPlan takes a restore point first, and captureSnapshot prunes
+  // /snapshotIndex through a real transaction now. Nothing here races two
+  // captures, so the single-writer version -- read, run the updater, write --
+  // is all this file needs. Same shape as dangerZone.test.js.
+  runTransaction: async (reference, updater) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = updater(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current != null } };
+    }
+    await mockUpdate({ path: "" }, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 // only requireAdmin is stubbed: the rest of the module is plain helpers this
@@ -93,8 +107,13 @@ describe("a restore point comes first", () => {
   test("the schedule is written only after a restore point exists", async () => {
     const result = await publishPlan(await built());
     expect(result.ok).toBe(true);
+    // Taking a restore point is two writes now, not one: the index is pruned
+    // through a transaction and the payload is written after it. Both belong
+    // to the restore point, so both count as "snapshot" -- classifying the
+    // index write as "schedule" would put a schedule write first and fail
+    // this on a change that did not move the schedule at all.
     const order = mockUpdate.mock.calls.map(([, p]) =>
-      p["snapshots/generated-id"] ? "snapshot" : "schedule"
+      p["snapshots/generated-id"] || p.snapshotIndex ? "snapshot" : "schedule"
     );
     expect(order.indexOf("snapshot")).toBeLessThan(order.indexOf("schedule"));
   });
