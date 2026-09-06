@@ -19,6 +19,20 @@ jest.mock("firebase/database", () => ({
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "entry-1" }),
   serverTimestamp: () => 0,
+  // guardWith -> captureSnapshot prunes /snapshotIndex through a real
+  // transaction now (see snapshots.test.js for why). No test here races two
+  // captures, so a single-writer version -- read the current value, run the
+  // updater, write the result -- is all this file needs.
+  runTransaction: async (reference, updater) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = updater(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current != null } };
+    }
+    await mockUpdate({ path: "" }, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 // only requireAdmin is stubbed; the rest of the module is plain helpers
@@ -254,10 +268,21 @@ describe("clearing scores as well, to start from scratch", () => {
     expect(result.ok).toBe(true);
     expect(result.snapshotId).toBeTruthy();
 
-    // first write is the restore point, and it carries the scores it is about
-    // to destroy rather than a pointer to them
-    const [snapshotPayload] = mockUpdate.mock.calls[0].slice(1);
-    const stored = snapshotPayload["snapshots/entry-1"];
+    // The restore point lands as two writes now -- the index (via a
+    // transaction, so concurrent captures can't both prune the same stale
+    // entry; see snapshots.test.js) and then the payload -- but both still
+    // land before the wipe, which is the property this test pins: the
+    // payload write is found among the calls that happened before the wipe.
+    const wipeCallIndex = mockUpdate.mock.calls.findIndex(
+      (call) => "teams/t1/schedule" in call[1]
+    );
+    const snapshotWrite = mockUpdate.mock.calls
+      .slice(0, wipeCallIndex)
+      .map((call) => call[1])
+      .find((payload) => "snapshots/entry-1" in payload);
+
+    expect(snapshotWrite).toBeTruthy();
+    const stored = snapshotWrite["snapshots/entry-1"];
     expect(stored.entries.map((e) => e.path)).toEqual(
       expect.arrayContaining(["teams", "judges", "scores"])
     );
@@ -303,6 +328,48 @@ describe("clearing scores as well, to start from scratch", () => {
     mockGet.mockImplementation(world());
     await clearSchedule({ includeScores: true });
     expect(mockUpdate.mock.calls.at(-1)[1]["adminLog/entry-1"].summary).toMatch(/score/i);
+  });
+});
+
+/**
+ * Bug: the `before` written into the log entry was read once, at the very
+ * top, and never refreshed -- even though guardWith's own captureSnapshot
+ * (a fresh read of every path, plus an index read/write) sits between that
+ * read and the eventual write, with several more await points where another
+ * organizer's edit can land.
+ *
+ * Concretely: organizer A calls clearSchedule while organizer B fixes team
+ * T's room through overrideTeamSlot. The safety snapshot correctly captures
+ * B's new room (it re-reads live data), but the OLD code's adminLog entry
+ * recorded A's stale room from before B's fix -- and undoAdminAction's
+ * findDrift only ever validates the log's `after`, never whether `before`
+ * was accurate. A later Undo would silently restore the stale room and
+ * clobber B's correction with no drift check catching it.
+ */
+describe("clearing the schedule racing with another organizer's edit", () => {
+  test("the logged before-state reflects the value at write time, not the value read when clearSchedule started", async () => {
+    let teamsCall = 0;
+    mockGet.mockImplementation(async (r) => {
+      if (r.path === "teams") {
+        teamsCall += 1;
+        // First read (clearSchedule's own, at the top) sees the room
+        // organizer A started with. Every read after that -- guardWith's
+        // restore-point read, and this fix's re-read before the write --
+        // sees organizer B's fix, which lands in between.
+        const room = teamsCall === 1 ? "Rice 110" : "Rice 204";
+        return { exists: () => true, val: () => ({ t1: { schedule: { room, batch: 1 } } }) };
+      }
+      return { exists: () => false, val: () => null };
+    });
+
+    const result = await clearSchedule();
+    expect(result.ok).toBe(true);
+
+    const payload = mockUpdate.mock.calls.at(-1)[1];
+    const logged = payload["adminLog/entry-1"].changes.find(
+      (c) => c.path === "teams/t1/schedule"
+    );
+    expect(JSON.parse(logged.before)).toEqual({ room: "Rice 204", batch: 1 });
   });
 });
 
