@@ -282,9 +282,8 @@ describe("an admin can wipe scores to start over", () => {
   });
 
   test("an admin clears the pre-migration copy on the team node too", async () => {
-    // READ_LEGACY_SCORE_PATH is still true, so a reset that missed these would
-    // leave cards that still show in the dashboard and still count toward the
-    // averages the final round is picked from
+    // a database old enough to predate the migration still holds cards here,
+    // and a reset that could not reach them would not be a reset
     await assertSucceeds(set(ref(db("admin"), "teams/team1/scores"), null));
     await assertSucceeds(set(ref(db("admin"), "teams/team1/finalScores"), null));
   });

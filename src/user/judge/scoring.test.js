@@ -120,6 +120,23 @@ describe("ranking is a total order", () => {
     expect(sorted.map((t) => t.name)).toEqual(["alpha", "zeta"]);
   });
 
+  /**
+   * Nothing makes team names unique -- findTeamIdByName carries the same
+   * warning -- so two teams matching on every other key used to compare equal,
+   * and the sort fell back to insertion order: Firebase push-key order, the
+   * coin flip the tiebreak exists to remove. It decides who advances when the
+   * tie straddles the final-round cut.
+   */
+  test("two teams with the same name still get a definite order", () => {
+    const twins = (teamId) => ({ ...team("Lantern", 32, 2, 3), teamId });
+    const a = twins("t-aaa");
+    const b = twins("t-zzz");
+
+    expect(compareForRanking(a, b)).toBeLessThan(0);
+    expect([a, b].sort(compareForRanking).map((t) => t.teamId)).toEqual(["t-aaa", "t-zzz"]);
+    expect([b, a].sort(compareForRanking).map((t) => t.teamId)).toEqual(["t-aaa", "t-zzz"]);
+  });
+
   test("the same input always produces the same order", () => {
     // the whole point: without this the last podium place went to whichever
     // team Firebase happened to give the earlier push key

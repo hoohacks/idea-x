@@ -1,7 +1,7 @@
 import { ref, get, update, onValue, serverTimestamp } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
-import { READ_LEGACY_SCORE_PATH, FIRST_ROUND } from "./getTeamInfo.js";
+import { FIRST_ROUND } from "./getTeamInfo.js";
 import { compareForRanking, rankingEntry, scoredJudgeCount } from "./scoreRubric.js";
 import { guardWith } from "../admin/snapshots.js";
 import { buildFinalPlan, slotsOf, slotLabel, orphanedIn } from "./finalRoundPlan.js";
@@ -24,25 +24,17 @@ export const MIN_JUDGES_FOR_CONFIDENCE = 2;
 /**
  * Every first-round card, as { teamId: { judgeUid: card } }.
  *
- * Reads both the current location and the pre-migration one, because averages
- * computed from half the cards would quietly pick the wrong finalists. Drop the
- * legacy branch with READ_LEGACY_SCORE_PATH once the migration is verified.
+ * One location. Cards used to live under the team node as well, and this read
+ * merged both so nothing vanished during the cutover; that is finished, and the
+ * app neither writes nor reads the old path any more.
  */
-export async function loadFirstRoundScores(teamsData) {
+export async function loadFirstRoundScores() {
   const byTeam = {};
 
   const snap = await get(ref(database, `scores/${FIRST_ROUND}`));
   if (snap.exists()) {
     for (const [teamId, cards] of Object.entries(snap.val() ?? {})) {
       byTeam[teamId] = { ...(cards ?? {}) };
-    }
-  }
-
-  if (READ_LEGACY_SCORE_PATH && teamsData) {
-    for (const [teamId, team] of Object.entries(teamsData)) {
-      if (!team?.scores) continue;
-      // the migrated copy wins: it is the one the app writes to now
-      byTeam[teamId] = { ...team.scores, ...(byTeam[teamId] ?? {}) };
     }
   }
 
@@ -104,7 +96,7 @@ async function readFinalWorld() {
 
   const teamsData = teamsSnap.exists() ? teamsSnap.val() ?? {} : {};
   const judgesData = judgesSnap.exists() ? judgesSnap.val() ?? {} : {};
-  const scoresByTeam = await loadFirstRoundScores(teamsData);
+  const scoresByTeam = await loadFirstRoundScores();
 
   const size = Number(sizeSnap.val());
   return {

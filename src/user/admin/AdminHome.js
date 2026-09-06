@@ -99,7 +99,7 @@ export default function AdminHome() {
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={2.5} sx={{ flexWrap: "wrap", rowGap: 1 }}>
+            <Stack direction="row" sx={{ gap: 2.5, flexWrap: "wrap", rowGap: 1 }}>
               <Figure value={counts.teams.submitted} of={counts.teams.total} label="submitted" />
               <Figure value={counts.judges.checkedIn} of={counts.judges.roundOne} label="judges in" />
               <Figure value={counts.people.checkedIn} of={counts.people.competitors} label="checked in" />
@@ -120,7 +120,7 @@ export default function AdminHome() {
             </Alert>
           )}
 
-          <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap", gap: 1 }}>
+          <Stack direction="row" sx={{ mt: 2, flexWrap: "wrap", gap: 1 }}>
             {state.actions.map((action, index) => (
               <Button
                 key={action.label}

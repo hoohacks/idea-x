@@ -137,7 +137,7 @@ function JudgeSearch() {
                 spacing={1}
               >
                 <Stack sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                     <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
                     {isRoundOne && <Chip label="first round" size="small" color="primary" />}
                     {judge.wantsToMentor && (

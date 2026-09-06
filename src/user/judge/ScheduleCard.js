@@ -70,7 +70,7 @@ function ScheduleCard({
           <Typography variant="h5" sx={{ lineHeight: 1.3 }}>
             {teamName}
           </Typography>
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+          <Stack sx={{ gap: 0.75 }} direction="row" flexWrap="wrap">
             {/* where and when: the two things a judge reads off this card while
                 walking, so they are set as data rather than as labels */}
             <Chip

@@ -5,6 +5,7 @@ import { ref, get, set, onValue } from "firebase/database";
 import { auth, database, storage } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import { memberIds } from "./teamMembers";
+import { personName } from "../../roles.js";
 import { leaveTeam } from "./teamMembership.js";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
@@ -165,7 +166,7 @@ function Team() {
                 const userSnapshot = await get(userRef);
                 if (userSnapshot.exists()) {
                     const userInfo = userSnapshot.val();
-                    return `${userInfo.firstName} ${userInfo.lastName}`;
+                    return personName(userInfo, "Unnamed teammate");
                 }
                 return "Unknown User";
             }));

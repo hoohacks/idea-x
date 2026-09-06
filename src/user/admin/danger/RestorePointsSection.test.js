@@ -38,8 +38,14 @@ const mockPoint = {
   paths: ["teams", "judges", "scores"],
 };
 
-/** A snapshot with one added team, one lost score card. */
-function mockPreviewResult() {
+/**
+ * A snapshot with one added team, one lost score card by default.
+ *
+ * `extraJudgeScore: false` drops the live j1 card so live matches the
+ * snapshot exactly on the scores path -- used to model the moment Preview is
+ * first opened, before a judge has filed anything, in the race test below.
+ */
+function mockPreviewResult({ extraJudgeScore = true } = {}) {
   return {
     ok: true,
     entries: [
@@ -48,7 +54,9 @@ function mockPreviewResult() {
     ],
     live: {
       teams: { t1: { name: "Aurora" }, t2: { name: "New Team" } },
-      scores: { first: { t1: { j0: { total: 30 }, j1: { total: 28 } } } },
+      scores: extraJudgeScore
+        ? { first: { t1: { j0: { total: 30 }, j1: { total: 28 } } } }
+        : { first: { t1: { j0: { total: 30 } } } },
     },
   };
 }
@@ -230,5 +238,46 @@ describe("the preview dialog", () => {
     userEvent.clear(typedField);
     userEvent.type(typedField, "HooHacks Ideathon");
     expect(confirmButton).toBeEnabled();
+  });
+
+  // ---- Bug: the diff shown in Preview was computed once, when the dialog
+  // opened, and never refreshed. An organizer can sit on "0 score cards will
+  // be destroyed" for as long as it takes to talk a decision over -- and a
+  // judge filing a card in that window was invisible to that diff. Clicking
+  // Restore then destroyed a card that had appeared in no warning anyone saw,
+  // even though restoreSnapshot itself is safe to call (it takes its own
+  // pre-restore point) -- the organizer simply had no reason to look, because
+  // nothing on screen ever told them there was now something to lose.
+  test("refuses to restore silently when what would be destroyed changed after the preview was shown", async () => {
+    const onResult = jest.fn();
+    // Preview opens showing nothing at risk...
+    previewSnapshot.mockReset();
+    previewSnapshot
+      .mockResolvedValueOnce(mockPreviewResult({ extraJudgeScore: false }))
+      // ...but a judge files a card before the organizer gets to Restore, so
+      // the re-check made at confirm time finds one.
+      .mockResolvedValueOnce(mockPreviewResult({ extraJudgeScore: true }));
+
+    renderSection(onResult);
+    userEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await screen.findByText("teams", { selector: "strong" });
+    expect(screen.queryByText(/score card will be destroyed/)).toBeNull();
+
+    userEvent.click(screen.getByRole("button", { name: "Restore…" }));
+    const confirmButton = await screen.findByRole("button", { name: "Restore" });
+    userEvent.type(screen.getByLabelText('Type "2" to confirm'), "2");
+    userEvent.click(confirmButton);
+
+    // The restore must not go through on the stale, already-confirmed diff --
+    // the organizer confirmed "0 score cards", not "1".
+    await waitFor(() => expect(previewSnapshot).toHaveBeenCalledTimes(2));
+    expect(restoreSnapshot).not.toHaveBeenCalled();
+
+    // The newly-discovered loss is surfaced, not swallowed -- the preview
+    // dialog is still open (or reopened) showing the up-to-date warning, so
+    // the organizer can see exactly what they'd now be confirming.
+    expect(
+      await screen.findByText("1 score card will be destroyed: Aurora by Judge Smith (first)")
+    ).toBeInTheDocument();
   });
 });

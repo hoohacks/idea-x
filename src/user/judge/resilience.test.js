@@ -14,9 +14,11 @@ import {
   flushPending,
   withTimeout,
   subscribeToPending,
+  STORAGE_KEY,
 } from "./pendingScores";
 import { saveDraft, loadDraft, clearDraft } from "./scoreDraft";
 import { readJson, writeJson, isAvailable } from "./localStore";
+import * as localStore from "./localStore";
 
 const card = { problem: 8, innovation: 7, impact: 9, viability: 4, pitch_quality: 4 };
 const entry = (overrides = {}) => ({
@@ -85,6 +87,51 @@ describe("the outbox survives what the dialog does not", () => {
     enqueue(entry());
     expect(seen).toHaveBeenCalled();
     stop();
+  });
+});
+
+/**
+ * Two tabs of the judging page -- a restored tab and a PWA relaunch, say --
+ * each queuing a card at the same moment.
+ *
+ * `enqueue` used to be readAll() -> filter -> push -> writeAll() with no
+ * check in between. Tab A reads the queue, tab B reads the same queue before
+ * A writes, and whichever of them writes second silently replaces the
+ * other's queued card with a list that never had it -- the tab that queued
+ * first has no way to know its card just vanished from the outbox.
+ *
+ * The spy below simulates that interleaving without needing two real tabs:
+ * it lets this test's own `enqueue` call read the queue once, and in that
+ * exact gap -- before this call has written anything back -- runs a second,
+ * real `enqueue` call standing in for the other tab.
+ */
+describe("enqueue racing a second tab", () => {
+  test("a card queued by another tab in the gap before this write is not overwritten", () => {
+    enqueue(entry({ teamId: "team-1" })); // already queued, from earlier
+
+    const realReadJson = localStore.readJson;
+    let storageReads = 0;
+    const spy = jest.spyOn(localStore, "readJson").mockImplementation((key, fallback) => {
+      const result = realReadJson(key, fallback);
+      if (key === STORAGE_KEY) {
+        storageReads += 1;
+        // The first read this call makes of the queue -- simulate the other
+        // tab's enqueue landing right after, before this call writes back.
+        if (storageReads === 1) {
+          spy.mockRestore();
+          enqueue(entry({ teamId: "team-2" }));
+        }
+      }
+      return result;
+    });
+
+    enqueue(entry({ teamId: "team-3" }));
+
+    expect(listPending("judge-1").map((e) => e.teamId).sort()).toEqual([
+      "team-1",
+      "team-2",
+      "team-3",
+    ]);
   });
 });
 
@@ -237,5 +284,78 @@ describe("localStore never throws", () => {
     expect(readJson("k", "fallback")).toBe("fallback");
 
     setItem.mockRestore();
+  });
+});
+
+/**
+ * Two things that only go wrong when the flush and the judge overlap.
+ *
+ * The judging screen drains the outbox on mount and again on the rising edge of
+ * `.info/connected`, which lands milliseconds later — so two flushes running at
+ * once is the ordinary case, not a rare one. Both bugs below were reachable
+ * with nothing more exotic than a judge correcting a card on a bad network.
+ */
+describe("a flush racing the judge", () => {
+  test("a card re-submitted mid-flush is not thrown away", async () => {
+    enqueue(entry({ score: { ...card, problem: 1 } }));
+
+    let land;
+    const write = jest.fn(() => new Promise((resolve) => { land = resolve; }));
+
+    const flush = flushPending(write, { judgeUid: "judge-1" });
+    await Promise.resolve();
+
+    // the judge notices a mistake and submits again while the first write hangs
+    enqueue(entry({ score: { ...card, problem: 10 } }));
+    expect(listPending("judge-1")[0].score.problem).toBe(10);
+
+    land();
+    await flush;
+
+    // the entry id is stable per judge/team/round, so a flush that removed "the
+    // entry with this id" on success deleted the correction and left the stale
+    // card as the one that landed
+    const left = listPending("judge-1");
+    expect(left).toHaveLength(1);
+    expect(left[0].score.problem).toBe(10);
+  });
+
+  test("overlapping flushes send each card once, not twice", async () => {
+    enqueue(entry());
+
+    const settle = [];
+    const write = jest.fn(() => new Promise((resolve) => { settle.push(resolve); }));
+
+    const first = flushPending(write, { judgeUid: "judge-1" });
+    const second = flushPending(write, { judgeUid: "judge-1" });
+    await Promise.resolve();
+
+    settle.forEach((resolve) => resolve());
+    await Promise.all([first, second]);
+
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(listPending("judge-1")).toHaveLength(0);
+  });
+
+  test("a card queued during a flush is still sent by the run behind it", async () => {
+    enqueue(entry());
+
+    const settle = [];
+    const write = jest.fn(() => new Promise((resolve) => { settle.push(resolve); }));
+
+    const first = flushPending(write, { judgeUid: "judge-1" });
+    await Promise.resolve();
+
+    // arrives too late for the running flush, which already took its snapshot
+    enqueue(entry({ teamId: "team-2" }));
+    const second = flushPending(write, { judgeUid: "judge-1" });
+
+    for (let tick = 0; tick < 6; tick += 1) {
+      settle.forEach((resolve) => resolve());
+      await Promise.resolve();
+    }
+    await Promise.all([first, second]);
+
+    expect(listPending("judge-1")).toHaveLength(0);
   });
 });

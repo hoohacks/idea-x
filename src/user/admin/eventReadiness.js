@@ -194,8 +194,8 @@ function blockersFor({ config, legacyScoreTeams }) {
     blockers.push({
       id: "migration",
       title: "Finish the score migration",
-      detail: `${legacyScoreTeams} team${legacyScoreTeams === 1 ? " still has" : "s still have"} score cards under the old location, so every average is read from two places at once.`,
-      how: "Run npm run migrate:scores, check the standings still look right, then turn off READ_LEGACY_SCORE_PATH.",
+      detail: `${legacyScoreTeams} team${legacyScoreTeams === 1 ? " still has" : "s still have"} score cards under the old location, which the app no longer reads. Those cards count for nothing until they are moved.`,
+      how: "Run npm run migrate:scores, then check the standings look right.",
       to: "/user/admin/control?tab=data",
     });
   }

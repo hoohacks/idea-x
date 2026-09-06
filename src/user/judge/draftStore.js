@@ -1,4 +1,4 @@
-import { ref, get, update, onValue, serverTimestamp } from "firebase/database";
+import { ref, get, update, onValue, runTransaction, serverTimestamp } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
@@ -188,7 +188,38 @@ export async function saveDraft(plan) {
       version: nextVersion,
     };
 
-    await update(ref(database), { [DRAFT_PATH]: payload });
+    /*
+     * The check above narrows the race; it does not close it.
+     *
+     * Two organizers who read the same version both pass it, and both then
+     * write -- the second silently overwriting the first, with both told the
+     * save succeeded. That is the exact failure the version field exists to
+     * prevent, so the write re-checks it atomically rather than trusting a read
+     * from a moment ago.
+     *
+     * `applyLocally: false` keeps a write that is about to be rejected from
+     * flashing through the live subscription on its way to being undone.
+     */
+    const result = await runTransaction(
+      ref(database, DRAFT_PATH),
+      (current) => {
+        // abort by returning nothing: somebody wrote between the read and here
+        if ((current?.version ?? 0) !== (plan.version ?? 0)) return undefined;
+        return payload;
+      },
+      { applyLocally: false }
+    );
+
+    if (!result.committed) {
+      const winner = result.snapshot?.val();
+      return {
+        ok: false,
+        error:
+          `${winner?.createdByName ?? "Another organizer"} saved this draft first. ` +
+          `Reload the preview to pick up their version.`,
+      };
+    }
+
     return { ok: true, version: nextVersion };
   } catch (error) {
     console.error("Could not save the schedule draft:", error);

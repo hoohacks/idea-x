@@ -79,6 +79,16 @@ describe("ranking the final round", () => {
     expect(alpha.expected).toBe(2);
     expect(alpha.complete).toBe(false);
   });
+
+  test("a card from a judge who is not on the panel does not count as received", () => {
+    // j9 is not in t1's panel -- its card must not stand in for j2's
+    const finalScores = { t1: { j1: card(8), j9: card(8) } };
+    const alpha = finalStandings({ finalRoundTeams, finalScores, panels }).find((t) => t.name === "Alpha");
+
+    expect(alpha.received).toBe(1);
+    expect(alpha.expected).toBe(2);
+    expect(alpha.complete).toBe(false);
+  });
 });
 
 describe("a running total is not a result", () => {
@@ -108,6 +118,17 @@ describe("a running total is not a result", () => {
     const standings = finalStandings({ finalRoundTeams, finalScores, panels });
 
     expect(standings[0].name).toBe("Alpha");
+    expect(winnerOf(standings)).toBeNull();
+  });
+
+  test("a card from an off-panel judge does not settle the round or crown a winner", () => {
+    // t2's real panel is j1 and j2; j9 is scoring a team it was never assigned
+    const finalScores = { ...complete, t2: { j1: card(7), j9: card(7) } };
+    const standings = finalStandings({ finalRoundTeams, finalScores, panels });
+    const state = standingsState(standings);
+
+    expect(state.settled).toBe(false);
+    expect(state.waitingOn).toEqual([{ name: "Beta", missing: 1 }]);
     expect(winnerOf(standings)).toBeNull();
   });
 

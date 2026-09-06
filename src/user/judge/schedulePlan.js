@@ -206,7 +206,7 @@ export function describeSupply({
     if (even.length) {
       advice.push(
         `Teams are split ${sizes.join("/")}, so the smaller batches get more judges per team. ` +
-          `A batch count of ${even.join(" or ")} divides ${teamCount} teams evenly and removes that.`
+          `A batch count of ${listOf(even)} divides ${teamCount} teams evenly and removes that.`
       );
     }
   }
@@ -234,6 +234,12 @@ export function describeSupply({
     batchSizes: sizes,
     judgesPerTeam: { min: globalMin, max: globalMax },
   };
+}
+
+/** "4", "4 or 5", "4, 5 or 8" -- rather than "4 or 5 or 8". */
+function listOf(values) {
+  if (values.length < 2) return String(values[0] ?? "");
+  return `${values.slice(0, -1).join(", ")} or ${values[values.length - 1]}`;
 }
 
 /** The fewest batches that let `judgeCount` judges cover every room, or null. */

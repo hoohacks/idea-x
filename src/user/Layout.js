@@ -1,6 +1,7 @@
 import { Box, Container } from "@mui/material";
 import Nav from "../siteNav";
 import PageFooter from "../siteFooter";
+import { pageMinHeight } from "../theme";
 
 /**
  * Page frame for the signed-in portal. The old version pinned main to a fixed
@@ -14,7 +15,7 @@ function Layout({ children, maxWidth = "md", bleed = false }) {
     return (
         <Box
             sx={{
-                minHeight: "100vh",
+                ...pageMinHeight,
                 display: "flex",
                 flexDirection: "column",
                 bgcolor: "background.default",

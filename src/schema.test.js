@@ -187,8 +187,8 @@ describe("the deployed rules cannot drift from these ones unnoticed", () => {
    * When it fails: republish database.rules.json in the console, bump
    * `// rulesVersion:` at the top of that file, and put the printed digest here.
    */
-  const EXPECTED_VERSION = 5;
-  const EXPECTED_DIGEST = "dd765fbd0888973ff840d813dc4d961e47ec45336fabfceab6524c9a97c16319";
+  const EXPECTED_VERSION = 7;
+  const EXPECTED_DIGEST = "4220aa274ad62df857088d83029400c09e782dc892a8a28d47da1968d7db5666";
 
   // sorted so a pure reordering of the file is not treated as a rules change
   function sortDeep(value) {

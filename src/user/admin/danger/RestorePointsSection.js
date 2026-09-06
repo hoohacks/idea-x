@@ -174,9 +174,51 @@ export default function RestorePointsSection({ onResult }) {
 
   const restore = async () => {
     const target = previewing;
-    closePreview();
+    const confirmedDiff = diff;
     setBusy(true);
     try {
+      // The diff on screen was computed once, when Preview was opened, and
+      // Preview can sit open for as long as it takes to talk a decision over.
+      // A judge who files a card in that window is invisible to that diff --
+      // so before the destructive write actually happens, look again. If
+      // what this restore point would destroy has moved since the organizer
+      // read the warning and confirmed it, that confirmation does not cover
+      // the new set: refuse, and show the organizer the real numbers instead
+      // of quietly destroying something that appeared in no warning they saw.
+      const recheck = await previewSnapshot(target.id);
+      if (!recheck.ok) {
+        setConfirmingRestore(false);
+        onResult(
+          {
+            ok: false,
+            error:
+              recheck.error ||
+              "Could not check that restore point again before restoring, so nothing was changed.",
+          },
+          null
+        );
+        return;
+      }
+
+      const freshDiff = diffSnapshot(recheck.entries, recheck.live);
+      if (JSON.stringify(freshDiff) !== JSON.stringify(confirmedDiff)) {
+        setConfirmingRestore(false);
+        setDiff(freshDiff);
+        setTeamNames(teamNamesFrom(recheck.entries));
+        onResult(
+          {
+            ok: false,
+            error:
+              "What this restore point would destroy has changed since you opened this preview " +
+              "-- probably a score came in. The numbers below are now current. Check them again " +
+              "before confirming.",
+          },
+          null
+        );
+        return;
+      }
+
+      closePreview();
       const result = await restoreSnapshot(target.id);
       onResult(
         result,
@@ -245,7 +287,7 @@ export default function RestorePointsSection({ onResult }) {
                     <Typography variant="caption" color="text.secondary" component="div">
                       {when(point.at)} · {point.byName ?? point.by} · {bytes(point.bytes)}
                     </Typography>
-                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap", gap: 0.5 }}>
+                    <Stack direction="row" sx={{ mt: 0.5, flexWrap: "wrap", gap: 0.5 }}>
                       {(point.paths ?? []).map((path) => (
                         <Chip key={path} label={path} size="small" variant="outlined" />
                       ))}

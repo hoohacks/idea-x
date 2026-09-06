@@ -196,6 +196,29 @@ const theme = createTheme({
         },
       },
     },
+    /**
+     * 16px fields on a phone, whatever the density is elsewhere.
+     *
+     * iOS Safari zooms the page in whenever you focus a field whose text is
+     * under 16px, and it does not zoom back out. Every field here was 15px, so
+     * tapping "First name" left the site magnified and sliding sideways under
+     * the thumb for the rest of the session -- which reads as a broken page
+     * rather than as a zoom.
+     *
+     * The fix is the font size, not `maximum-scale=1`: switching pinch-zoom off
+     * would hide the symptom by taking zoom away from people who rely on it.
+     *
+     * Keyed on a coarse pointer as well as on width, because an iPad is a touch
+     * device at desktop width and zooms in exactly the same way.
+     */
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          "@media (pointer: coarse), (max-width: 599.95px)": { fontSize: "1rem" },
+        },
+      },
+    },
+
     MuiFormHelperText: { styleOverrides: { root: { marginLeft: 2 } } },
 
     MuiAppBar: {
@@ -290,6 +313,23 @@ export const tokens = {
   ACCENT_DARK,
   ACCENT_WASH,
   DISPLAY,
+};
+
+/**
+ * A page frame's minimum height, in a unit a phone agrees with.
+ *
+ * `100vh` on iOS is the height the viewport would have if the address bar were
+ * hidden, so a frame set to it is always taller than the screen actually shows.
+ * Every page then had a stripe of dead scroll at the bottom, and dragging into
+ * it collapsed and re-expanded the address bar -- the page appearing to jump
+ * while you read it.
+ *
+ * `dvh` is the height that is really visible and tracks the bar as it moves.
+ * The `vh` line stays as the fallback for browsers without it.
+ */
+export const pageMinHeight = {
+  minHeight: "100vh",
+  "@supports (min-height: 100dvh)": { minHeight: "100dvh" },
 };
 
 export default theme;

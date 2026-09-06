@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { IoChevronDown, IoMenu, IoClose } from "react-icons/io5";
-import { AuthContext } from "./App";
+import { AuthContext, NavDrawerContext } from "./App";
 import { auth } from "./firebase";
 import { tokens } from "./theme";
 import { hasRole } from "./roles";
@@ -170,7 +170,15 @@ function Nav({ variant = "app" }) {
 
     const [adminAnchor, setAdminAnchor] = useState(null);
     const [accountAnchor, setAccountAnchor] = useState(null);
-    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    // Above the route, so a tap that lands while the page is still resolving a
+    // role is not thrown away with the nav that received it. See the note on
+    // NavDrawerContext. The local fallback is for render tests, which mount the
+    // nav on its own.
+    const hoisted = useContext(NavDrawerContext);
+    const [localDrawerOpen, setLocalDrawerOpen] = useState(false);
+    const drawerOpen = hoisted ? hoisted.open : localDrawerOpen;
+    const setDrawerOpen = hoisted ? hoisted.setOpen : setLocalDrawerOpen;
 
     const isAdmin = hasRole(userTypes, "admin");
     const primary = PRIMARY.filter(

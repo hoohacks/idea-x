@@ -20,6 +20,20 @@ jest.mock("firebase/database", () => ({
   push: () => ({ key: "generated-id" }),
   onValue: () => () => {},
   serverTimestamp: () => 1700000000000,
+  // publishFinalRound takes a restore point first, and captureSnapshot prunes
+  // /snapshotIndex through a real transaction now. Nothing here races two
+  // captures, so the single-writer version -- read, run the updater, write --
+  // is all this file needs. Same shape as dangerZone.test.js.
+  runTransaction: async (reference, updater) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = updater(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current != null } };
+    }
+    await mockUpdate({ path: "" }, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));

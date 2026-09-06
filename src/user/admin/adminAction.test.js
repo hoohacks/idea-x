@@ -237,4 +237,41 @@ describe("undoing an entry", () => {
     const result = await undoAdminAction("missing");
     expect(result.ok).toBe(false);
   });
+
+  /**
+   * The drift check above runs once, early, using values read before
+   * `requireAdmin` and `applyAdminAction`'s own work (resolving the acting
+   * admin's name, building the log entry) are awaited. A write landing in
+   * that window passed a check that was already stale by the time the
+   * update actually went out -- undo would silently clobber it and still
+   * report success.
+   *
+   * `requireAdmin` is where this test lands that write: undo awaits it
+   * twice (once directly, once again inside `applyAdminAction`), which is
+   * exactly the kind of gap a real second admin's action would land in.
+   */
+  test("a write landing while requireAdmin is pending is refused, not clobbered", async () => {
+    let liveValue = "Omega"; // matches the log entry's `after` -- the early check passes
+    mockGet.mockImplementation(async (r) => {
+      if (r.path.startsWith("adminLog/")) return { exists: () => Boolean(logged), val: () => logged };
+      if (r.path === "teams/t1/name") return { exists: () => true, val: () => liveValue };
+      return { exists: () => false, val: () => null };
+    });
+
+    // Simulates another organizer's edit landing in the exact window the bug
+    // names: after the early drift check passed, while undo is still waiting
+    // on requireAdmin.
+    requireAdmin.mockImplementation(async () => {
+      liveValue = "Edited By Someone Else";
+      return { uid: "admin-1" };
+    });
+
+    const result = await undoAdminAction("entry-0");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("teams/t1/name");
+    expect(mockUpdate).not.toHaveBeenCalled();
+    // the edit that landed mid-flight must survive, not be silently reverted
+    expect(liveValue).toBe("Edited By Someone Else");
+  });
 });

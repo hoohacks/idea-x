@@ -42,7 +42,7 @@ function TeamCard({ assignment, target, onOpenTeam }) {
     >
       <Typography variant="caption" color="text.secondary">{assignment.room}</Typography>
       <Typography sx={{ fontWeight: 600 }}>{assignment.teamName}</Typography>
-      <Stack direction="row" spacing={0.5} sx={{ mt: 0.75, flexWrap: "wrap", gap: 0.5 }}>
+      <Stack direction="row" sx={{ mt: 0.75, flexWrap: "wrap", gap: 0.5 }}>
         {judgeCount === 0 ? (
           <Chip label="No judges" size="small" color="error" variant="outlined" />
         ) : (
@@ -134,7 +134,7 @@ export default function PlanGrid({ plan, stats, onOpenTeam }) {
                 <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }}>
                   Spare judges
                 </Typography>
-                <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5 }}>
                   {spareJudges.map((name) => (
                     <Chip key={name} label={name} size="small" variant="outlined" />
                   ))}

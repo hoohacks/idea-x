@@ -50,15 +50,44 @@ export function overrideSlotChanges({ teamId, room, time, teamData, judgesData }
 }
 
 export async function overrideTeamSlot({ teamId, teamName, room, time }) {
-  const [teamSnap, judgesSnap] = await Promise.all([
+  const [teamSnap, teamsSnap, judgesSnap] = await Promise.all([
     get(ref(database, `teams/${teamId}`)),
+    get(ref(database, "teams")),
     get(ref(database, "judges")),
   ]);
   if (!teamSnap.exists()) return { ok: false, error: "That team no longer exists." };
 
+  const teamData = teamSnap.val();
+  const batch = teamData?.schedule?.batch;
+
+  /*
+   * Two teams cannot present in one room at one time.
+   *
+   * A move changes the room and the label, never the batch, so this is the only
+   * thing it can break -- and it is the one check this path did not have. Both
+   * other ways into a slot refuse it: the planner's moveTeam, and
+   * scheduleTeamIntoBatch. This is the one an organizer uses during the event,
+   * off a team's record, which makes it the worst of the three to leave open.
+   *
+   * Only when the room actually changes. Editing just the time on an event that
+   * already has a clash somewhere should not be blocked by that clash.
+   */
+  if (room && batch && room !== teamData?.schedule?.room) {
+    const clash = Object.entries(teamsSnap.val() ?? {}).find(
+      ([id, other]) =>
+        id !== teamId && other?.schedule?.batch === batch && other?.schedule?.room === room
+    );
+    if (clash) {
+      return {
+        ok: false,
+        error: `${clash[1]?.name ?? "Another team"} is already in ${room} in batch ${batch}.`,
+      };
+    }
+  }
+
   const changes = overrideSlotChanges({
     teamId, room, time,
-    teamData: teamSnap.val(),
+    teamData,
     judgesData: judgesSnap.exists() ? judgesSnap.val() : {},
   });
 
@@ -124,25 +153,22 @@ export async function setTeamSubmitted({ teamId, teamName, submitted }) {
  * Losing them because you wanted to redo the rooms would be a bad trade.
  *
  * `includeScores` is the deliberate, louder choice: a real start from scratch.
- * It has to clear two places, not one. READ_LEGACY_SCORE_PATH is still true, so
- * pre-migration cards live at teams/{id}/scores and teams/{id}/finalScores as
- * well as under /scores, and both are still read -- by the Teams dashboard and
- * by the averages the final round is picked from. Clearing only /scores would
- * leave those behind, which is precisely not starting from scratch.
+ * It clears the pre-migration locations too -- teams/{id}/scores and
+ * teams/{id}/finalScores -- even though nothing reads them any more. A project
+ * old enough to hold them would otherwise keep them through a wipe, and "start
+ * from scratch" has to mean it. Each is only touched if it is actually there.
  *
  * Admins already hold the permission for this: the root rule reaches /scores,
  * and a delete skips .validate, so the card shape never gets to reject a null.
  * test/rules/scores.test.mjs pins both.
  */
-export async function clearSchedule({ includeScores = false } = {}) {
-  const [teamsSnap, judgesSnap] = await Promise.all([
-    get(ref(database, "teams")),
-    get(ref(database, "judges")),
-  ]);
-
-  const teamsData = teamsSnap.exists() ? teamsSnap.val() ?? {} : {};
-  const judgesData = judgesSnap.exists() ? judgesSnap.val() ?? {} : {};
-
+/**
+ * Read teams/judges (and, if asked, scores) once, and turn that into the
+ * `changes` clearSchedule would apply. Pure given the snapshots -- the actual
+ * reads live in `readClearScheduleData` below, so this can be re-run against
+ * two different reads without hitting the database twice for the same call.
+ */
+function buildClearChanges({ teamsData, judgesData, scoresData, includeScores }) {
   const changes = [];
   for (const [teamId, team] of Object.entries(teamsData)) {
     if (team?.schedule) {
@@ -158,14 +184,12 @@ export async function clearSchedule({ includeScores = false } = {}) {
       });
     }
   }
-
   const assignmentCount = changes.length;
 
   let scoreCount = 0;
   if (includeScores) {
-    const scoresSnap = await get(ref(database, "scores"));
-    if (scoresSnap.exists()) {
-      changes.push({ path: "scores", before: scoresSnap.val(), after: null });
+    if (scoresData) {
+      changes.push({ path: "scores", before: scoresData, after: null });
       scoreCount += 1;
     }
 
@@ -180,7 +204,33 @@ export async function clearSchedule({ includeScores = false } = {}) {
     }
   }
 
-  if (!changes.length) {
+  return { changes, assignmentCount, scoreCount };
+}
+
+async function readClearScheduleData(includeScores) {
+  const [teamsSnap, judgesSnap, scoresSnap] = await Promise.all([
+    get(ref(database, "teams")),
+    get(ref(database, "judges")),
+    includeScores ? get(ref(database, "scores")) : Promise.resolve(null),
+  ]);
+  return {
+    teamsData: teamsSnap.exists() ? teamsSnap.val() ?? {} : {},
+    judgesData: judgesSnap.exists() ? judgesSnap.val() ?? {} : {},
+    scoresData: scoresSnap && scoresSnap.exists() ? scoresSnap.val() : null,
+  };
+}
+
+function summarize({ includeScores, assignmentCount, scoreCount }) {
+  return includeScores
+    ? `Cleared the schedule and every score: ${assignmentCount} assignment records, ${scoreCount} score locations`
+    : `Cleared the schedule: ${assignmentCount} assignment records`;
+}
+
+export async function clearSchedule({ includeScores = false } = {}) {
+  const initial = await readClearScheduleData(includeScores);
+  const first = buildClearChanges({ ...initial, includeScores });
+
+  if (!first.changes.length) {
     return {
       ok: false,
       error: includeScores
@@ -189,20 +239,7 @@ export async function clearSchedule({ includeScores = false } = {}) {
     };
   }
 
-  // Only worth clearing when there was a schedule; on a scores-only reset there
-  // is no generation metadata to remove.
-  if (assignmentCount) {
-    const meta = await captureBefore(["config/scheduleMeta"]);
-    changes.push({
-      path: "config/scheduleMeta",
-      before: meta["config/scheduleMeta"],
-      after: null,
-    });
-  }
-
-  const summary = includeScores
-    ? `Cleared the schedule and every score: ${assignmentCount} assignment records, ${scoreCount} score locations`
-    : `Cleared the schedule: ${assignmentCount} assignment records`;
+  const summary = summarize({ includeScores, ...first });
 
   // A restore point BEFORE the wipe, and a refusal if it cannot be taken.
   //
@@ -223,9 +260,59 @@ export async function clearSchedule({ includeScores = false } = {}) {
   });
   if (!guard.ok) return { ok: false, error: guard.error };
 
+  /*
+   * Re-read teams/judges (and scores) here, as late as this function can put
+   * a read -- immediately before the write, rather than reusing the read
+   * from the top of this function.
+   *
+   * guardWith's own captureSnapshot sits between that early read and this
+   * line: a fresh read of its own of these same paths, an index read, and an
+   * index write, each an await point where another organizer's edit can
+   * land. Using the early read's values here would mean the log could record
+   * a `before` that was no longer true by the time this action actually
+   * wrote anything -- the restore point would correctly hold the other
+   * organizer's edit (it re-reads live data), but adminLog would say
+   * something different, and undoAdminAction's findDrift only ever checks a
+   * change's `after`, never whether its `before` was accurate. A later Undo
+   * would then silently restore the stale value and clobber the other
+   * organizer's edit with no drift check to catch it.
+   *
+   * This NARROWS the window, it does not CLOSE it: `changes[].before` below
+   * is still a read that happens strictly before the write, not a value the
+   * write is conditioned on. RTDB's multi-path update() is atomic across
+   * paths but not conditional on any of them -- there is no primitive here
+   * to make this a true compare-and-swap the way a single-path
+   * runTransaction can. A complete fix would need every path this touches to
+   * be written through its own conditional transaction, which multi-location
+   * update() cannot express and which is a larger change than this file.
+   */
+  const fresh = await readClearScheduleData(includeScores);
+  const rebuilt = buildClearChanges({ ...fresh, includeScores });
+
+  if (!rebuilt.changes.length) {
+    return {
+      ok: false,
+      error:
+        "There was nothing left to clear by the time the restore point finished saving. " +
+        "Nothing was changed.",
+    };
+  }
+
+  let changes = rebuilt.changes;
+
+  // Only worth clearing when there was a schedule; on a scores-only reset there
+  // is no generation metadata to remove.
+  if (rebuilt.assignmentCount) {
+    const meta = await captureBefore(["config/scheduleMeta"]);
+    changes = [
+      ...changes,
+      { path: "config/scheduleMeta", before: meta["config/scheduleMeta"], after: null },
+    ];
+  }
+
   const result = await applyAdminAction({
     action: "schedule.clear",
-    summary,
+    summary: summarize({ includeScores, ...rebuilt }),
     changes,
     hasRestorePoint: true,
   });
@@ -242,6 +329,36 @@ export async function clearSchedule({ includeScores = false } = {}) {
  */
 export async function forceIntoFinalRound({ teamId, teamName, room, timeslot, judgeUids = [] }) {
   if (!room || !timeslot) return { ok: false, error: "Give the team a room and a timeslot." };
+
+  const teamsSnap = await get(ref(database, "teams"));
+  const teamsData = teamsSnap.exists() ? teamsSnap.val() : {};
+
+  /*
+   * Two finalists cannot present in one room at one time.
+   *
+   * This writes finalSlot straight from TeamEditDrawer's free-text room and
+   * timeslot fields with no check against any other finalist's seat -- the
+   * same gap overrideTeamSlot had for the first round before 27182ff. Same
+   * shape here: room and timeslot together are the seat, so a collision is
+   * another team holding both at once.
+   *
+   * Only when the seat actually changes. A finalist re-saved with the slot it
+   * already has -- to add a judge, say -- should not be blocked by a clash
+   * that was already there before this call.
+   */
+  const existingSlot = teamsData?.[teamId]?.finalSlot;
+  if (room !== existingSlot?.room || timeslot !== existingSlot?.timeslot) {
+    const clash = Object.entries(teamsData ?? {}).find(
+      ([id, other]) =>
+        id !== teamId && other?.finalSlot?.room === room && other?.finalSlot?.timeslot === timeslot
+    );
+    if (clash) {
+      return {
+        ok: false,
+        error: `${clash[1]?.name ?? "Another team"} is already in ${room} at ${timeslot}.`,
+      };
+    }
+  }
 
   const paths = [
     `finalRound/teams/${teamId}`,

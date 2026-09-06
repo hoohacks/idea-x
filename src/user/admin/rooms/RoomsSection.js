@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Alert, Button, Chip, Stack, TextField, Typography } from "@mui/material";
 import { RowList, Row } from "../adminUi";
-import { roomsInUse, addRoom, renameRoom, removeRoom } from "./roomsService";
+import { roomsInUse, finalRoomsInUse, addRoom, renameRoom, removeRoom } from "./roomsService";
 import RemapDialog from "./RemapDialog";
 
 /**
@@ -17,6 +17,18 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
   const [busy, setBusy] = useState(false);
 
   const inUse = roomsInUse(teamsData);
+  const finalInUse = finalRoomsInUse(teamsData);
+
+  // roomsInUse only sees the first round. A room the final round alone is
+  // using -- it typically gets a dedicated room of its own -- otherwise looked
+  // empty here, so the chip understated it and Remove skipped straight to
+  // removeRoom with no destination, which now correctly refuses rather than
+  // silently orphaning finalists. Folding finalInUse in gives that case a
+  // destination to pick, same as the first round always had.
+  const occupantsOf = (room) => [
+    ...(inUse[room] ?? []),
+    ...(finalInUse[room] ?? []).map((team) => ({ ...team, time: team.timeslot, batch: "final round" })),
+  ];
 
   const run = async (work, successMessage) => {
     setBusy(true);
@@ -30,7 +42,7 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
   };
 
   const handleRemove = async (room) => {
-    const occupants = inUse[room] ?? [];
+    const occupants = occupantsOf(room);
     if (occupants.length) {
       setRemoving({ room, inUse: occupants });
       return;
@@ -71,7 +83,7 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
 
       <RowList empty="No rooms yet. Add the first one above.">
         {rooms.map((room) => {
-          const occupants = inUse[room] ?? [];
+          const occupants = occupantsOf(room);
           const isRenaming = renaming === room;
 
           return (

@@ -6,16 +6,6 @@ import { enqueue, flushPending, withTimeout } from "./pendingScores.js";
 export const FIRST_ROUND = "first";
 export const FINAL_ROUND = "final";
 
-/**
- * Scores are read from the pre-migration location as well as the current one
- * for the length of the cutover, so historical cards do not appear to vanish
- * between deploying this build and running migrate-scores.mjs.
- *
- * DELETE THIS, and the two branches that reference it, once the migration is
- * verified. See "Moving scores off the team node" in the README.
- */
-export const READ_LEGACY_SCORE_PATH = true;
-
 function requireUser() {
   const user = getAuth().currentUser;
   if (!user) throw new Error("Must be signed in");
@@ -24,12 +14,6 @@ function requireUser() {
 
 function scorePath(round, teamId, judgeUid) {
   return `scores/${round}/${teamId}/${judgeUid}`;
-}
-
-// where the same card lived before it moved out from under the team node
-function legacyScorePath(round, teamId, judgeUid) {
-  const segment = round === FINAL_ROUND ? "finalScores" : "scores";
-  return `teams/${teamId}/${segment}/${judgeUid}`;
 }
 
 // Legacy fallback only. Team names are not unique, so two teams sharing a name
@@ -135,13 +119,7 @@ export async function writeScoreOnBehalf({ round, teamId, teamName, judgeUid, sc
 export async function getMyScore({ round, teamId }) {
   const user = requireUser();
   const snap = await get(ref(database, scorePath(round, teamId, user.uid)));
-  if (snap.exists()) return snap.val();
-
-  if (READ_LEGACY_SCORE_PATH) {
-    const legacy = await get(ref(database, legacyScorePath(round, teamId, user.uid)));
-    if (legacy.exists()) return legacy.val();
-  }
-  return null;
+  return snap.exists() ? snap.val() : null;
 }
 
 async function scoredTeamIds(teamIds, round) {
@@ -156,13 +134,7 @@ async function scoredTeamIds(teamIds, round) {
       // submit twice. A per-team failure now costs only that team.
       try {
         const snap = await get(ref(database, scorePath(round, id, user.uid)));
-        if (snap.exists()) return [id, true];
-
-        if (READ_LEGACY_SCORE_PATH) {
-          const legacy = await get(ref(database, legacyScorePath(round, id, user.uid)));
-          return [id, legacy.exists()];
-        }
-        return [id, false];
+        return [id, snap.exists()];
       } catch (error) {
         console.warn(`Could not check whether ${id} is already scored:`, error);
         return [id, false];

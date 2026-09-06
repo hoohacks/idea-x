@@ -106,12 +106,30 @@ export function scoredJudgeCount(scores = {}) {
  *   2. more judges calling it fundable
  *   3. more judges having seen it   (a 3-judge 32 is better evidenced than a 1-judge 32)
  *   4. team name, so the result is at least deterministic and explainable
+ *   5. team id, because names are not unique
+ *
+ * Step 5 is what makes the order total rather than nearly total. Nothing stops
+ * two groups calling themselves the same thing -- findTeamIdByName carries the
+ * same warning -- and two teams matching on all four earlier keys put the sort
+ * back on insertion order, which is Firebase push-key order: the coin flip this
+ * function exists to remove. finalStandings relies on there always being a
+ * first row, so "nearly total" is not enough.
+ *
+ * The name comparison is pinned to one locale. Left to the runtime's default it
+ * is the viewer's, so two organizers looking at the same tie could be shown it
+ * in two different orders.
  */
 export function compareForRanking(a, b) {
   if (a.averageScore !== b.averageScore) return b.averageScore - a.averageScore;
   if (a.fundableVotes !== b.fundableVotes) return b.fundableVotes - a.fundableVotes;
   if (a.judgeCount !== b.judgeCount) return b.judgeCount - a.judgeCount;
-  return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+
+  const byName = String(a.name ?? "").localeCompare(String(b.name ?? ""), "en");
+  if (byName !== 0) return byName;
+
+  const left = String(a.teamId ?? "");
+  const right = String(b.teamId ?? "");
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 /**

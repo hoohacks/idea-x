@@ -54,6 +54,21 @@ export function mergeRoleProfiles(profiles) {
   return merged;
 }
 
+/**
+ * A person's name for display, or a fallback.
+ *
+ * Never interpolate the two fields directly. Records are written with their
+ * fields present and empty rather than absent -- granting someone a role from
+ * the control panel seeds `firstName: ""` -- so the raw join produces " " for a
+ * real person, and "undefined undefined" for a record missing the fields
+ * entirely. The first renders as a blank row in a team roster and a blank
+ * verdict on the check-in screen, where somebody is trying to confirm they just
+ * checked in the right person.
+ */
+export function personName(person, fallback = "Unnamed") {
+  return [person?.firstName, person?.lastName].filter(Boolean).join(" ").trim() || fallback;
+}
+
 export function isAdmin(userTypes) {
   return hasRole(userTypes, "admin");
 }

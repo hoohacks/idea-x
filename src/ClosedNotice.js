@@ -27,7 +27,7 @@ export default function ClosedNotice({ what = "Registration" }) {
       </Hero>
 
       <Box sx={{ pb: 8 }}>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           <Button variant="contained" href={EVENT.siteUrl}>
             About the event
           </Button>

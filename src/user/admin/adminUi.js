@@ -26,8 +26,7 @@ export function PageHeader({ title, stats = [], progress, children }) {
             {stats.length > 0 && (
                 <Stack
                     direction="row"
-                    spacing={2.5}
-                    sx={{ mt: 1.5, flexWrap: "wrap", rowGap: 1 }}
+                    sx={{ gap: 2.5, mt: 1.5, flexWrap: "wrap", rowGap: 1 }}
                 >
                     {stats.map(({ label, value }) => (
                         <Stack key={label} direction="row" spacing={0.75} alignItems="baseline">

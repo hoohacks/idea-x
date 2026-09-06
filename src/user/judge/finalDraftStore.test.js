@@ -26,6 +26,17 @@ jest.mock("firebase/database", () => ({
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
   onValue: jest.fn(),
+  // single-writer tests only; concurrency lives in draftConcurrency.test.js
+  runTransaction: async (reference, callback) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = callback(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current !== null } };
+    }
+    await mockUpdate({ path: "" }, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
   serverTimestamp: () => 1700000000000,
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));

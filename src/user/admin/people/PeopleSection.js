@@ -142,7 +142,7 @@ export default function PeopleSection({ onResult }) {
             <Alert severity="info" action={<Button size="small" onClick={() => setSelected([])}>Clear</Button>}>
               <Stack spacing={1}>
                 <Typography variant="body2">{selected.length} selected</Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
                   {selectedJudges.length > 0 && (
                     <>
                       <Button size="small" variant="outlined" disabled={busy}
@@ -206,7 +206,7 @@ export default function PeopleSection({ onResult }) {
                   </Box>
                 </Stack>
 
-                <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5, flexShrink: 0 }}>
+                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, flexShrink: 0 }}>
                   <TextField
                     select
                     size="small"

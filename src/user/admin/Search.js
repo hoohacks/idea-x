@@ -18,6 +18,15 @@ import Layout from "../Layout";
 import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
 import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
 
+// dietary values are meant to be the small fixed lowercase set Registration.js
+// writes ("none", "vegetarian", ...), but peopleService.blankCompetitor used
+// to default new walk-in records to "None" -- a capital N -- and that
+// capitalized copy does not repair itself once it is in the database.
+// Comparing case-insensitively here means a legacy "None" record reads
+// exactly like "none" instead of showing catering a bogus dietary flag and
+// splitting the filter into two buckets for what is really one.
+const isNoDietaryRestriction = (value) => !value || String(value).trim().toLowerCase() === "none";
+
 function Search() {
   const [query, setQuery] = useState("");
   const [checkedInFilter, setCheckedInFilter] = useState("");
@@ -61,7 +70,10 @@ function Search() {
 
   const dietaryOptions = useMemo(() => {
     const values = new Set(
-      competitors.map((person) => person.dietaryRestriction).filter(Boolean)
+      competitors
+        .map((person) => person.dietaryRestriction)
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase())
     );
     return [...values].sort();
   }, [competitors]);
@@ -80,7 +92,8 @@ function Search() {
           String(Boolean(person.checkedIn)) === checkedInFilter;
 
         const matchesDietary =
-          dietaryFilter === "" || person.dietaryRestriction === dietaryFilter;
+          dietaryFilter === "" ||
+          String(person.dietaryRestriction ?? "").trim().toLowerCase() === dietaryFilter;
 
         return matchesQuery && matchesCheckedIn && matchesDietary;
       })
@@ -151,9 +164,9 @@ function Search() {
                 spacing={1}
               >
                 <Stack sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                     <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
-                    {person.dietaryRestriction && person.dietaryRestriction !== "none" && (
+                    {!isNoDietaryRestriction(person.dietaryRestriction) && (
                       <Chip
                         label={person.dietaryRestriction}
                         size="small"
@@ -165,7 +178,7 @@ function Search() {
                       <Chip label="got food" size="small" variant="outlined" />
                     )}
                   </Stack>
-                  <Stack direction="row" spacing={1.5} alignItems="baseline" flexWrap="wrap">
+                  <Stack sx={{ gap: 1.5 }} direction="row" alignItems="baseline" flexWrap="wrap">
                     <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
                       {person.email}
                     </Typography>

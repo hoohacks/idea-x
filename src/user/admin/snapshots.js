@@ -1,4 +1,4 @@
-import { ref, get, update, push, onValue, serverTimestamp } from "firebase/database";
+import { ref, get, update, push, onValue, runTransaction, serverTimestamp } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
 import { resolveName } from "./adminAction.js";
@@ -66,34 +66,82 @@ export async function captureSnapshot({ label, reason = null, paths = JUDGING_PA
 
     const bytes = entries.reduce((sum, entry) => sum + entry.value.length, 0);
     const id = push(ref(database, "snapshots")).key;
-
-    const updates = {
-      [`snapshots/${id}`]: { entries },
-      [`snapshotIndex/${id}`]: {
-        at: serverTimestamp(),
-        by: admin.uid,
-        byName: await resolveName(admin.uid),
-        label,
-        reason,
-        paths,
-        bytes,
-      },
+    const meta = {
+      at: serverTimestamp(),
+      by: admin.uid,
+      byName: await resolveName(admin.uid),
+      label,
+      reason,
+      paths,
+      bytes,
     };
 
-    // prune in the same update, so the store cannot grow without bound and a
-    // failed prune cannot leave an orphaned payload behind
-    const indexSnap = await get(ref(database, "snapshotIndex"));
-    if (indexSnap.exists()) {
-      const existing = Object.entries(indexSnap.val() ?? {})
-        .map(([key, meta]) => ({ key, at: meta?.at ?? 0 }))
+    /*
+     * Insert this entry's metadata into /snapshotIndex and prune whatever is
+     * past KEEP_SNAPSHOTS, as ONE conditional write.
+     *
+     * The old code read /snapshotIndex, computed the single oldest entry to
+     * evict from that read, and wrote the insert and the eviction together in
+     * a plain update(). Two captures landing together both read the SAME
+     * pre-capture index, so both computed the SAME entry to evict -- the
+     * index gained two entries and lost one, net +1 over the limit, without
+     * bound as more captures piled up in the same window.
+     *
+     * runTransaction closes that specifically: the server reruns the updater
+     * against its own latest value whenever a write has landed since this
+     * client last read it, so the second capture's prune math runs against a
+     * value that already reflects the first capture's insert (and its
+     * prune), never a stale read from before it. Two concurrent captures
+     * serialize into two correct, sequential edits instead of two
+     * conflicting ones -- /snapshotIndex can never hold more than
+     * KEEP_SNAPSHOTS entries, no matter how many captures land at once. That
+     * part of this bug is ELIMINATED, not narrowed: a transaction is a real
+     * compare-and-swap, unlike a read followed by a plain write.
+     *
+     * `existing` is read from `current`, not from `next` -- the entry being
+     * inserted here still carries a serverTimestamp() sentinel, resolved only
+     * when the transaction actually commits server-side, so it cannot be
+     * sorted by `.at` locally. Every entry in `current`, by contrast, already
+     * committed with a real numeric timestamp.
+     */
+    let staleKeys = [];
+    const indexResult = await runTransaction(ref(database, "snapshotIndex"), (current) => {
+      const existing = Object.entries(current ?? {})
+        .map(([key, entryMeta]) => ({ key, at: entryMeta?.at ?? 0 }))
         .sort((a, b) => b.at - a.at);
-      for (const stale of existing.slice(KEEP_SNAPSHOTS - 1)) {
-        updates[`snapshots/${stale.key}`] = null;
-        updates[`snapshotIndex/${stale.key}`] = null;
-      }
+
+      staleKeys = existing.slice(KEEP_SNAPSHOTS - 1).map((entry) => entry.key);
+
+      const next = { ...(current ?? {}) };
+      for (const stale of staleKeys) delete next[stale];
+      next[id] = meta;
+      return next;
+    });
+
+    if (!indexResult.committed) {
+      return { ok: false, error: "Could not update the restore point list. Nothing was saved." };
     }
 
+    /*
+     * The payload, plus deleting the payloads of whatever the transaction
+     * above just pruned -- bundled into one update so a failure here cannot
+     * leave a payload for an entry the index no longer lists (an orphan that
+     * would never surface again, and would never be cleaned up: exactly the
+     * unbounded growth this module exists to prevent).
+     *
+     * This does NOT make the transaction and this update into one atomic
+     * cross-node operation -- RTDB has no primitive for that, only
+     * multi-path update() (atomic, not conditional) and single-path
+     * transactions (conditional, single node). A crash between the two calls
+     * can still leave /snapshotIndex pointing at a payload that was never
+     * written. That fails safe rather than silently: restoreSnapshot and
+     * previewSnapshot both already refuse cleanly when a payload is missing,
+     * so a dangling index entry is visible and inert, not a storage leak.
+     */
+    const updates = { [`snapshots/${id}`]: { entries } };
+    for (const stale of staleKeys) updates[`snapshots/${stale}`] = null;
     await update(ref(database), updates);
+
     return { ok: true, id, bytes };
   } catch (error) {
     console.error("Could not create a restore point:", error);

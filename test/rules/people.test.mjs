@@ -92,6 +92,29 @@ describe("competitors", () => {
     await assertFails(get(ref(db("erin"), "competitors/dave")));
   });
 
+  test("claiming a team does not open its records to you", async () => {
+    // teamId is a field you write about yourself -- the write rule pins only
+    // checkedIn and foodCheckIn -- so if the read gate compares nothing but
+    // teamId, membership is a claim rather than a fact. dave is on no team;
+    // he types one team's id into his own record and every competitor on it
+    // becomes readable, resume and email and all. Membership is settled by
+    // teams/{id}/members, which only the person themselves or an admin can
+    // add to, so that is what the gate has to ask.
+    await assertSucceeds(update(ref(db("dave"), "competitors/dave"), { teamId: "team1" }));
+
+    await assertFails(get(ref(db("dave"), "competitors/alice")));
+    await assertFails(get(ref(db("dave"), "competitors/bob")));
+  });
+
+  test("and being claimed by a stranger does not put them in your team's view", async () => {
+    // the same gap in the other direction: dave asserts team1 about himself,
+    // so a real member comparing teamIds would find a match and read a record
+    // belonging to someone who never joined.
+    await assertSucceeds(update(ref(db("dave"), "competitors/dave"), { teamId: "team1" }));
+
+    await assertFails(get(ref(db("alice"), "competitors/dave")));
+  });
+
   test("nobody may enumerate the list", async () => {
     await assertFails(get(ref(db("alice"), "competitors")));
     await assertFails(get(ref(db("judge1"), "competitors")));

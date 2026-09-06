@@ -5,7 +5,7 @@
  * The merge is what turns them into the one `userData` the app renders, so it
  * is the place a blank field on one record can erase a real one on another.
  */
-import { hasRole, roleList, isAdmin, isJudge, mergeRoleProfiles, ROLES } from "./roles";
+import { personName, hasRole, roleList, isAdmin, isJudge, mergeRoleProfiles, ROLES } from "./roles";
 
 describe("role predicates", () => {
   test("a missing list is not a role", () => {
@@ -63,5 +63,36 @@ describe("merging one person's role records", () => {
 
   test("roles are merged in ROLES order", () => {
     expect(ROLES).toEqual(["competitor", "judge", "admin"]);
+  });
+});
+
+/**
+ * A name that is present but empty is the case that kept slipping through.
+ *
+ * Granting someone a role from the control panel seeds `firstName: ""` rather
+ * than leaving it out, so `${first} ${last}` produced a single space -- which
+ * renders as a blank row in a team roster and a blank name on the check-in
+ * screen, where a volunteer is trying to confirm they scanned the right person.
+ * A record missing the fields entirely produced "undefined undefined".
+ */
+describe("a name for display", () => {
+  test("uses both parts when both are there", () => {
+    expect(personName({ firstName: "Ada", lastName: "Lovelace" })).toBe("Ada Lovelace");
+  });
+
+  test("uses whichever part exists, without a stray space", () => {
+    expect(personName({ firstName: "Ada", lastName: "" })).toBe("Ada");
+    expect(personName({ lastName: "Lovelace" })).toBe("Lovelace");
+  });
+
+  test("an empty record falls back rather than rendering a space", () => {
+    expect(personName({ firstName: "", lastName: "" }, "Name not on file")).toBe("Name not on file");
+    expect(personName({}, "Name not on file")).toBe("Name not on file");
+    expect(personName(null, "Name not on file")).toBe("Name not on file");
+    expect(personName(undefined)).toBe("Unnamed");
+  });
+
+  test("whitespace-only names are not names", () => {
+    expect(personName({ firstName: "   ", lastName: " " }, "fallback")).toBe("fallback");
   });
 });

@@ -1,5 +1,6 @@
 import { ref, get } from "firebase/database";
 import { database } from "../../firebase.js";
+import { personName } from "../../roles.js";
 import { FIRST_ROUND } from "./getTeamInfo.js";
 import { BATCH_COUNT, BATCH_TIMES, TARGET_JUDGES_PER_TEAM } from "./schedulePlan.js";
 
@@ -62,9 +63,9 @@ export async function fetchBatchConfig() {
     }
 }
 
+/** The shared one, under the name the judging modules already import. */
 export function displayName(person, fallback) {
-    const name = [person?.firstName, person?.lastName].filter(Boolean).join(" ").trim();
-    return name || fallback;
+    return personName(person, fallback);
 }
 
 /**

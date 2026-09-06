@@ -53,6 +53,16 @@ The site goes live weeks before the event, so registration and sign-in are
 Both public forms and the login page become a "not open yet" page.
 **`#/login?staff`** still reaches the sign-in form, so organizers can work.
 
+**Organizers who need an account** use **`#/judge-registration?staff`**, which
+reaches the judge and mentor form while the doors are shut. An organizer is a
+judge record with the admin flag set on top, so that is the form they want; an
+existing organizer then grants admin from the control panel. The competitor
+form has no staff entrance, deliberately.
+
+The very first organizer is the exception, because writing `/admins` requires
+being an admin already. Bootstrap that one by hand: Firebase console →
+Authentication → add a user, then Realtime Database → `admins/{uid}: true`.
+
 **To open it:** set the repository variable `REGISTRATION_OPEN` to `true`
 (Settings → Secrets and variables → Actions → Variables), then run Deploy. No
 code change. The deploy summary says which way the doors are.
@@ -489,11 +499,9 @@ with `--rollback <file> --apply`.
 record rejects all of it, and Realtime Database reports `PERMISSION_DENIED` for
 the lot.
 
-**Outstanding:** `READ_LEGACY_SCORE_PATH` in `src/user/judge/getTeamInfo.js` is
-still `true`, so pre-migration scores at `teams/{id}/scores` are still read and
-every average comes from two places. Run the migration, verify, then set it to
-`false` and delete the branches it guards. The dashboard counts the teams that
-still have legacy cards.
+The app reads scores only from `/scores`. On a database that predates
+`migrate-scores`, cards under `teams/{id}/scores` count for nothing until they
+are moved — the control panel blocks the event and counts the teams affected.
 
 ---
 

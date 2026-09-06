@@ -76,6 +76,17 @@ export default function ScheduleSection({ config, onResult }) {
 
           <Stack spacing={1}>
             <Typography variant="body2">Batch times</Typography>
+            {/*
+              Saying so, because the field does not.
+              These times are read when a schedule is BUILT and copied onto every
+              judge's card and every team's page at publish. Changing them later
+              moves nothing that is already out there -- and "Batch times saved"
+              reads exactly like it did.
+            */}
+            <Typography variant="caption" color="text.secondary">
+              Used when you build a schedule. Cards already published keep their
+              times; change one on the team's record.
+            </Typography>
             {batches.map((batch) => (
               <TextField
                 key={batch}
@@ -89,7 +100,9 @@ export default function ScheduleSection({ config, onResult }) {
             <Button
               variant="outlined"
               disabled={busy}
-              onClick={() => run(() => setBatchTimes(times), "Batch times saved")}
+              onClick={() =>
+                run(() => setBatchTimes(times), "Batch times saved for the next build")
+              }
               sx={{ alignSelf: "flex-start" }}
             >
               Save times

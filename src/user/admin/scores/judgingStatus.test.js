@@ -132,7 +132,9 @@ describe("scores from judges who are no longer assigned", () => {
     const { teamRows } = buildProgress(data);
     const alpha = teamRows.find((r) => r.name === "Alpha");
 
-    expect(alpha.received).toBe(3);
+    // received stays at the panel's own count -- the ghost card moves the
+    // average without moving completeness
+    expect(alpha.received).toBe(2);
     expect(alpha.averageScore).toBeLessThan(36);
   });
 
@@ -142,6 +144,21 @@ describe("scores from judges who are no longer assigned", () => {
     const { teamRows } = buildProgress(data);
     const alpha = teamRows.find((r) => r.name === "Alpha");
     expect(alpha.unassignedScorers[0].judgeName).toBe("some-unk");
+  });
+
+  test("do not count toward completeness -- an assigned judge outstanding still flags the team", () => {
+    // Gamma's only assigned judge is j1, and j1 has not scored; a judge who is
+    // not on Gamma's panel scores it instead
+    const data = fixture();
+    data.scores.t3 = { j9: card() };
+    data.judges.j9 = judge("Ghost", { isRound1Judge: false });
+
+    const { teamRows } = buildProgress(data);
+    const gamma = teamRows.find((r) => r.name === "Gamma");
+
+    expect(gamma.outstanding.map((j) => j.judgeId)).toEqual(["j1"]);
+    expect(gamma.received).toBe(0);
+    expect(gamma.status).toBe(TEAM_UNJUDGED);
   });
 });
 

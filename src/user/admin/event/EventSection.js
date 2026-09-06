@@ -1,22 +1,27 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Stack, TextField, Typography } from "@mui/material";
 import { setEventStart } from "./eventConfig";
-import { EVENT_START } from "../../../eventInfo";
+import { EVENT_START, eventLocalToInstant, instantToEventLocal } from "../../../eventInfo";
 
 /**
  * The event start.
  *
  * The countdown on the home page reads config/eventStart when it is set and
  * falls back to EVENT_START in eventInfo.js, so the date can move without a
- * deploy. The input is datetime-local, which speaks the same
- * "YYYY-MM-DDTHH:mm" the constant already uses.
+ * deploy.
+ *
+ * A `datetime-local` input speaks wall clock and has no idea what zone it is
+ * in, so both directions are converted explicitly. Slicing the first sixteen
+ * characters off whatever was stored is what this used to do, and it showed a
+ * UTC instant -- which is what the seed writes -- as if the digits were already
+ * Eastern, moving the event by four hours each time somebody pressed Save.
  */
 export default function EventSection({ config, onResult }) {
   const stored = config.eventStart ?? EVENT_START;
-  const [value, setValue] = useState(String(stored).slice(0, 16));
+  const [value, setValue] = useState(() => instantToEventLocal(stored));
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { setValue(String(stored).slice(0, 16)); }, [stored]);
+  useEffect(() => { setValue(instantToEventLocal(stored)); }, [stored]);
 
   return (
     <section>
@@ -36,11 +41,14 @@ export default function EventSection({ config, onResult }) {
           />
           <Button
             variant="outlined"
-            disabled={busy || value === String(stored).slice(0, 16)}
+            disabled={busy || value === instantToEventLocal(stored)}
             onClick={async () => {
               setBusy(true);
               try {
-                onResult(await setEventStart(`${value}:00`), "Event start saved");
+                onResult(
+                  await setEventStart(eventLocalToInstant(value).toISOString()),
+                  "Event start saved"
+                );
               } finally {
                 setBusy(false);
               }

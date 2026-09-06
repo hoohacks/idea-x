@@ -335,7 +335,7 @@ function JudgingProgress() {
                   spacing={1}
                 >
                   <Box sx={{ minWidth: 0 }}>
-                    <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                    <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
                       <Typography variant="h5">{team.name}</Typography>
                       {chip.label && (
                         <Chip label={chip.label} size="small" color={chip.color} />
@@ -392,7 +392,7 @@ function JudgingProgress() {
                   spacing={1}
                 >
                   <Box sx={{ minWidth: 0 }}>
-                    <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                    <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
                       <Typography variant="h5">{judge.name}</Typography>
                       {!judge.checkedIn && (
                         <Chip label="Not checked in" size="small" color="warning" />

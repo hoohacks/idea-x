@@ -121,7 +121,7 @@ function Profile() {
                     </Row>
                     <Divider />
                     <Row label="Role">
-                        <Stack direction="row" spacing={0.75} flexWrap="wrap">
+                        <Stack sx={{ gap: 0.75 }} direction="row" flexWrap="wrap">
                             {roles.length ? (
                                 roles.map((role) => (
                                     <Chip

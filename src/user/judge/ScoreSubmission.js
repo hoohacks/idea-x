@@ -157,7 +157,22 @@ function ScoreSubmission({
         </Stack>
       </DialogTitle>
 
-      <Box component="form" onSubmit={handleSubmit}>
+      {/*
+        The form has to be a flex column, not a plain wrapper.
+
+        Dialog lays its paper out as a column and expects DialogContent to be
+        the flex child that scrolls. Putting a form between them made the
+        sections stack at their natural height instead, so on a phone the whole
+        rubric ran past the bottom of the card and left "Submit score" hanging
+        outside it, over the page behind -- on the one screen a judge uses
+        standing in a room. `minHeight: 0` is the half that does the work: it
+        lets this shrink below its content so DialogContent can scroll.
+      */}
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: "flex", flexDirection: "column", flex: "1 1 auto", minHeight: 0 }}
+      >
         <DialogContent dividers sx={{ py: 2 }}>
           <Stack spacing={1.75}>
             {restored && (
@@ -215,11 +230,12 @@ function ScoreSubmission({
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: "wrap", justifyContent: "space-between" }}>
           <Typography variant="body2">
             {missing ? `${missing} left to fill in` : `Total ${runningTotal} / ${SCORE_MAX_TOTAL}`}
           </Typography>
-          <Stack direction="row" spacing={1}>
+          {/* ml:auto keeps the pair on the right when the row wraps on a phone */}
+          <Stack direction="row" spacing={1} sx={{ ml: "auto" }}>
             <Button onClick={onClose} disabled={inFlight} variant="outlined">
               Cancel
             </Button>

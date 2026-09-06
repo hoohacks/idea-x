@@ -154,7 +154,7 @@ export default function FinalRoundPlanner() {
               </Alert>
             ))}
 
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+            <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
               <Button variant="contained" component={RouterLink} to="/user/admin/judging">
                 Watch final round progress
               </Button>
@@ -233,7 +233,7 @@ export default function FinalRoundPlanner() {
       ))}
 
       <Card sx={{ p: 2 }}>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
+        <Stack sx={{ gap: 2 }} direction="row" flexWrap="wrap" alignItems="center">
           <Stat label="finalists" value={`${stats.finalists} of ${stats.ranked}`} />
           <Stat label="panel" value={stats.minPanel === stats.maxPanel
             ? String(stats.minPanel)
@@ -256,7 +256,7 @@ export default function FinalRoundPlanner() {
         </Stack>
       </Card>
 
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+      <Stack sx={{ gap: 1 }} direction="row" flexWrap="wrap">
         <Button variant="contained" onClick={() => setConfirmPublish(true)} disabled={publishing || !slots.length}>
           {publishing ? "Publishing…" : "Publish the final round"}
         </Button>

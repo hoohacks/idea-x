@@ -19,15 +19,35 @@ jest.mock("firebase/database", () => ({
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "entry-1" }),
   serverTimestamp: () => 0,
+  // guardWith -> captureSnapshot prunes /snapshotIndex through a real
+  // transaction now (see snapshots.test.js for why). No test here races two
+  // captures, so a single-writer version -- read the current value, run the
+  // updater, write the result -- is all this file needs.
+  runTransaction: async (reference, updater) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = updater(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current != null } };
+    }
+    await mockUpdate({ path: "" }, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+// only requireAdmin is stubbed; the rest of the module is plain helpers
+jest.mock("../../../roles.js", () => ({
+  ...jest.requireActual("../../../roles.js"),
+  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+}));
 
 const {
   overrideSlotChanges,
+  overrideTeamSlot,
   deleteScore,
   setTeamSubmitted,
   clearSchedule,
+  forceIntoFinalRound,
 } = require("./dangerZone");
 const { requireAdmin } = require("../../../roles.js");
 
@@ -175,11 +195,10 @@ describe("clearing scores as well, to start from scratch", () => {
    * team and judge, so they survive a regeneration and re-attach. Starting over
    * for real is a separate, louder choice.
    *
-   * The part that is easy to miss: READ_LEGACY_SCORE_PATH is still true, so
-   * pre-migration cards live at teams/{id}/scores as well as under /scores.
-   * A reset that only cleared /scores would leave cards that still show in the
-   * dashboard and still count toward the averages the final round is picked
-   * from -- which is exactly not starting from scratch.
+   * The part that is easy to miss: cards used to live at teams/{id}/scores as
+   * well, on any database old enough to predate the migration. Nothing reads
+   * them now, but a reset that only cleared /scores would leave them sitting
+   * there -- which is exactly not starting from scratch.
    */
   const world = (extra = {}) => async (r) => {
     const data = {
@@ -249,10 +268,21 @@ describe("clearing scores as well, to start from scratch", () => {
     expect(result.ok).toBe(true);
     expect(result.snapshotId).toBeTruthy();
 
-    // first write is the restore point, and it carries the scores it is about
-    // to destroy rather than a pointer to them
-    const [snapshotPayload] = mockUpdate.mock.calls[0].slice(1);
-    const stored = snapshotPayload["snapshots/entry-1"];
+    // The restore point lands as two writes now -- the index (via a
+    // transaction, so concurrent captures can't both prune the same stale
+    // entry; see snapshots.test.js) and then the payload -- but both still
+    // land before the wipe, which is the property this test pins: the
+    // payload write is found among the calls that happened before the wipe.
+    const wipeCallIndex = mockUpdate.mock.calls.findIndex(
+      (call) => "teams/t1/schedule" in call[1]
+    );
+    const snapshotWrite = mockUpdate.mock.calls
+      .slice(0, wipeCallIndex)
+      .map((call) => call[1])
+      .find((payload) => "snapshots/entry-1" in payload);
+
+    expect(snapshotWrite).toBeTruthy();
+    const stored = snapshotWrite["snapshots/entry-1"];
     expect(stored.entries.map((e) => e.path)).toEqual(
       expect.arrayContaining(["teams", "judges", "scores"])
     );
@@ -298,5 +328,174 @@ describe("clearing scores as well, to start from scratch", () => {
     mockGet.mockImplementation(world());
     await clearSchedule({ includeScores: true });
     expect(mockUpdate.mock.calls.at(-1)[1]["adminLog/entry-1"].summary).toMatch(/score/i);
+  });
+});
+
+/**
+ * Bug: the `before` written into the log entry was read once, at the very
+ * top, and never refreshed -- even though guardWith's own captureSnapshot
+ * (a fresh read of every path, plus an index read/write) sits between that
+ * read and the eventual write, with several more await points where another
+ * organizer's edit can land.
+ *
+ * Concretely: organizer A calls clearSchedule while organizer B fixes team
+ * T's room through overrideTeamSlot. The safety snapshot correctly captures
+ * B's new room (it re-reads live data), but the OLD code's adminLog entry
+ * recorded A's stale room from before B's fix -- and undoAdminAction's
+ * findDrift only ever validates the log's `after`, never whether `before`
+ * was accurate. A later Undo would silently restore the stale room and
+ * clobber B's correction with no drift check catching it.
+ */
+describe("clearing the schedule racing with another organizer's edit", () => {
+  test("the logged before-state reflects the value at write time, not the value read when clearSchedule started", async () => {
+    let teamsCall = 0;
+    mockGet.mockImplementation(async (r) => {
+      if (r.path === "teams") {
+        teamsCall += 1;
+        // First read (clearSchedule's own, at the top) sees the room
+        // organizer A started with. Every read after that -- guardWith's
+        // restore-point read, and this fix's re-read before the write --
+        // sees organizer B's fix, which lands in between.
+        const room = teamsCall === 1 ? "Rice 110" : "Rice 204";
+        return { exists: () => true, val: () => ({ t1: { schedule: { room, batch: 1 } } }) };
+      }
+      return { exists: () => false, val: () => null };
+    });
+
+    const result = await clearSchedule();
+    expect(result.ok).toBe(true);
+
+    const payload = mockUpdate.mock.calls.at(-1)[1];
+    const logged = payload["adminLog/entry-1"].changes.find(
+      (c) => c.path === "teams/t1/schedule"
+    );
+    expect(JSON.parse(logged.before)).toEqual({ room: "Rice 204", batch: 1 });
+  });
+});
+
+
+/**
+ * Two teams cannot present in one room at one time.
+ *
+ * The planner's moveTeam refuses it and so does scheduleTeamIntoBatch, but the
+ * slot override -- reached from a team's record, which is the one an organizer
+ * uses once the event is running -- did not. Typing a room another team already
+ * had in that batch double-booked the room and reported success.
+ */
+describe("moving a team that is already scheduled", () => {
+  const world = {
+    "teams/team-clearing": {
+      name: "Clearing",
+      schedule: { id: "team-clearing", teamName: "Clearing", room: "Rice 344", time: "5:00 PM", batch: 1 },
+    },
+    teams: {
+      "team-clearing": { name: "Clearing", schedule: { room: "Rice 344", time: "5:00 PM", batch: 1 } },
+      "team-rootstock": { name: "Rootstock", schedule: { room: "Rice 342", time: "5:00 PM", batch: 1 } },
+      // same room, different batch: not a clash, they never overlap
+      "team-almanac": { name: "Almanac", schedule: { room: "Rice 341", time: "5:15 PM", batch: 2 } },
+    },
+    judges: { j1: { teamAssignments: { "team-clearing": { room: "Rice 344", time: "5:00 PM" } } } },
+  };
+
+  beforeEach(() => {
+    mockGet.mockImplementation(async (r) => {
+      const data = world[r.path];
+      return { exists: () => data !== undefined, val: () => data };
+    });
+  });
+
+  const move = (room, time = "5:00 PM") =>
+    overrideTeamSlot({ teamId: "team-clearing", teamName: "Clearing", room, time });
+
+  test("refuses a room another team holds in the same batch", async () => {
+    const result = await move("Rice 342");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Rootstock is already in Rice 342 in batch 1/);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("allows a room only taken in a different batch", async () => {
+    const result = await move("Rice 341");
+
+    expect(result.ok).toBe(true);
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  test("allows a free room", async () => {
+    expect((await move("Rice 999")).ok).toBe(true);
+  });
+
+  /**
+   * The check is on the room changing, not on every save. An event that already
+   * has a clash somewhere should not have its time edits blocked by it.
+   */
+  test("editing only the time is not blocked", async () => {
+    const result = await move("Rice 344", "5:05 PM");
+
+    expect(result.ok).toBe(true);
+    const paths = Object.keys(mockUpdate.mock.calls[0][1]);
+    expect(paths).toContain("teams/team-clearing/schedule/time");
+    expect(paths).not.toContain("teams/team-clearing/schedule/room");
+  });
+});
+
+/**
+ * Two finalists cannot present in one room at one time, same as the first
+ * round -- but forceIntoFinalRound writes teams/{id}/finalSlot straight from
+ * TeamEditDrawer's free-text room/timeslot fields with no check against every
+ * other finalist's seat. Two teams typed into the same room at the same
+ * timeslot both reported success and double-booked the room.
+ */
+describe("forcing a team into the final round by hand", () => {
+  const world = {
+    teams: {
+      "team-clearing": { name: "Clearing" },
+      "team-rootstock": { name: "Rootstock", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } },
+      "team-almanac": { name: "Almanac", finalSlot: { room: "Rice 342", timeslot: "Slot 2" } },
+    },
+  };
+
+  beforeEach(() => {
+    mockGet.mockImplementation(async (r) => {
+      const value = world[r.path];
+      return { exists: () => value !== undefined, val: () => value };
+    });
+  });
+
+  const force = (teamId, room, timeslot) =>
+    forceIntoFinalRound({ teamId, teamName: world.teams[teamId]?.name, room, timeslot });
+
+  test("refuses a room and timeslot another finalist already holds", async () => {
+    const result = await force("team-clearing", "Rice 344", "Slot 1");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Rootstock is already in Rice 344 at Slot 1/);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("allows the same room at a different timeslot", async () => {
+    const result = await force("team-clearing", "Rice 344", "Slot 2");
+    expect(result.ok).toBe(true);
+  });
+
+  test("allows a free room and timeslot", async () => {
+    const result = await force("team-clearing", "Rice 999", "Slot 1");
+    expect(result.ok).toBe(true);
+  });
+
+  /**
+   * The check is on the seat actually changing, not on every save. A finalist
+   * re-saved with the exact slot it already has -- to add a judge, say -- should
+   * not be blocked by a clash that was already there before this call.
+   */
+  test("a team already sitting in its own slot is not blocked from being touched again", async () => {
+    world.teams["team-clearing"] = {
+      name: "Clearing",
+      finalSlot: { room: "Rice 344", timeslot: "Slot 1" },
+    };
+
+    const result = await force("team-clearing", "Rice 344", "Slot 1");
+    expect(result.ok).toBe(true);
   });
 });

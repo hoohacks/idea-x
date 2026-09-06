@@ -1,4 +1,4 @@
-import { ref, get, update, onValue, serverTimestamp } from "firebase/database";
+import { ref, get, update, onValue, runTransaction, serverTimestamp } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
@@ -154,7 +154,31 @@ export async function saveFinalDraft(plan) {
       version: (plan.version ?? 0) + 1,
     };
 
-    await update(ref(database), { [FINAL_DRAFT_PATH]: payload });
+    /*
+     * The check above narrows the race; it does not close it. Two organizers
+     * who read the same version both pass it and both write, the second
+     * silently overwriting the first with both told it saved. See the same
+     * note in draftStore.js.
+     */
+    const result = await runTransaction(
+      ref(database, FINAL_DRAFT_PATH),
+      (current) => {
+        if ((current?.version ?? 0) !== (plan.version ?? 0)) return undefined;
+        return payload;
+      },
+      { applyLocally: false }
+    );
+
+    if (!result.committed) {
+      const winner = result.snapshot?.val();
+      return {
+        ok: false,
+        error:
+          `${winner?.createdByName ?? "Another organizer"} saved this draft first. ` +
+          `Reload the planner to pick up their version.`,
+      };
+    }
+
     return { ok: true, version: payload.version };
   } catch (error) {
     console.error("Could not save the final round draft:", error);

@@ -18,9 +18,13 @@ jest.mock("firebase/database", () => ({
   serverTimestamp: () => 0,
 }));
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+// only requireAdmin is stubbed; the rest of the module is plain helpers
+jest.mock("../../../roles.js", () => ({
+  ...jest.requireActual("../../../roles.js"),
+  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+}));
 
-const { roomsInUse, remapChanges, listRooms, removeRoom } = require("./roomsService");
+const { roomsInUse, remapChanges, moveCollisions, listRooms, removeRoom } = require("./roomsService");
 const { requireAdmin } = require("../../../roles.js");
 
 /**
@@ -205,5 +209,170 @@ describe("remapping a room the final round is also using", () => {
       judgesData: {},
     }).map((c) => c.path);
     expect(only.some((path) => path.includes("final"))).toBe(false);
+  });
+});
+
+
+/**
+ * Emptying a room asked where its teams should go and then believed the answer.
+ *
+ * Two rooms both busy in batch 1 merged into one room with two teams in it at
+ * five o'clock -- produced by the tool an organizer reaches for when a room
+ * falls through, which is exactly when there is no time to notice.
+ */
+describe("emptying a room into another one", () => {
+  const busyBoth = {
+    a: { name: "Clearing", schedule: { room: "Rice 344", time: "5:00 PM", batch: 1, teamName: "Clearing" } },
+    b: { name: "Rootstock", schedule: { room: "Rice 342", time: "5:00 PM", batch: 1, teamName: "Rootstock" } },
+  };
+
+  describe("the pure check", () => {
+    test("names the team already sitting in the destination", () => {
+      const found = moveCollisions({ from: "Rice 344", to: "Rice 342", teamsData: busyBoth });
+
+      expect(found).toHaveLength(1);
+      expect(found[0].team.teamName).toBe("Clearing");
+      expect(found[0].blockedBy.teamName).toBe("Rootstock");
+    });
+
+    test("a destination busy in a different batch is not a collision", () => {
+      const laterBatch = {
+        ...busyBoth,
+        b: { name: "Rootstock", schedule: { room: "Rice 342", time: "5:15 PM", batch: 2, teamName: "Rootstock" } },
+      };
+
+      expect(moveCollisions({ from: "Rice 344", to: "Rice 342", teamsData: laterBatch })).toEqual([]);
+    });
+
+    test("an empty destination is never a collision", () => {
+      expect(moveCollisions({ from: "Rice 344", to: "Rice 999", teamsData: busyBoth })).toEqual([]);
+    });
+  });
+
+  describe("removeRoom", () => {
+    const world = (teams) => ({
+      "config/judgingRooms": ["Rice 344", "Rice 342"],
+      teams,
+      judges: {},
+      "finalRound/teams": {},
+    });
+
+    const serve = (data) =>
+      mockGet.mockImplementation(async (r) => {
+        const value = data[r.path];
+        return { exists: () => value !== undefined, val: () => value };
+      });
+
+    beforeEach(() => {
+      mockUpdate.mockReset();
+      mockUpdate.mockResolvedValue(undefined);
+      requireAdmin.mockResolvedValue({ uid: "admin-1" });
+    });
+
+    test("refuses to move teams into a room that is busy at the same time", async () => {
+      serve(world(busyBoth));
+
+      const result = await removeRoom("Rice 344", { moveTo: "Rice 342" });
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/Rice 342 is not free: Rootstock is already there in batch 1/);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    test("moves them when the destination is free at that time", async () => {
+      serve(
+        world({
+          ...busyBoth,
+          b: { name: "Rootstock", schedule: { room: "Rice 342", time: "5:15 PM", batch: 2, teamName: "Rootstock" } },
+        })
+      );
+
+      const result = await removeRoom("Rice 344", { moveTo: "Rice 342" });
+
+      expect(result.ok).toBe(true);
+      const paths = Object.keys(mockUpdate.mock.calls[0][1]);
+      expect(paths).toContain("teams/a/schedule/room");
+    });
+  });
+});
+
+/**
+ * A room used only by the final round -- the final round typically gets a
+ * dedicated room of its own -- has nothing in roomsInUse, which looks only at
+ * team.schedule. removeRoom used that count for both the "choose where they
+ * go" refusal and the decision to run remapChanges at all, so a final-only
+ * room used to come off config/judgingRooms with no prompt and no remap: every
+ * finalist's teams/{id}/finalSlot/room, finalRound/teams/{id}/room and each
+ * judge's finalAssignments/{id}/room kept pointing at a room that no longer
+ * existed. Dangling, with no repair path.
+ */
+describe("emptying a room the final round is using", () => {
+  const world = (teams) => ({
+    "config/judgingRooms": ["Rice 344", "Rice 342"],
+    teams,
+    judges: {},
+    "finalRound/teams": {},
+  });
+
+  const serve = (data) =>
+    mockGet.mockImplementation(async (r) => {
+      const value = data[r.path];
+      return { exists: () => value !== undefined, val: () => value };
+    });
+
+  beforeEach(() => {
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue(undefined);
+    requireAdmin.mockResolvedValue({ uid: "admin-1" });
+  });
+
+  test("refuses to silently drop a room only the final round is using", async () => {
+    serve(world({ f1: { name: "Finalist", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } } }));
+
+    const result = await removeRoom("Rice 344");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/1 team\(s\) are scheduled in Rice 344/);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("moves the finalist's slot when given a destination", async () => {
+    serve(world({ f1: { name: "Finalist", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } } }));
+
+    const result = await removeRoom("Rice 344", { moveTo: "Rice 342" });
+
+    expect(result.ok).toBe(true);
+    const paths = Object.keys(mockUpdate.mock.calls[0][1]);
+    expect(paths).toContain("teams/f1/finalSlot/room");
+  });
+
+  test("refuses to move finalists into a room another finalist already holds at that timeslot", async () => {
+    serve(
+      world({
+        f1: { name: "Finalist", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } },
+        f2: { name: "Runner-up", finalSlot: { room: "Rice 342", timeslot: "Slot 1" } },
+      })
+    );
+
+    const result = await removeRoom("Rice 344", { moveTo: "Rice 342" });
+
+    expect(result.ok).toBe(false);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("a room used by both rounds counts both, and remaps both", async () => {
+    serve(
+      world({
+        f1: { name: "Finalist", finalSlot: { room: "Rice 344", timeslot: "Slot 1" } },
+        a: { name: "Clearing", schedule: { room: "Rice 344", time: "5:00 PM", batch: 1, teamName: "Clearing" } },
+      })
+    );
+
+    const result = await removeRoom("Rice 344", { moveTo: "Rice 342" });
+
+    expect(result.ok).toBe(true);
+    const paths = Object.keys(mockUpdate.mock.calls[0][1]);
+    expect(paths).toContain("teams/f1/finalSlot/room");
+    expect(paths).toContain("teams/a/schedule/room");
   });
 });

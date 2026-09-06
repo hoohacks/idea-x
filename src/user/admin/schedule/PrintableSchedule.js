@@ -3,6 +3,7 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { onValue, ref } from "firebase/database";
 import { database } from "../../../firebase";
 import { EVENT } from "../../../eventInfo";
+import { pageMinHeight } from "../../../theme";
 
 /**
  * The schedule on paper, one sheet per room.
@@ -39,11 +40,10 @@ export default function PrintableSchedule() {
   const batchTimes = config.batchTimes ?? {};
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 4 }, bgcolor: "background.paper", minHeight: "100vh" }}>
+    <Box sx={{ p: { xs: 2, sm: 4 }, bgcolor: "background.paper", ...pageMinHeight }}>
       <Stack
         className="no-print"
         direction="row"
-        spacing={1}
         alignItems="center"
         sx={{ mb: 3, flexWrap: "wrap", gap: 1 }}
       >
@@ -74,38 +74,47 @@ export default function PrintableSchedule() {
               </Typography>
             </Stack>
 
-            <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
-              <Box component="thead">
-                <Box component="tr">
-                  {["Batch", "Time", "Team", "Judges", "Score out of 40"].map((head) => (
-                    <Box
-                      key={head}
-                      component="th"
-                      sx={{
-                        textAlign: "left",
-                        py: 0.75,
-                        pr: 1.5,
-                        borderBottom: 1,
-                        borderColor: "divider",
-                        typography: "overline",
-                      }}
-                    >
-                      {head}
+            {/*
+              A five-column sheet cannot shrink below its own content, so on a phone
+              the table pushed the whole page sideways -- an organizer checking a room
+              from the floor got a site that slid under the thumb. Only the table
+              scrolls now, and print gets the full width back, since paper has no
+              viewport to overflow.
+            */}
+            <Box sx={{ overflowX: "auto", "@media print": { overflowX: "visible" } }}>
+              <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
+                <Box component="thead">
+                  <Box component="tr">
+                    {["Batch", "Time", "Team", "Judges", "Score out of 40"].map((head) => (
+                      <Box
+                        key={head}
+                        component="th"
+                        sx={{
+                          textAlign: "left",
+                          py: 0.75,
+                          pr: 1.5,
+                          borderBottom: 1,
+                          borderColor: "divider",
+                          typography: "overline",
+                        }}
+                      >
+                        {head}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {room.slots.map((slot) => (
+                    <Box component="tr" key={`${slot.batch}-${slot.teamId}`}>
+                      <Cell data>{slot.batch ?? "—"}</Cell>
+                      <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "—"}</Cell>
+                      <Cell>{slot.teamName}</Cell>
+                      <Cell>{slot.judges.join(", ") || "—"}</Cell>
+                      {/* deliberately blank: this column is why the sheet exists */}
+                      <Cell />
                     </Box>
                   ))}
                 </Box>
-              </Box>
-              <Box component="tbody">
-                {room.slots.map((slot) => (
-                  <Box component="tr" key={`${slot.batch}-${slot.teamId}`}>
-                    <Cell data>{slot.batch ?? "—"}</Cell>
-                    <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "—"}</Cell>
-                    <Cell>{slot.teamName}</Cell>
-                    <Cell>{slot.judges.join(", ") || "—"}</Cell>
-                    {/* deliberately blank: this column is why the sheet exists */}
-                    <Cell />
-                  </Box>
-                ))}
               </Box>
             </Box>
           </Box>

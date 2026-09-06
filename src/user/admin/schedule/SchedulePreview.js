@@ -406,7 +406,7 @@ export default function SchedulePreview({ header = null }) {
           alignItems={{ xs: "stretch", sm: "center" }}
           justifyContent="space-between"
         >
-          <Stack direction="row" spacing={2} alignItems="baseline" flexWrap="wrap">
+          <Stack sx={{ gap: 2 }} direction="row" alignItems="baseline" flexWrap="wrap">
             <Typography variant="body2">
               {stats.teams} teams · {stats.judges} judges
             </Typography>

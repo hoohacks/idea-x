@@ -1,5 +1,5 @@
 import { Navigate, Routes, Route } from "react-router-dom"
-import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { createContext, useContext, useMemo, useState, useEffect, useCallback } from "react"
 import Registration from "./Registration"
 import Search from "./user/admin/Search.js"
 import RegisteredAtDisplay from "./RegisteredAtDisplay"
@@ -30,6 +30,28 @@ import PrintableSchedule from "./user/admin/schedule/PrintableSchedule.js"
 import { ROLES, hasRole, mergeRoleProfiles } from "./roles.js"
 
 const AuthContext = createContext(null);
+
+/**
+ * Whether the phone drawer is open, held above the route rather than inside the
+ * nav.
+ *
+ * `ProtectedRoute` renders `<Layout>Loading...</Layout>` while it waits for a
+ * role, and the page it then renders brings its own `Layout`. React sees a
+ * different element in that position, so it throws the first one away -- nav
+ * included. Anyone who tapped the menu in that window watched it open and
+ * vanish, or never open at all, and the second tap worked. On a phone on
+ * conference wifi that window is long enough to hit every time.
+ *
+ * Keeping the flag above the swap means whichever nav mounts reads the state
+ * the person actually set.
+ */
+const NavDrawerContext = createContext(null);
+
+function NavDrawerProvider({ children }) {
+  const [open, setOpen] = useState(false);
+  const value = useMemo(() => ({ open, setOpen }), [open]);
+  return <NavDrawerContext.Provider value={value}>{children}</NavDrawerContext.Provider>;
+}
 
 function useAuth() {
   return useContext(AuthContext);
@@ -153,6 +175,7 @@ function AuthProvider({ children }) {
 function App() {
   return (
     <AuthProvider>
+      <NavDrawerProvider>
       <Routes>
         <Route path="/" element={<Registration />} />
         <Route path="/ideathon-registration" element={<Registration />} />
@@ -187,10 +210,11 @@ function App() {
             app being broken rather than the address being wrong */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </NavDrawerProvider>
     </AuthProvider>
   )
 }
 
-export { AuthContext, useAuth, ProtectedRoute };
+export { AuthContext, NavDrawerContext, NavDrawerProvider, useAuth, ProtectedRoute };
 
 export default App

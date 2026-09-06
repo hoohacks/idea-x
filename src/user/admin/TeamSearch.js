@@ -33,6 +33,7 @@ import {
 import { IoChevronDown } from "react-icons/io5";
 import Layout from "../Layout";
 import { memberIds } from "../team/teamMembers";
+import { personName } from "../../roles";
 import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
 import { deleteScore } from "./danger/dangerZone";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
@@ -49,7 +50,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
   return (
     <Accordion disableGutters elevation={0} sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}>
       <AccordionSummary expandIcon={<IoChevronDown />} sx={{ px: 0, minHeight: 40 }}>
-        <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+        <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
           <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
             {label}
           </Typography>
@@ -194,7 +195,7 @@ function TeamSearch() {
             if (nameCache.has(uid)) return nameCache.get(uid);
             const userSnapshot = await get(ref(database, `competitors/${uid}`));
             const userInfo = userSnapshot.exists() ? userSnapshot.val() : null;
-            const name = userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : "Unknown user";
+            const name = userInfo ? personName(userInfo, "Unnamed competitor") : "Unknown user";
             nameCache.set(uid, name);
             return name;
           })
@@ -279,7 +280,7 @@ function TeamSearch() {
           return (
             <Row key={key} accent={Boolean(team.submitted)}>
               <Stack spacing={0.5}>
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                   <Typography sx={{ fontWeight: 600 }}>{team.name || "Unnamed team"}</Typography>
                   <Chip
                     label={team.submitted ? "submitted" : "not submitted"}
@@ -312,7 +313,7 @@ function TeamSearch() {
 
                 {team.submitted && submission && (
                   <Box sx={{ mt: 0.5 }}>
-                    <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                    <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
                       <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
                         {submission.ideaName}
                       </Typography>
