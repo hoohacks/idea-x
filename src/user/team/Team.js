@@ -1,7 +1,7 @@
 import Layout from "../Layout";
 import { useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "../../App";
-import { ref, get, set, onValue } from "firebase/database";
+import { ref, get, set, onValue, runTransaction } from "firebase/database";
 import { auth, database, storage } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import { memberIds } from "./teamMembers";
@@ -112,13 +112,66 @@ function Team() {
                 deckName = pitchDeckName;
             }
 
-            await set(ref(database, `teams/${teamId}/submission`), {
-                ideaName,
-                problemStatement,
-                targetIndustry,
-                pitchDeckName: deckName,
-                pitchDeckURL,
-            });
+            // The seed guard above only fills ideaName/problemStatement/
+            // targetIndustry in ONCE per team, on purpose -- so a tab that has
+            // been open since before this moment can still be holding exactly
+            // what was there when it loaded, not what a teammate saved since.
+            // Writing that straight over the database the way this used to
+            // would silently erase a real submission with someone else's
+            // stale or half-finished text. The pitch deck fields above don't
+            // have this problem because they are re-derived from the live
+            // `teamData` every time, not from state seeded once; these three
+            // can't be re-derived the same way without also throwing away
+            // whatever THIS tab is actively typing, which is the exact bug
+            // the seed guard exists to prevent.
+            //
+            // So instead of guessing, check: has the database moved past what
+            // this tab last saw? A transaction makes that check and the write
+            // atomic, the same way saveDraft in draftStore.js protects two
+            // organizers editing the same schedule draft -- reading the
+            // stored value a moment before writing narrows the race but does
+            // not close it.
+            const baseline = submissionBaseline.current;
+            const result = await runTransaction(
+                ref(database, `teams/${teamId}/submission`),
+                (current) => {
+                    const storedIdea = current?.ideaName ?? "";
+                    const storedProblem = current?.problemStatement ?? "";
+                    const storedIndustry = current?.targetIndustry ?? "";
+                    if (
+                        storedIdea !== baseline.ideaName ||
+                        storedProblem !== baseline.problemStatement ||
+                        storedIndustry !== baseline.targetIndustry
+                    ) {
+                        // somebody saved real content this tab never saw --
+                        // abort by returning nothing rather than overwrite it
+                        return undefined;
+                    }
+                    return {
+                        ideaName,
+                        problemStatement,
+                        targetIndustry,
+                        pitchDeckName: deckName,
+                        pitchDeckURL,
+                    };
+                },
+                { applyLocally: false }
+            );
+
+            if (!result.committed) {
+                setUploadError(
+                    "A teammate already saved changes to the idea, problem statement or target " +
+                    "industry since this page loaded them. Reload the page to see the latest " +
+                    "version, then make your changes again on top of it."
+                );
+                return;
+            }
+
+            // This tab's own write just became the new baseline, so saving
+            // again later in the same session (no reload in between) is
+            // checked against what it actually wrote, not what it started with.
+            submissionBaseline.current = { ideaName, problemStatement, targetIndustry };
+
             // only after the details land, so a team is never marked submitted
             // with nothing to show
             await set(ref(database, `teams/${teamId}/submitted`), true);
@@ -150,6 +203,14 @@ function Team() {
     // Which team the form fields were last filled in from, so a later snapshot
     // does not overwrite what somebody is typing. See below.
     const seededFor = useRef(null);
+
+    // What the database held for these three fields at the moment they were
+    // seeded (or, after this tab's own successful save, what it just wrote).
+    // handleSubmitProject compares this against what's actually stored right
+    // before writing, so a save started from a stale seed can tell it is
+    // about to clobber a teammate's newer submission instead of doing it
+    // silently.
+    const submissionBaseline = useRef({ ideaName: "", problemStatement: "", targetIndustry: "" });
 
     // Fetch team data from Firebase if teamId is available
     useEffect(() => {
@@ -183,9 +244,17 @@ function Team() {
             // problem statement lost it the moment a teammate pressed Join.
             if (seededFor.current !== teamId) {
                 seededFor.current = teamId;
-                setIdeaName(teamData.submission?.ideaName || "");
-                setProblemStatement(teamData.submission?.problemStatement || "");
-                setTargetIndustry(teamData.submission?.targetIndustry || "");
+                const seededIdea = teamData.submission?.ideaName || "";
+                const seededProblem = teamData.submission?.problemStatement || "";
+                const seededIndustry = teamData.submission?.targetIndustry || "";
+                submissionBaseline.current = {
+                    ideaName: seededIdea,
+                    problemStatement: seededProblem,
+                    targetIndustry: seededIndustry,
+                };
+                setIdeaName(seededIdea);
+                setProblemStatement(seededProblem);
+                setTargetIndustry(seededIndustry);
                 setPitchDeckName(teamData.submission?.pitchDeckName || "");
             }
 
