@@ -77,11 +77,50 @@ export async function resolveName(uid) {
 }
 
 /**
+ * Re-verify a set of paths' current values, one time, immediately before the
+ * write they guard.
+ *
+ * This is NOT a compare-and-swap. RTDB's multi-path `update()` has no
+ * condition of its own -- nothing stops a write from landing in the gap
+ * between this check resolving and the `update()` call actually reaching the
+ * server. What this closes is the much larger gap that used to sit in front
+ * of it: `requireAdmin`'s round trip and `resolveName`'s, both awaited after
+ * the caller's own drift check had already passed. Shrinking a window this
+ * far, right up against the write it protects, is the most a client can do
+ * without either a Cloud Function that owns the check and the write as one
+ * atomic step, or restructuring so every one of these paths lives under a
+ * single parent an RTDB transaction could guard at once (today they do not
+ * -- an admin action's changes can span any number of unrelated top-level
+ * paths).
+ */
+async function findLiveDrift(expectedByPath) {
+  const paths = Object.keys(expectedByPath);
+  if (!paths.length) return null;
+
+  const current = await captureBefore(paths);
+  for (const path of paths) {
+    const want = expectedByPath[path] ?? null;
+    const now = current[path] ?? null;
+    if (JSON.stringify(now) !== JSON.stringify(want)) {
+      return { path, expected: want, actual: now };
+    }
+  }
+  return null;
+}
+
+/**
  * `hasRestorePoint` changes only what the entry says when the before-state was
  * too big to inline. That distinction matters: "too large to undo" used to be
  * the whole story, and it was read as "this is gone". With a restore point
  * taken beforehand the data is recoverable, and the log has to say so or nobody
  * will look.
+ *
+ * `guardBefore`, when given, is a `{ path: expectedCurrentValue }` map that is
+ * re-checked with `findLiveDrift` right before the write goes out, and the
+ * write is refused if anything drifted. It is `null` for every caller that
+ * does not pass it -- undo is the only caller that has an "expected current
+ * value" worth re-checking this late, and every other call site keeps writing
+ * exactly as it always did.
  */
 export async function applyAdminAction({
   action,
@@ -89,6 +128,7 @@ export async function applyAdminAction({
   changes = [],
   undoable = true,
   hasRestorePoint = false,
+  guardBefore = null,
 }) {
   let admin;
   try {
@@ -120,6 +160,21 @@ export async function applyAdminAction({
     const updates = {};
     for (const { path, after } of changes) updates[path] = after ?? null;
     updates[`adminLog/${entryId}`] = entry;
+
+    // Last check before the write, deliberately as close to `update()` as the
+    // rest of this function's async work (resolveName above included) allows.
+    if (guardBefore) {
+      const drift = await findLiveDrift(guardBefore);
+      if (drift) {
+        return {
+          ok: false,
+          error:
+            `${drift.path} has changed since this action, so undoing it would discard ` +
+            `that edit. Nothing was changed.`,
+          drift,
+        };
+      }
+    }
 
     await update(ref(database), updates);
     return { ok: true, entryId };
@@ -197,6 +252,12 @@ export async function undoAdminAction(entryId) {
 
   // The undo goes through applyAdminAction, so it is logged like anything else,
   // and marking the original happens in the same atomic update as the reversal.
+  //
+  // `guardBefore: current` re-checks these same paths one more time, right
+  // before the write -- the drift check just above already passed, but it ran
+  // before requireAdmin (and applyAdminAction's own resolveName) were
+  // awaited, and a second admin's write reaching any of these paths in that
+  // gap would otherwise be silently overwritten by this undo.
   return applyAdminAction({
     action: `undo:${entry.action}`,
     summary: `Undid: ${entry.summary}`,
@@ -209,5 +270,6 @@ export async function undoAdminAction(entryId) {
       },
     ],
     undoable: false,
+    guardBefore: current,
   });
 }
