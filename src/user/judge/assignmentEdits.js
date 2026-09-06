@@ -1,4 +1,4 @@
-import { ref, get, update } from "firebase/database";
+import { ref, get, update, runTransaction } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
 import { assignmentList } from "./assignmentList.js";
@@ -48,14 +48,13 @@ async function loadContext(teamId, judgeUid) {
 }
 
 /**
- * Write one assignment out to the team and to every judge on it.
- * `roster` is the full, final list of { judgeId, judgeName } for the team.
+ * Write the per-judge denormalised copies for a roster that has ALREADY been
+ * committed to `teams/{teamId}/schedule` by `commitRoster` below. `assignment`
+ * is that committed value (schedule spread with the new `judges`), so every
+ * copy matches what actually landed rather than what this caller merely
+ * intended to write.
  */
-function fanOut(updates, teamId, schedule, roster, previousRoster) {
-  const assignment = { ...schedule, judges: roster };
-
-  updates[`teams/${teamId}/schedule/judges`] = roster;
-
+function fanOut(updates, teamId, assignment, roster, previousRoster) {
   for (const judge of roster) {
     updates[`judges/${judge.judgeId}/teamAssignments/${teamId}`] = assignment;
   }
@@ -72,6 +71,79 @@ function rosterOf(schedule) {
   const raw = schedule?.judges;
   const list = Array.isArray(raw) ? raw : Object.values(raw ?? {});
   return list.filter((entry) => entry && entry.judgeId);
+}
+
+/**
+ * Commit a recomputed roster for one team, refusing a write built on a roster
+ * that has since moved.
+ *
+ * `assignJudgeToTeam`, `unassignJudgeFromTeam` and `swapJudges` all read the
+ * roster once (in `loadContext`), decide the new roster from that snapshot,
+ * and used to write it straight back with a plain `update()` -- no version, no
+ * recheck. Two organizers racing the same no-show scramble both read the same
+ * [Y, Z], one computes [Z, X] and the other computes [Y], and whichever
+ * `update()` lands second silently threw the first one away. BOTH calls
+ * returned `{ ok: true }`, so neither organizer had any reason to look again.
+ *
+ * The fix is the same compare-and-set shape draftStore.js uses for the
+ * schedule preview: `runTransaction` re-reads the roster atomically at write
+ * time and aborts if it no longer matches what this caller read. Unlike
+ * draftStore there is no stored `version` field on a team's schedule, so the
+ * roster itself (structurally compared) is the token being raced over -- it
+ * plays the same role a version number would. Exactly one writer commits; the
+ * other gets `{ ok: false }` and a message telling it to reload, instead of a
+ * silent loss.
+ *
+ * This closes the race for the roster of record at `teams/{teamId}/schedule`.
+ * It does NOT close two smaller ones, and both would need more than this file
+ * to close in full:
+ *
+ *   - The per-judge `teamAssignments` copies below are written by a SEPARATE
+ *     `update()` after the transaction commits, because RTDB's client
+ *     transaction API only ever guards one location, not the several
+ *     top-level paths this fan-out touches. A crash in the gap between the
+ *     transaction committing and that update landing would leave a judge's
+ *     copy stale until the next write touches this team. That gap did not
+ *     exist before (the old code's one `update()` was atomic across every
+ *     path it touched) -- it is the one thing this fix trades away to close
+ *     the much larger, much more likely race described above. Closing it too
+ *     would need either a server-side function that owns both writes, or
+ *     restructuring so a judge's assignment is read through the team's
+ *     record rather than duplicated onto their own.
+ *   - `findConflict`'s "is this judge already booked elsewhere in this batch"
+ *     check reads a different judge's `teamAssignments` node, before this
+ *     transaction runs, and is not re-checked atomically with the commit.
+ *     Two organizers could still double-book a judge if both pass that check
+ *     in the same window. This function only narrows that window; it does not
+ *     close it.
+ */
+async function commitRoster({ teamId, previous, roster }) {
+  const result = await runTransaction(
+    ref(database, `teams/${teamId}/schedule`),
+    (current) => {
+      // abort by returning nothing: the roster moved between the read this
+      // caller acted on and this write, so the caller's decision is stale
+      if (JSON.stringify(rosterOf(current)) !== JSON.stringify(previous)) return undefined;
+      return { ...current, judges: roster };
+    },
+    { applyLocally: false }
+  );
+
+  if (!result.committed) {
+    const stillThere = result.snapshot?.exists();
+    return {
+      ok: false,
+      error: stillThere
+        ? "Another organizer already changed this team's judges. Reload and try again."
+        : "That team's schedule entry was removed while you were choosing. Reload and try again.",
+    };
+  }
+
+  const updates = {};
+  fanOut(updates, teamId, result.snapshot.val(), roster, previous);
+  await update(ref(database), updates);
+
+  return { ok: true, roster };
 }
 
 /**
@@ -245,11 +317,7 @@ export async function assignJudgeToTeam({ judgeUid, teamId, allowConflict = fals
     { judgeId: judgeUid, judgeName: displayName(judges[judgeUid]) },
   ];
 
-  const updates = {};
-  fanOut(updates, teamId, schedule, roster, previous);
-  await update(ref(database), updates);
-
-  return { ok: true, roster };
+  return commitRoster({ teamId, previous, roster });
 }
 
 export async function unassignJudgeFromTeam({ judgeUid, teamId }) {
@@ -271,11 +339,7 @@ export async function unassignJudgeFromTeam({ judgeUid, teamId }) {
     };
   }
 
-  const updates = {};
-  fanOut(updates, teamId, schedule, roster, previous);
-  await update(ref(database), updates);
-
-  return { ok: true, roster };
+  return commitRoster({ teamId, previous, roster });
 }
 
 /** Replace one judge with another on the same team, in a single update. */
@@ -306,9 +370,5 @@ export async function swapJudges({ teamId, fromJudgeUid, toJudgeUid, allowConfli
     .filter((entry) => entry.judgeId !== fromJudgeUid)
     .concat({ judgeId: toJudgeUid, judgeName: displayName(judges[toJudgeUid]) });
 
-  const updates = {};
-  fanOut(updates, teamId, schedule, roster, previous);
-  await update(ref(database), updates);
-
-  return { ok: true, roster };
+  return commitRoster({ teamId, previous, roster });
 }

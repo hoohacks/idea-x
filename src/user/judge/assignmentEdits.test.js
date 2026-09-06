@@ -17,10 +17,33 @@ jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "
 const mockGet = jest.fn();
 const mockUpdate = jest.fn();
 
+/**
+ * Holds a `get` open, so two concurrent callers can both read the roster
+ * before either of them writes -- mirrors the gate in
+ * draftConcurrency.test.js, which exists for exactly the same reason.
+ */
+const mockGate = { waiting: [], held: 0, hold: 0 };
+
 jest.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
+  // The live value a transaction re-reads and (if it commits) mutates. Nothing
+  // is awaited between reading `mockScheduleValue` and writing it back, which is
+  // what the real server guarantees -- an `await` in here would reproduce the
+  // very race this mock exists to test for.
+  runTransaction: async (reference, callback) => {
+    const current = mockScheduleValue;
+    const next = callback(current);
+    if (next === undefined) {
+      return {
+        committed: false,
+        snapshot: { val: () => current, exists: () => current != null },
+      };
+    }
+    mockScheduleValue = next;
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  },
 }));
 
 const {
@@ -43,23 +66,48 @@ const JUDGES = { j1: judge("Ada"), j2: judge("Alan"), j3: judge("Grace") };
 const snap = (value) => ({ exists: () => value !== null && value !== undefined, val: () => value });
 const payload = () => mockUpdate.mock.calls.at(-1)[1];
 
-/** The two nodes these functions read, and nothing else. */
+/** The live value `runTransaction` above reads and writes. */
+let mockScheduleValue = null;
+
+/** A `get` result, gated so a caller can be held mid-read for a race test. */
+function gatedSnap(value) {
+  if (mockGate.held < mockGate.hold) {
+    mockGate.held += 1;
+    return new Promise((resolve) => mockGate.waiting.push(() => resolve(snap(value))));
+  }
+  return Promise.resolve(snap(value));
+}
+
+/** The nodes these functions read, and nothing else. */
 function world({ roster = [{ judgeId: "j1", judgeName: "Ada J" }], assignments = {} } = {}) {
-  mockGet.mockImplementation(async ({ path }) => {
-    if (path === "teams/t1/schedule") return snap(schedule(roster));
-    if (path === "judges") return snap(JUDGES);
+  mockScheduleValue = schedule(roster);
+  mockGet.mockImplementation(({ path }) => {
+    if (path === "teams/t1/schedule") return gatedSnap(mockScheduleValue);
+    if (path === "judges") return gatedSnap(JUDGES);
     if (path.startsWith("judges/") && path.endsWith("/teamAssignments")) {
       const uid = path.split("/")[1];
-      return snap(assignments[uid] ?? null);
+      return Promise.resolve(snap(assignments[uid] ?? null));
     }
-    return snap(null);
+    return Promise.resolve(snap(null));
   });
+}
+
+/** Start both calls, let every gated read land, then release them together. */
+async function raceTwo(callA, callB) {
+  const runA = callA();
+  const runB = callB();
+  while (mockGate.waiting.length < mockGate.hold) await Promise.resolve();
+  mockGate.waiting.forEach((release) => release());
+  return Promise.all([runA, runB]);
 }
 
 beforeEach(() => {
   mockGet.mockReset();
   mockUpdate.mockReset();
   mockUpdate.mockResolvedValue(undefined);
+  mockGate.waiting = [];
+  mockGate.held = 0;
+  mockGate.hold = 0;
 });
 
 describe("adding a judge", () => {
@@ -68,8 +116,8 @@ describe("adding a judge", () => {
     const result = await assignJudgeToTeam({ judgeUid: "j2", teamId: "t1" });
 
     expect(result.ok).toBe(true);
+    expect(mockScheduleValue.judges.map((j) => j.judgeId)).toEqual(["j1", "j2"]);
     const p = payload();
-    expect(p["teams/t1/schedule/judges"].map((j) => j.judgeId)).toEqual(["j1", "j2"]);
     // the judge already on the team must see the new panel too
     expect(p["judges/j1/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual(["j1", "j2"]);
     expect(p["judges/j2/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual(["j1", "j2"]);
@@ -87,9 +135,11 @@ describe("adding a judge", () => {
     expect(copy.batch).toBe(1);
   });
 
-  test("everything lands in ONE update, so it cannot half-apply", async () => {
+  test("the per-judge fan-out lands in ONE update, so it cannot half-apply", async () => {
     world();
     await assignJudgeToTeam({ judgeUid: "j2", teamId: "t1" });
+    // the roster of record commits via the transaction above; this is the
+    // separate, still-atomic-among-itself update for the judges' own copies
     expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 
@@ -154,7 +204,7 @@ describe("removing a judge", () => {
     const p = payload();
     expect(p["judges/j2/teamAssignments/t1"]).toBeNull();
     expect(p["judges/j1/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual(["j1"]);
-    expect(p["teams/t1/schedule/judges"].map((j) => j.judgeId)).toEqual(["j1"]);
+    expect(mockScheduleValue.judges.map((j) => j.judgeId)).toEqual(["j1"]);
   });
 
   test("the last judge cannot be removed, or the team presents to an empty room", async () => {
@@ -181,11 +231,12 @@ describe("swapping one judge for another", () => {
     { judgeId: "j2", judgeName: "Alan J" },
   ];
 
-  test("out and in happen in a single update", async () => {
+  test("out and in happen in a single fan-out update", async () => {
     world({ roster: pair });
     await swapJudges({ teamId: "t1", fromJudgeUid: "j2", toJudgeUid: "j3" });
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockScheduleValue.judges.map((j) => j.judgeId)).toEqual(["j1", "j3"]);
     const p = payload();
     expect(p["judges/j2/teamAssignments/t1"]).toBeNull();
     expect(p["judges/j3/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual(["j1", "j3"]);
@@ -213,8 +264,69 @@ describe("a legacy roster stored as an object", () => {
     world({ roster: { 0: { judgeId: "j1", judgeName: "Ada J" } } });
     await assignJudgeToTeam({ judgeUid: "j2", teamId: "t1" });
 
-    expect(Array.isArray(payload()["teams/t1/schedule/judges"])).toBe(true);
-    expect(payload()["teams/t1/schedule/judges"].map((j) => j.judgeId)).toEqual(["j1", "j2"]);
+    expect(Array.isArray(mockScheduleValue.judges)).toBe(true);
+    expect(mockScheduleValue.judges.map((j) => j.judgeId)).toEqual(["j1", "j2"]);
+  });
+});
+
+/**
+ * Two organizers racing the same team's roster.
+ *
+ * This is the no-show-judge scramble: team t1 has judges [Y, Z]. Organizer A
+ * swaps Y for X; organizer B removes Z; both act on the same [Y, Z] they each
+ * read a moment earlier. Before the fix, both writes were a plain `update()`
+ * with nothing checked in between, so the second one silently threw the first
+ * away and BOTH calls came back `{ ok: true }` -- the exact failure this file
+ * exists to close.
+ */
+describe("two organizers racing the same team's judges", () => {
+  const Y = "j1";
+  const Z = "j2";
+  const X = "j3";
+
+  function racingWorld() {
+    world({
+      roster: [
+        { judgeId: Y, judgeName: "Ada J" },
+        { judgeId: Z, judgeName: "Alan J" },
+      ],
+    });
+    mockGate.hold = 4; // loadContext's two get()s, times two callers
+  }
+
+  test("only one edit survives, and the loser is told to reload rather than told it saved", async () => {
+    racingWorld();
+
+    const [swapResult, unassignResult] = await raceTwo(
+      () => swapJudges({ teamId: "t1", fromJudgeUid: Y, toJudgeUid: X, allowConflict: true }),
+      () => unassignJudgeFromTeam({ judgeUid: Z, teamId: "t1" })
+    );
+
+    // exactly one writer commits; the other is refused, not silently overwritten
+    expect([swapResult.ok, unassignResult.ok].filter(Boolean)).toHaveLength(1);
+    const loser = swapResult.ok ? unassignResult : swapResult;
+    expect(loser.ok).toBe(false);
+    expect(loser.error).toMatch(/changed|removed/i);
+
+    // and what is actually stored is the winner's roster, not a blend of both
+    const storedIds = mockScheduleValue.judges.map((j) => j.judgeId).sort();
+    const isSwapOutcome = JSON.stringify(storedIds) === JSON.stringify([X, Z].sort());
+    const isUnassignOutcome = JSON.stringify(storedIds) === JSON.stringify([Y].sort());
+    expect(isSwapOutcome || isUnassignOutcome).toBe(true);
+    expect(swapResult.ok ? isSwapOutcome : isUnassignOutcome).toBe(true);
+
+    // only the winner's fan-out was ever written
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test("with no one racing, the same edit still goes through", async () => {
+    racingWorld();
+    mockGate.hold = 0;
+
+    const result = await unassignJudgeFromTeam({ judgeUid: Z, teamId: "t1" });
+
+    expect(result.ok).toBe(true);
+    expect(mockScheduleValue.judges.map((j) => j.judgeId)).toEqual([Y]);
   });
 });
 
