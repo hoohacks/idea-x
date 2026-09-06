@@ -17,7 +17,10 @@
  */
 import { readJson, writeJson } from "./localStore.js";
 
-const STORAGE_KEY = "ideathon:pendingScores:v1";
+// Exported only so resilience.test.js can spy on the exact key a second
+// "tab" would race over; every other caller still goes through the
+// functions below.
+export const STORAGE_KEY = "ideathon:pendingScores:v1";
 
 /**
  * How long a submit may hang before it is treated as un-acknowledged. Long
@@ -72,6 +75,25 @@ export function hasPendingFor({ round, teamId, judgeUid }) {
   );
 }
 
+/** Drop any existing queued card for this judge/team/round, then add this one. */
+function nextQueue(current, cardEntry) {
+  const rest = current.filter(
+    (entry) =>
+      !(entry.round === cardEntry.round && entry.teamId === cardEntry.teamId && entry.judgeUid === cardEntry.judgeUid)
+  );
+  rest.push(cardEntry);
+  return rest;
+}
+
+/**
+ * How many times to re-base and retry before giving up on detecting further
+ * contention and just writing. Every attempt is one synchronous read of
+ * localStorage -- cheap -- and this many rounds of a second tab's write
+ * landing in this exact gap, back to back, is not something a real judging
+ * session should ever produce.
+ */
+const MAX_ENQUEUE_ATTEMPTS = 5;
+
 /**
  * Queue a card. One entry per judge/team/round: re-submitting the same card
  * replaces the queued one rather than stacking a second copy, so a judge who
@@ -79,14 +101,31 @@ export function hasPendingFor({ round, teamId, judgeUid }) {
  *
  * Returns false when the device refused storage, which is the one case the
  * caller must surface as a real failure — there is nowhere left to keep it.
+ *
+ * This used to be readAll() -> filter -> push -> writeAll(), with nothing
+ * checked in between. Two tabs of the judging page -- a restored tab, a PWA
+ * relaunch -- can both read the same queue before either writes, and
+ * whichever `writeAll` landed second silently replaced the queue the first
+ * tab had just added its card to. Both tabs believed their card was queued;
+ * only one of them actually was.
+ *
+ * The fix re-reads the queue immediately before writing and, if it has
+ * changed since the read this call based its edit on, re-bases the same edit
+ * onto the fresh read and tries again -- an unattended retry rather than a
+ * user-facing refusal, because there is no "reload and try again" to show a
+ * judge for a queue they never looked at directly.
+ *
+ * This NARROWS the race; it does not close it. `localStorage` has no
+ * compare-and-swap: `getItem` and `setItem` are two separate calls, and
+ * nothing stops a second tab's own read-modify-write from landing in the
+ * gap between this call's last read and its `writeAll`, however short that
+ * gap is made. Closing it fully would need a cross-tab lock this file does
+ * not have access to on its own -- the Web Locks API, or moving this queue
+ * into IndexedDB, whose transactions actually are atomic across tabs. Either
+ * is a bigger change than this module's one localStorage key.
  */
 export function enqueue({ round, teamId, teamName, judgeUid, score }) {
-  const rest = readAll().filter(
-    (entry) =>
-      !(entry.round === round && entry.teamId === teamId && entry.judgeUid === judgeUid)
-  );
-
-  rest.push({
+  const cardEntry = {
     id: `${round}:${teamId}:${judgeUid}`,
     // Which version of this card it is.
     //
@@ -108,9 +147,29 @@ export function enqueue({ round, teamId, teamName, judgeUid, score }) {
     queuedAt: Date.now(),
     attempts: 0,
     lastError: null,
-  });
+  };
 
-  return writeAll(rest);
+  let before = readAll();
+  for (let attempt = 0; attempt < MAX_ENQUEUE_ATTEMPTS; attempt += 1) {
+    const rest = nextQueue(before, cardEntry);
+
+    // Re-read right up against the write. If another tab's enqueue (or a
+    // flush's remove) landed since `before` was read, `rest` was built on a
+    // queue that no longer exists -- re-base on what is actually there now
+    // and try again, instead of overwriting it.
+    const justBefore = readAll();
+    if (JSON.stringify(justBefore) !== JSON.stringify(before)) {
+      before = justBefore;
+      continue;
+    }
+
+    return writeAll(rest);
+  }
+
+  // Retries exhausted under sustained contention: commit against the
+  // freshest read available rather than drop the card or hang forever. This
+  // carries the same residual risk every attempt above already carried.
+  return writeAll(nextQueue(readAll(), cardEntry));
 }
 
 export function removeEntry(id) {
