@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Alert,
   Box,
@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import Layout from "../Layout";
 import ScheduleCard from "./ScheduleCard";
 import { readScheduleMeta } from "./scheduleConfig";
-import { getPersonalSchedule, getFinalRoundSchedule } from "./getPersonalSchedule";
+import { subscribeToPersonalSchedule, subscribeToFinalRoundSchedule } from "./getPersonalSchedule";
 import ScoreSubmission from "./ScoreSubmission";
 import { useAuth } from "../../App";
 import { hasRole } from "../../roles";
@@ -80,21 +80,32 @@ function Assignments() {
   const canManageSchedule = hasRole(userTypes, "admin");
   const canViewAssignments = hasRole(userTypes, "judge");
 
-  const { online, pendingCount, pendingTeamIds, syncing, retry } = useJudgingSync(
+  const { online, pendingCount, pendingTeamIdsByRound, syncing, retry } = useJudgingSync(
     canViewAssignments ? currentUserId : null
   );
 
-  const loadPersonalSchedule = useCallback(async () => {
+  /**
+   * The judge's first-round assignments, live.
+   *
+   * This used to be a one-shot `get` that ran once on mount and never again,
+   * so a judge who left the page open all day never saw an organizer's room
+   * fix or reassignment -- their card just sat there wrong while the actual
+   * schedule moved on. Subscribing to the judge's own assignment node means
+   * an edit reaches an open tab the same way `.info/connected` already does,
+   * with no reload required.
+   */
+  useEffect(() => {
     if (!canViewAssignments) {
+      setPersonalAssignments([]);
       setLoadingAssignments(false);
-      return;
+      return undefined;
     }
-    try {
-      setLoadingAssignments(true);
-      const teams = await getPersonalSchedule();
-      setPersonalAssignments(teams ?? []);
-      setScoredTeamIds(await getMyScoredTeamIds((teams ?? []).map((t) => t.id)));
-    } catch (err) {
+
+    setLoadingAssignments(true);
+    let cancelled = false;
+
+    const onError = (err) => {
+      if (cancelled) return;
       console.error("Error fetching personal schedule:", err);
       // silently showing "no assignments yet" for what is really a failed read
       // sends a judge to find an organizer for a problem that is not theirs
@@ -102,14 +113,31 @@ function Assignments() {
         severity: "error",
         message: "Could not load your assignments. Check your connection and reload.",
       });
-    } finally {
       setLoadingAssignments(false);
-    }
-  }, [canViewAssignments]);
+    };
 
-  useEffect(() => {
-    loadPersonalSchedule();
-  }, [loadPersonalSchedule]);
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToPersonalSchedule(async (teams) => {
+        if (cancelled) return;
+        setPersonalAssignments(teams ?? []);
+        setLoadingAssignments(false);
+        try {
+          const scored = await getMyScoredTeamIds((teams ?? []).map((t) => t.id));
+          if (!cancelled) setScoredTeamIds(scored);
+        } catch (err) {
+          if (!cancelled) console.warn("Could not check scored teams:", err);
+        }
+      }, onError);
+    } catch (err) {
+      onError(err);
+    }
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [canViewAssignments]);
 
   /**
    * Pick up scores that synced in the background.
@@ -241,38 +269,65 @@ function Assignments() {
   // The judge's finalists come from their own record. Deriving them in the
   // browser from /finalRound only worked because every judge could read the
   // standings -- team names and average scores -- before they were announced.
+  //
+  // This is a live subscription, not a one-shot read keyed on
+  // `finalRoundActive`. A one-shot read only ever re-ran when that boolean
+  // flipped, so a final round that was published and then corrected -- a
+  // room swap, a panel fix, a republish -- while `finalRound/active` stayed
+  // true the entire time never reached a judge who already had the page
+  // open. Subscribing to the judge's own `finalAssignments` node picks up
+  // that edit the moment it lands, the same way the first-round schedule
+  // above does.
   useEffect(() => {
+    if (!finalRoundActive || !canViewAssignments) {
+      setFinalAssignments([]);
+      setFinalRoundScoredTeamIds(new Set());
+      return undefined;
+    }
+
     let cancelled = false;
-    async function load() {
-      if (!finalRoundActive || !canViewAssignments) {
-        if (!cancelled) {
-          setFinalAssignments([]);
-          setFinalRoundScoredTeamIds(new Set());
-        }
-        return;
-      }
-      try {
-        const teams = await getFinalRoundSchedule();
+
+    const onError = (err) => {
+      if (cancelled) return;
+      console.error("Error fetching final round assignments:", err);
+      // same failure mode as the first-round read above: a transient denial
+      // renders identically to "you have no final round assignments" unless
+      // it says otherwise, which sends a judge looking for an organizer over
+      // a problem that is not theirs
+      setToast({
+        severity: "error",
+        message: "Could not load your final round assignments. Check your connection and reload.",
+      });
+    };
+
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToFinalRoundSchedule(async (teams) => {
         if (cancelled) return;
         setFinalAssignments(teams);
-        const scored = await getMyFinalRoundScoredTeamIds(teams.map((t) => t.id));
-        if (!cancelled) setFinalRoundScoredTeamIds(scored);
-      } catch (err) {
-        console.error("Error fetching final round assignments:", err);
-      }
+        try {
+          const scored = await getMyFinalRoundScoredTeamIds(teams.map((t) => t.id));
+          if (!cancelled) setFinalRoundScoredTeamIds(scored);
+        } catch (err) {
+          if (!cancelled) console.warn("Could not check final round scored teams:", err);
+        }
+      }, onError);
+    } catch (err) {
+      onError(err);
     }
-    load();
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [finalRoundActive, canViewAssignments]);
 
   const remaining = useMemo(
     () =>
       personalAssignments.filter(
-        (a) => !scoredTeamIds.has(a.id) && !pendingTeamIds.has(a.id)
+        (a) => !scoredTeamIds.has(a.id) && !pendingTeamIdsByRound[FIRST_ROUND].has(a.id)
       ).length,
-    [personalAssignments, scoredTeamIds, pendingTeamIds]
+    [personalAssignments, scoredTeamIds, pendingTeamIdsByRound]
   );
 
   const draftTarget = useMemo(() => {
@@ -399,7 +454,7 @@ function Assignments() {
                         time={assignment.time}
                         onButtonClick={(card) => openFor({ ...card, round: FIRST_ROUND })}
                         disabled={scoredTeamIds.has(assignment.id)}
-                        pending={pendingTeamIds.has(assignment.id)}
+                        pending={pendingTeamIdsByRound[FIRST_ROUND].has(assignment.id)}
                       />
                     </Grid>
                   ))}
@@ -427,7 +482,7 @@ function Assignments() {
                             room={team.room}
                             time={team.timeslot ?? team.time}
                             disabled={finalRoundScoredTeamIds.has(team.id)}
-                            pending={pendingTeamIds.has(team.id)}
+                            pending={pendingTeamIdsByRound[FINAL_ROUND].has(team.id)}
                             onButtonClick={(card) => openFor({ ...card, round: FINAL_ROUND })}
                           />
                         </Grid>
