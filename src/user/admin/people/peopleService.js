@@ -1,4 +1,4 @@
-import { ref, get, push, serverTimestamp } from "firebase/database";
+import { ref, get, push, runTransaction, serverTimestamp } from "firebase/database";
 import { initializeApp, deleteApp } from "firebase/app";
 import {
   getAuth,
@@ -66,7 +66,13 @@ export function blankCompetitor({ firstName = "", lastName = "", email = "" } = 
     schoolYear: "",
     uvaSchool: "",
     resume: "",
-    dietaryRestriction: "None",
+    // lowercase, to match every reader: Registration.js writes "none",
+    // Profile.js lists ["none", ...], and Search.js's chip and dietary filter
+    // both compare against "none". A capitalized default here used to slip a
+    // record past all three -- catering saw a dietary flag reading "None" on
+    // every walk-in an organizer added by hand, and the filter split one
+    // bucket of "no restriction" into two.
+    dietaryRestriction: "none",
     checkedIn: false,
     foodCheckIn: false,
     registeredAt: serverTimestamp(),
@@ -559,20 +565,52 @@ export async function createPerson({ role, firstName, lastName, email, password,
   return { ...result, uid };
 }
 
-/** Create a database record for a uid that already has a login. */
+/**
+ * Create a database record for a uid that already has a login.
+ *
+ * The existence check used to be a plain `get` before the write -- two
+ * organizers independently fixing the same broken uid could both read "no
+ * record yet" and both write, with the second silently overwriting the
+ * first's name and email and neither one told anything went wrong. That is
+ * the same shape of race that let two organizers stomp each other's schedule
+ * draft (see draftStore.saveDraft), and the fix is the same one: a
+ * transaction that re-reads the path at the moment it commits and only
+ * writes if it is still empty, instead of trusting a read from a moment ago.
+ *
+ * This is a true compare-and-swap on `${role}/${uid}`, not a narrower window
+ * -- RTDB transactions are conditional (they retry against the server's
+ * current value and abort if a callback returns undefined), which a plain
+ * multi-path `update()` never is. It closes the double-attach race
+ * completely: whichever attempt commits first wins, and the second is told
+ * plainly rather than silently discarded. The one path this does NOT cover is
+ * a write racing an *edit* to the same record made in the instant between the
+ * transaction committing and the log entry below re-affirming the same value
+ * -- that would need the log write folded into the same transaction, which
+ * `applyAdminAction`'s single shared multi-path update does not support.
+ */
 export async function attachRecord({ uid, role, firstName, lastName, email, company = "" }) {
   if (!uid) return { ok: false, error: "Enter the account's uid." };
   if (!ROLE_NODES[role] || role === "admin") {
     return { ok: false, error: "Pick judge or competitor." };
   }
 
-  const snap = await get(ref(database, `${ROLE_NODES[role]}/${uid}`));
-  if (snap.exists()) return { ok: false, error: `That uid already has a ${role} record.` };
-
   const record =
     role === "judge"
       ? blankJudge({ firstName, lastName, email, company })
       : blankCompetitor({ firstName, lastName, email });
+
+  let result;
+  try {
+    result = await runTransaction(ref(database, `${ROLE_NODES[role]}/${uid}`), (current) =>
+      current === null ? record : undefined
+    );
+  } catch (error) {
+    return { ok: false, error: error.message || "The record could not be saved." };
+  }
+
+  if (!result.committed) {
+    return { ok: false, error: `That uid already has a ${role} record.` };
+  }
 
   return applyAdminAction({
     action: "person.create",

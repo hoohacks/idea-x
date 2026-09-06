@@ -11,12 +11,14 @@ jest.mock("../../../firebase", () => ({ database: {}, auth: { currentUser: { uid
 
 const mockUpdate = jest.fn();
 const mockGet = jest.fn();
+const mockRunTransaction = jest.fn();
 
 jest.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "new-id" }),
+  runTransaction: (...args) => mockRunTransaction(...args),
   serverTimestamp: () => 1700000000000,
 }));
 jest.mock("firebase/auth", () => ({
@@ -32,7 +34,7 @@ jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid
 const {
   removalChanges, listPeople, matchesQuery, blankJudge, blankCompetitor,
   setSoleRole, setOrganizer, describeSwitch, deletePerson, bulkSet, deleteTeam,
-  listArchived, restoreArchived,
+  listArchived, restoreArchived, attachRecord,
 } = require("./peopleService");
 const { requireAdmin } = require("../../../roles.js");
 
@@ -71,6 +73,21 @@ beforeEach(() => {
   mockGet.mockImplementation(world());
   requireAdmin.mockReset();
   requireAdmin.mockResolvedValue({ uid: "admin-1" });
+
+  // Single-writer default: read the current value through the same mockGet
+  // fixture everything else in this file uses, run the callback, and commit.
+  // The race test below replaces this with a gated version of its own.
+  mockRunTransaction.mockReset();
+  mockRunTransaction.mockImplementation(async (reference, callback) => {
+    const snap = await mockGet(reference);
+    const current = snap.exists() ? snap.val() : null;
+    const next = callback(current);
+    if (next === undefined) {
+      return { committed: false, snapshot: { val: () => current, exists: () => current !== null } };
+    }
+    await mockUpdate(reference, { [reference.path]: next });
+    return { committed: true, snapshot: { val: () => next, exists: () => true } };
+  });
 });
 
 describe("removalChanges reaches every copy of a person", () => {
@@ -512,6 +529,86 @@ describe("deleting a team", () => {
   });
 });
 
+describe("attaching a record to an existing login", () => {
+  test("a brand new uid gets the record and it is logged", async () => {
+    const result = await attachRecord({ uid: "new1", role: "judge", firstName: "Ada", lastName: "Lovelace" });
+    expect(result.ok).toBe(true);
+    expect(payload()["judges/new1"].firstName).toBe("Ada");
+  });
+
+  test("refuses when the uid already has that role's record", async () => {
+    // the WORLD fixture's world() helper only answers whole-node reads
+    // ("judges"), not a single uid's child path -- attachRecord reads
+    // "judges/j1" directly, so that specific path needs its own stub
+    mockGet.mockImplementation(async (r) => {
+      if (r.path === "judges/j1") return { exists: () => true, val: () => WORLD.judges.j1 };
+      return world()(r);
+    });
+    const result = await attachRecord({ uid: "j1", role: "judge", firstName: "Someone" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/already has a judge record/);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The race this guards against: a plain `get`-then-write lets two
+   * organizers who both fix the same broken uid at the same moment both read
+   * "no record yet" and both write, with the second silently overwriting the
+   * first and nobody told. A transaction re-reads the path AT THE MOMENT IT
+   * COMMITS rather than trusting an earlier read, so only one of two racing
+   * attempts can win.
+   *
+   * The mock below is deliberately atomic where the real database is atomic
+   * (nothing is awaited between reading the current value and writing the
+   * next one inside `proceed`) and gated where the real one is slow (both
+   * calls queue until both have arrived, mirroring two organizers who each
+   * confirmed the uid was free before either one wrote). Getting either
+   * wrong makes this test pass while proving nothing.
+   */
+  test("two organizers racing to attach the same uid are not both told it worked", async () => {
+    const db = {};
+    const queued = [];
+
+    mockRunTransaction.mockImplementation(
+      (reference, callback) =>
+        new Promise((resolve) => {
+          const proceed = () => {
+            const current = db[reference.path] ?? null;
+            const next = callback(current);
+            if (next === undefined) {
+              resolve({ committed: false, snapshot: { val: () => current, exists: () => current !== null } });
+              return;
+            }
+            db[reference.path] = next;
+            resolve({ committed: true, snapshot: { val: () => next, exists: () => true } });
+          };
+          if (queued.length < 2) queued.push(proceed);
+          else proceed();
+        })
+    );
+
+    const runA = attachRecord({ uid: "new1", role: "judge", firstName: "Ada" });
+    const runB = attachRecord({ uid: "new1", role: "judge", firstName: "Imposter" });
+
+    // bounded, not `while (queued.length < 2)` -- against code that never
+    // reaches a transaction at all this would spin forever instead of
+    // failing, and a hung suite is a worse signal than a red assertion
+    for (let i = 0; i < 1000 && queued.length < 2; i += 1) await Promise.resolve();
+    queued.forEach((proceed) => proceed());
+
+    const [a, b] = await Promise.all([runA, runB]);
+
+    // exactly one attempt wins; the other is refused, not silently discarded
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+    const loser = a.ok ? b : a;
+    expect(loser.error).toMatch(/already has a judge record/);
+
+    // and the winner's identity is what actually stuck
+    const winnerName = a.ok ? "Ada" : "Imposter";
+    expect(db["judges/new1"].firstName).toBe(winnerName);
+  });
+});
+
 describe("blank records", () => {
   test("a new judge is not in the round one pool and not checked in", () => {
     const judge = blankJudge({ firstName: "New" });
@@ -529,6 +626,14 @@ describe("blank records", () => {
     const competitor = blankCompetitor({ firstName: "New" });
     expect(competitor.checkedIn).toBe(false);
     expect(competitor.teamId).toBeUndefined();
+  });
+
+  test("a new competitor's dietary default matches what every reader compares against", () => {
+    // Registration.js writes "none", Profile.js lists ["none", ...], and
+    // Search.js only renders a dietary chip when the value is not "none" --
+    // a capitalized default here slips past all three and flags a walk-in to
+    // catering as having a restriction called "None"
+    expect(blankCompetitor({ firstName: "New" }).dietaryRestriction).toBe("none");
   });
 });
 
