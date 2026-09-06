@@ -1,7 +1,7 @@
 import { ref, get } from "firebase/database";
 import { database } from "../../firebase.js";
 import { assignmentList } from "../judge/assignmentList.js";
-import { calculateAverageScore, countFundableVotes, scoredJudgeCount, RUBRIC } from "../judge/scoreRubric.js";
+import { calculateAverageScore, countFundableVotes, scoredJudgeCount, compareForRanking, RUBRIC } from "../judge/scoreRubric.js";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo.js";
 
 /**
@@ -141,7 +141,17 @@ export function scoreRows({ teams, judges, scores }, round = FIRST_ROUND) {
   return rows;
 }
 
-/** The standings, computed the same way the final-round cut computes them. */
+/**
+ * The standings, computed the same way the final-round cut computes them.
+ *
+ * The tiebreak is `compareForRanking` itself, not a second copy of its rule --
+ * two teams tied on average and fundable votes used to fall back to whatever
+ * order Object.entries(teams) happened to produce, which is Firebase push-key
+ * order. That let this export disagree with the Results page on a tie, which
+ * is exactly the coin flip compareForRanking exists to remove. Importing the
+ * comparator instead of re-deriving it is what keeps the two from drifting
+ * apart again.
+ */
 export function standingsRows({ teams, scores }, round = FIRST_ROUND) {
   const rows = [["Rank", "Team", "Team ID", "Average score", "Judges", "Fundable votes", "Submitted"]];
 
@@ -158,7 +168,7 @@ export function standingsRows({ teams, scores }, round = FIRST_ROUND) {
       };
     })
     .filter((team) => typeof team.averageScore === "number")
-    .sort((a, b) => b.averageScore - a.averageScore || b.fundableVotes - a.fundableVotes)
+    .sort(compareForRanking)
     .forEach((team, index) => {
       rows.push([
         index + 1,

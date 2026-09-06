@@ -161,6 +161,33 @@ describe("the standings export", () => {
     );
     expect(withUnscored.map((r) => r[1])).not.toContain("Ghost");
   });
+
+  // A tie on average and fundable votes used to fall back to Object.entries
+  // order -- i.e. Firebase push-key order -- which is exactly the coin flip
+  // compareForRanking exists to remove. "Alpha" is inserted first and would
+  // win a stable sort on the first two keys alone, but "Bravo" has been seen
+  // by more judges at the same average, so compareForRanking puts it first.
+  // An export that disagreed here would contradict the Results page on the
+  // one thing organizers use it to decide.
+  test("a tie on average and fundable votes is broken the same way the Results page breaks it", () => {
+    const card = { problem: 5, innovation: 5, impact: 5, viability: 2, pitch_quality: 3, fundable: false };
+    const tieWorld = {
+      teams: {
+        tA: { name: "Alpha", submitted: true },
+        tB: { name: "Bravo", submitted: true },
+      },
+      scores: {
+        first: {
+          tA: { j1: card },
+          tB: { j1: card, j2: card },
+        },
+      },
+    };
+
+    const rows = standingsRows(tieWorld, "first");
+    expect(rows[1][1]).toBe("Bravo");
+    expect(rows[2][1]).toBe("Alpha");
+  });
 });
 
 describe("the judge export", () => {
