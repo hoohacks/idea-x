@@ -6,6 +6,23 @@ import { database } from "../../firebase";
 import { readEventState } from "./eventReadiness";
 
 /**
+ * How many teams still have score cards sitting under the team node.
+ *
+ * dangerZone.js's clearSchedule (with includeScores) wipes two pre-migration
+ * locations, not one: teams/{id}/scores AND teams/{id}/finalScores. TeamSearch
+ * still reads both -- finalScores is merged in wherever it displays the final
+ * round -- so a team whose leftover cards are only under finalScores is real,
+ * live score data sitting somewhere the rest of the app no longer looks for
+ * ranking purposes. Counting only `scores` would let that team go unnoticed:
+ * this count would read zero, the "Finish the score migration" blocker on the
+ * home page would never appear, and an organizer would have no reason to run
+ * the migration before trusting the standings.
+ */
+export function countLegacyScoreTeams(teams) {
+  return Object.values(teams).filter((team) => team?.scores || team?.finalScores).length;
+}
+
+/**
  * What an organizer sees when they sign in.
  *
  * They used to see nothing. The dashboard built its cards for competitors and
@@ -36,7 +53,7 @@ export default function AdminHome() {
         const all = s.val() ?? {};
         setTeams(all);
         // cards still under the team node mean migrate-scores has not been run
-        setLegacyScoreTeams(Object.values(all).filter((team) => team?.scores).length);
+        setLegacyScoreTeams(countLegacyScoreTeams(all));
       }),
       onValue(ref(database, "judges"), (s) => setJudges(s.val() ?? {})),
       onValue(ref(database, "competitors"), (s) => setCompetitors(s.val() ?? {})),
