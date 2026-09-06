@@ -109,6 +109,18 @@ describe("competitor registration", () => {
     expect(screen.queryByText(/is not open yet/)).not.toBeInTheDocument();
     expect(screen.getByText("Student registration")).toBeInTheDocument();
   });
+
+  /**
+   * The staff entrance is deliberately not wired to this form. An organizer
+   * needs a judge record, not a competitor one, and every door left open while
+   * the doors are shut is another record a guessed URL can create.
+   */
+  test("the staff entrance does not open this one", () => {
+    show(Registration, "/?staff");
+
+    expect(screen.getByText(/Registration is not open yet/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/First name/)).not.toBeInTheDocument();
+  });
 });
 
 describe("judge and mentor sign-up", () => {
@@ -117,6 +129,24 @@ describe("judge and mentor sign-up", () => {
 
     expect(screen.getByText(/Judge and mentor sign-up is not open yet/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/First name/)).not.toBeInTheDocument();
+  });
+
+  /**
+   * Organizers need accounts of their own before the doors open, and nobody
+   * can make one for them: creating a person from the control panel needs an
+   * organizer already signed in, which is the thing being bootstrapped. The
+   * staff entrance is the same one the sign-in page uses, for the same reason.
+   */
+  test("closed, the staff entrance still reaches the form", () => {
+    show(JudgeRegistration, "/judge-registration?staff");
+
+    expect(screen.getByLabelText(/First name/)).toBeInTheDocument();
+    expect(screen.queryByText(/is not open yet/)).not.toBeInTheDocument();
+  });
+
+  test("a near miss on the parameter does not open it", () => {
+    show(JudgeRegistration, "/judge-registration?staffing=1");
+    expect(screen.getByText(/Judge and mentor sign-up is not open yet/)).toBeInTheDocument();
   });
 });
 

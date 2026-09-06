@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 // firebase
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 
 import { EVENT } from "./eventInfo";
-import { REGISTRATION_OPEN } from "./registrationWindow";
+import { REGISTRATION_OPEN, isStaffEntrance } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
 import {
   cleanName,
@@ -232,7 +232,24 @@ function problemsFor(values) {
 }
 
 const JudgeRegistration = () => {
-  if (!REGISTRATION_OPEN) return <ClosedNotice what="Judge and mentor sign-up" />;
+  // Organizers need accounts of their own before the doors open, and nothing
+  // in the app can make one for them: creating a person from the control panel
+  // requires an organizer already signed in, which is the very thing being
+  // bootstrapped. `#/judge-registration?staff` is the same entrance the
+  // sign-in page uses, for the same reason -- an organizer is a judge record
+  // with the admin flag set on top, so this is the form they need.
+  //
+  // The competitor form deliberately does NOT have this. Every door left open
+  // while the doors are shut is another record a guessed URL can create, and
+  // an organizer has no use for a competitor record.
+  //
+  // Obscurity, not security: somebody who guesses the parameter can create a
+  // judge record and nothing else. They cannot score -- isRound1Judge is
+  // admin-set -- and the rules show them no team they are not assigned to.
+  const { search } = useLocation();
+  if (!REGISTRATION_OPEN && !isStaffEntrance(search)) {
+    return <ClosedNotice what="Judge and mentor sign-up" />;
+  }
 
   return <JudgeRegistrationForm />;
 };
