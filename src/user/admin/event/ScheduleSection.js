@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card, Stack, TextField, Typography } from "@mui/material";
+import { Button, Card, TextField } from "@mui/material";
+import { FIELD, Section, SettingList, SettingRow } from "../adminUi";
 import { setBatchCount, setBatchTimes, setFinalRoundRoom } from "./eventConfig";
 import { BATCH_COUNT, BATCH_TIMES } from "../../judge/schedulePlan.js";
 import { FINAL_ROUND_ROOM } from "../../judge/finalRoundService";
@@ -40,26 +41,26 @@ export default function ScheduleSection({ config, onResult }) {
   const batches = Array.from({ length: Number(count) || 0 }, (_, i) => i + 1);
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>Judging schedule</Typography>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        These take effect the next time a schedule is generated. To move a team that
-        is already scheduled, use the team's own slot override.
-      </Alert>
-
-      <Card sx={{ p: 2 }}>
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={1} alignItems="flex-start">
+    <Section
+      title="Judging schedule"
+      note="These take effect the next time a schedule is generated. To move a team that is already scheduled, use the team's own slot override."
+    >
+      <Card sx={{ p: 2.5 }}>
+        <SettingList>
+          <SettingRow
+            label="Batches"
+            hint="Teams are split into this many presentation rounds."
+          >
             <TextField
-              size="small"
               type="number"
-              label="Batches"
               value={count}
               onChange={(event) => setCount(event.target.value)}
-              inputProps={{ min: 1, max: 12 }}
-              sx={{ width: 120 }}
-              helperText="Teams split into this many presentation rounds"
+              // the row's label is the visible one; this is what names the
+              // input itself, and it has to go through inputProps -- on a
+              // TextField a bare aria-label lands on the wrapper div, where no
+              // screen reader and no test will find it
+              inputProps={{ min: 1, max: 12, "aria-label": "Batches" }}
+              sx={{ width: FIELD.count }}
             />
             <Button
               variant="outlined"
@@ -68,33 +69,30 @@ export default function ScheduleSection({ config, onResult }) {
                 () => setBatchCount(Number(count)),
                 `Batch count set to ${count}`
               )}
-              sx={{ mt: 0.5 }}
             >
               Save
             </Button>
-          </Stack>
+          </SettingRow>
 
-          <Stack spacing={1}>
-            <Typography variant="body2">Batch times</Typography>
-            {/*
-              Saying so, because the field does not.
-              These times are read when a schedule is BUILT and copied onto every
-              judge's card and every team's page at publish. Changing them later
-              moves nothing that is already out there -- and "Batch times saved"
-              reads exactly like it did.
-            */}
-            <Typography variant="caption" color="text.secondary">
-              Used when you build a schedule. Cards already published keep their
-              times; change one on the team's record.
-            </Typography>
+          {/*
+            Saying so, because the field does not.
+            These times are read when a schedule is BUILT and copied onto every
+            judge's card and every team's page at publish. Changing them later
+            moves nothing that is already out there -- and "Batch times saved"
+            reads exactly like it did.
+          */}
+          <SettingRow
+            label="Batch times"
+            hint="Used when you build a schedule. Cards already published keep the times they were built with; change one on the team's record."
+          >
             {batches.map((batch) => (
               <TextField
                 key={batch}
-                size="small"
                 label={`Batch ${batch}`}
                 value={times[batch] ?? ""}
                 onChange={(event) => setTimes({ ...times, [batch]: event.target.value })}
                 placeholder="5:00 PM"
+                sx={{ width: FIELD.time }}
               />
             ))}
             <Button
@@ -103,31 +101,31 @@ export default function ScheduleSection({ config, onResult }) {
               onClick={() =>
                 run(() => setBatchTimes(times), "Batch times saved for the next build")
               }
-              sx={{ alignSelf: "flex-start" }}
             >
               Save times
             </Button>
-          </Stack>
+          </SettingRow>
 
-          <Stack direction="row" spacing={1} alignItems="flex-start">
+          <SettingRow
+            label="Final round room"
+            hint="Where the finalists present. The first round uses the list above."
+          >
             <TextField
-              size="small"
-              label="Final round room"
+              inputProps={{ "aria-label": "Final round room" }}
               value={room}
               onChange={(event) => setRoom(event.target.value)}
-              sx={{ flex: 1 }}
+              sx={{ width: FIELD.name }}
             />
             <Button
               variant="outlined"
               disabled={busy || room === storedRoom}
               onClick={() => run(() => setFinalRoundRoom(room), `Final round room set to ${room}`)}
-              sx={{ mt: 0.5 }}
             >
               Save
             </Button>
-          </Stack>
-        </Stack>
+          </SettingRow>
+        </SettingList>
       </Card>
-    </section>
+    </Section>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, Box, Button, Card, Stack, Typography } from "@mui/material";
+import { Button, Card } from "@mui/material";
+import { Section, SettingList, SettingRow } from "./adminUi";
 import {
   loadEventData, scheduleRows, scoreRows, standingsRows, judgeRows,
   downloadCsv, downloadJson, stamp,
@@ -89,48 +90,23 @@ export default function ExportSection({ onResult }) {
   ];
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>
-        Export
-      </Typography>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        Download the schedule before judging starts and the scores before you touch anything in
-        the danger zone. A file on a laptop is the only part of this that keeps working when
-        nothing else does.
-      </Alert>
-
-      <Card sx={{ p: 2 }}>
-        <Stack spacing={1.5}>
+    <Section
+      title="Export"
+      note="Download the schedule before judging starts and the scores before you touch anything in
+            the danger zone. A file on a laptop is the only part of this that keeps working when
+            nothing else does."
+    >
+      <Card sx={{ p: 2.5 }}>
+        <SettingList>
           {exports.map((item) => (
-            <Stack
-              key={item.label}
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems={{ sm: "center" }}
-              justifyContent="space-between"
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {item.label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {item.hint}
-                </Typography>
-              </Box>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={item.run}
-                disabled={busy}
-                sx={{ flexShrink: 0 }}
-              >
+            <SettingRow key={item.label} label={item.label} hint={item.hint}>
+              <Button variant="outlined" onClick={item.run} disabled={busy}>
                 Download
               </Button>
-            </Stack>
+            </SettingRow>
           ))}
-        </Stack>
+        </SettingList>
       </Card>
-    </section>
+    </Section>
   );
 }

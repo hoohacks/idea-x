@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
-  Accordion, AccordionDetails, AccordionSummary, Alert, Button, Chip, Stack, Typography,
+  Accordion, AccordionDetails, AccordionSummary, Button, Chip, Stack, Typography,
 } from "@mui/material";
 import { IoChevronDown } from "react-icons/io5";
-import { RowList, Row } from "../adminUi";
+import { RowList, Row, Section } from "../adminUi";
 import { decodeChanges, undoAdminAction } from "../adminAction";
 import { describeChange } from "./describeChange";
 
@@ -28,14 +28,11 @@ export default function ActivityFeed({ log, onResult }) {
   };
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>Recent activity</Typography>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        The last 100 changes made from this panel. An undo restores the recorded value
-        and refuses if anything has moved since.
-      </Alert>
-
+    <Section
+      title="Recent activity"
+      note="The last 100 changes made from this panel. An undo restores the recorded value
+            and refuses if anything has moved since."
+    >
       <RowList empty="Nothing has been changed from this panel yet.">
         {log.map((entry) => {
           const changes = entry.changes ? decodeChanges(entry.changes) : [];
@@ -101,6 +98,6 @@ export default function ActivityFeed({ log, onResult }) {
           );
         })}
       </RowList>
-    </section>
+    </Section>
   );
 }

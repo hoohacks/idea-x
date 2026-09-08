@@ -80,9 +80,9 @@ function Control() {
       <PageHeader
         title="Control panel"
         stats={[
-          { label: "rooms", value: (config.judgingRooms ?? []).length },
-          { label: "admins", value: admins.length },
-          { label: "recent changes", value: log.length },
+          { label: "rooms", singular: "room", value: (config.judgingRooms ?? []).length },
+          { label: "admins", singular: "admin", value: admins.length },
+          { label: "recent changes", singular: "recent change", value: log.length },
         ]}
       />
 

@@ -9,7 +9,7 @@ import {
   subscribeToSnapshots, restoreSnapshot, captureSnapshot, previewSnapshot, readJudgeNames,
   JUDGING_PATHS,
 } from "../snapshots";
-import { ConfirmDialog } from "../adminUi.js";
+import { ConfirmDialog, Section } from "../adminUi.js";
 import { diffSnapshot } from "./snapshotDiff";
 
 /**
@@ -246,25 +246,19 @@ export default function RestorePointsSection({ onResult }) {
   const confirmPhrase = eventName || String(diff?.byPath?.length ?? 0);
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>
-        Restore points
-      </Typography>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        One is taken automatically before the schedule is generated, before the final round is
-        activated, and before anything in the danger zone. Restoring also saves the current
-        state first, so you can undo an undo.
-      </Alert>
-
-      <Card sx={{ p: 2 }}>
+    <Section
+      title="Restore points"
+      note="One is taken automatically before the schedule is generated, before the final round is
+            activated, and before anything in the danger zone. Restoring also saves the current
+            state first, so you can undo an undo."
+      action={
+        <Button variant="outlined" onClick={take} disabled={busy}>
+          {busy ? "Working…" : "Take a restore point now"}
+        </Button>
+      }
+    >
+      <Card sx={{ p: 2.5 }}>
         <Stack spacing={2}>
-          <Box>
-            <Button variant="outlined" onClick={take} disabled={busy}>
-              {busy ? "Working…" : "Take a restore point now"}
-            </Button>
-          </Box>
-
           {points.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               None yet. One appears here the first time a schedule is generated.
@@ -365,6 +359,6 @@ export default function RestorePointsSection({ onResult }) {
         onConfirm={restore}
         onCancel={() => setConfirmingRestore(false)}
       />
-    </section>
+    </Section>
   );
 }

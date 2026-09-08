@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Stack, TextField, Typography } from "@mui/material";
+import { Button, Card, TextField } from "@mui/material";
+import { FIELD, Section, SettingList, SettingRow } from "../adminUi";
 import { setEventStart } from "./eventConfig";
 import { EVENT_START, eventLocalToInstant, instantToEventLocal } from "../../../eventInfo";
 
@@ -24,41 +25,41 @@ export default function EventSection({ config, onResult }) {
   useEffect(() => { setValue(instantToEventLocal(stored)); }, [stored]);
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>Event</Typography>
-
-      <Card sx={{ p: 2 }}>
-        <Stack direction="row" spacing={1} alignItems="flex-start">
-          <TextField
-            size="small"
-            type="datetime-local"
+    <Section title="Event">
+      <Card sx={{ p: 2.5 }}>
+        <SettingList>
+          <SettingRow
             label="Starts"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            helperText="Drives the countdown on the home page"
-            sx={{ flex: 1 }}
-          />
-          <Button
-            variant="outlined"
-            disabled={busy || value === instantToEventLocal(stored)}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                onResult(
-                  await setEventStart(eventLocalToInstant(value).toISOString()),
-                  "Event start saved"
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-            sx={{ mt: 0.5 }}
+            hint="Drives the countdown on the home page. Local to the event, not to whoever is reading it."
           >
-            Save
-          </Button>
-        </Stack>
+            <TextField
+              type="datetime-local"
+              inputProps={{ "aria-label": "Starts" }}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: FIELD.datetime }}
+            />
+            <Button
+              variant="outlined"
+              disabled={busy || value === instantToEventLocal(stored)}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  onResult(
+                    await setEventStart(eventLocalToInstant(value).toISOString()),
+                    "Event start saved"
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </SettingRow>
+        </SettingList>
       </Card>
-    </section>
+    </Section>
   );
 }
