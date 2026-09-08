@@ -1,4 +1,4 @@
-import { assignmentList } from "../../judge/assignmentList";
+import { assignmentList, rosterOf } from "../../judge/assignmentList";
 import { calculateAverageScore, countFundableVotes } from "../../judge/scoreRubric";
 
 /**
@@ -21,12 +21,6 @@ export const TEAM_UNJUDGED = "unjudged";
 function judgeName(judge, fallback) {
   const name = [judge?.firstName, judge?.lastName].filter(Boolean).join(" ").trim();
   return name || fallback;
-}
-
-function rosterOf(schedule) {
-  const raw = schedule?.judges;
-  const list = Array.isArray(raw) ? raw : Object.values(raw ?? {});
-  return list.filter((entry) => entry && entry.judgeId);
 }
 
 /**

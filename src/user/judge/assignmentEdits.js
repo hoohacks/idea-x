@@ -1,6 +1,7 @@
 import { ref, get, update, runTransaction } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
+import { rosterOf } from "./assignmentList.js";
 import { assignmentList } from "./assignmentList.js";
 
 /**
@@ -65,12 +66,6 @@ function fanOut(updates, teamId, assignment, roster, previousRoster) {
       updates[`judges/${judge.judgeId}/teamAssignments/${teamId}`] = null;
     }
   }
-}
-
-function rosterOf(schedule) {
-  const raw = schedule?.judges;
-  const list = Array.isArray(raw) ? raw : Object.values(raw ?? {});
-  return list.filter((entry) => entry && entry.judgeId);
 }
 
 /**

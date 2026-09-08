@@ -1,6 +1,6 @@
 import { ref, get } from "firebase/database";
 import { database } from "../../firebase.js";
-import { assignmentList } from "../judge/assignmentList.js";
+import { assignmentList, rosterOf } from "../judge/assignmentList.js";
 import { calculateAverageScore, countFundableVotes, scoredJudgeCount, compareForRanking, RUBRIC } from "../judge/scoreRubric.js";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo.js";
 
@@ -42,11 +42,6 @@ const RUBRIC_FIELDS = Object.keys(RUBRIC);
 function judgeName(judge, fallback = "Unknown") {
   const name = [judge?.firstName, judge?.lastName].filter(Boolean).join(" ").trim();
   return name || fallback;
-}
-
-function rosterOf(schedule) {
-  const raw = schedule?.judges;
-  return (Array.isArray(raw) ? raw : Object.values(raw ?? {})).filter((e) => e && e.judgeId);
 }
 
 /** Everything the exports need, in one read. */
