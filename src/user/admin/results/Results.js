@@ -61,7 +61,7 @@ export default function Results() {
       <PageHeader
         title="Results"
         stats={[
-          { label: "finalists", value: standings.length },
+          { label: "finalists", singular: "finalist", value: standings.length },
           { label: "cards in", value: `${state.cards}/${state.expected}` },
         ]}
       />

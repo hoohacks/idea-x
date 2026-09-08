@@ -131,7 +131,7 @@ function RegisteredAtDisplay() {
         title="Registration Metrics"
         stats={[
           { label: "registered", value: registeredAt.length },
-          { label: labels.length === 1 ? "day" : "days", value: labels.length },
+          { label: "days", singular: "day", value: labels.length },
           { label: "on the busiest day", value: busiest },
         ]}
       />
