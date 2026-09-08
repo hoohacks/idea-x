@@ -24,20 +24,20 @@ import {
 describe("the start is an instant, not a set of digits", () => {
   test("it names a single moment in time", () => {
     // 10:00 Eastern on a day inside daylight time is 14:00 UTC
-    expect(new Date(EVENT_START).toISOString()).toBe("2026-10-18T14:00:00.000Z");
+    expect(new Date(EVENT_START).toISOString()).toBe("2026-10-25T14:00:00.000Z");
   });
 
   test("the printed date is the event's, not the reader's", () => {
-    expect(EVENT.dateLabel).toBe("Sunday, October 18, 2026");
-    expect(EVENT.dayLabel).toBe("October 18");
+    expect(EVENT.dateLabel).toBe("Sunday, October 25, 2026");
+    expect(EVENT.dayLabel).toBe("October 25");
     expect(EVENT.year).toBe(2026);
   });
 });
 
 describe("wall clock to instant", () => {
   test("reads what an organizer typed as Eastern", () => {
-    expect(eventLocalToInstant("2026-10-18T10:00").toISOString()).toBe("2026-10-18T14:00:00.000Z");
-    expect(eventLocalToInstant("2026-10-18T10:00:00").toISOString()).toBe("2026-10-18T14:00:00.000Z");
+    expect(eventLocalToInstant("2026-10-25T10:00").toISOString()).toBe("2026-10-25T14:00:00.000Z");
+    expect(eventLocalToInstant("2026-10-25T10:00:00").toISOString()).toBe("2026-10-25T14:00:00.000Z");
   });
 
   test("follows the zone across the daylight saving boundary", () => {
@@ -55,18 +55,18 @@ describe("wall clock to instant", () => {
 describe("instant to wall clock", () => {
   test("shows an absolute instant as the Eastern time it is", () => {
     // what scripts/seed-event.mjs writes: a UTC instant
-    expect(instantToEventLocal("2026-10-18T14:00:00.000Z")).toBe("2026-10-18T10:00");
-    expect(instantToEventLocal(EVENT_START)).toBe("2026-10-18T10:00");
+    expect(instantToEventLocal("2026-10-25T14:00:00.000Z")).toBe("2026-10-25T10:00");
+    expect(instantToEventLocal(EVENT_START)).toBe("2026-10-25T10:00");
   });
 
   test("midnight is 00, not 24", () => {
-    expect(instantToEventLocal("2026-10-18T04:00:00.000Z")).toBe("2026-10-18T00:00");
+    expect(instantToEventLocal("2026-10-25T04:00:00.000Z")).toBe("2026-10-25T00:00");
   });
 
   test("a round trip through the admin panel does not move the event", () => {
     // the bug this replaces: display sliced the string, save appended seconds,
     // and every press of Save shifted the start by the UTC offset
-    const stored = "2026-10-18T14:00:00.000Z";
+    const stored = "2026-10-25T14:00:00.000Z";
     const shown = instantToEventLocal(stored);
     expect(eventLocalToInstant(shown).toISOString()).toBe(stored);
   });

@@ -23,9 +23,9 @@ export const EVENT_TIME_ZONE = "America/New_York";
  * invisible here because Charlottesville is Eastern, which is where it was
  * always tested.
  *
- * October 18th is inside daylight time; the clocks go back on November 1st.
+ * October 25th is inside daylight time; the clocks go back on November 1st.
  */
-export const EVENT_START = "2026-10-18T10:00:00-04:00";
+export const EVENT_START = "2026-10-25T10:00:00-04:00";
 
 const start = new Date(EVENT_START);
 
@@ -117,7 +117,7 @@ export const EVENT = {
   edition: "sixth annual",
   year: Number(instantToEventLocal(start).slice(0, 4)),
   start,
-  // "Sunday, October 18, 2026"
+  // "Sunday, October 25, 2026"
   dateLabel: start.toLocaleDateString("en-US", {
     timeZone: EVENT_TIME_ZONE,
     weekday: "long",
@@ -125,7 +125,7 @@ export const EVENT = {
     day: "numeric",
     year: "numeric",
   }),
-  // "October 18th"
+  // "October 25th"
   dayLabel: start.toLocaleDateString("en-US", {
     timeZone: EVENT_TIME_ZONE,
     month: "long",
