@@ -157,6 +157,36 @@ describe("moving a competitor between teams", () => {
     expect(byPath["competitors/u1/teamId"]).toBeNull();
     expect(byPath["teams/t1/members/u1"]).toBeNull();
   });
+
+  /**
+   * A team created before scripts/migrate-team-members.mjs ran still holds
+   * `members` as a real array -- the uid is the VALUE and the key is a
+   * meaningless index. Writing `members/{uid}: null` unconditionally deletes
+   * nothing on that shape, because the uid was never a key -- the competitor
+   * ends up listed on BOTH the old team and the new one.
+   */
+  test("clears the actual array slot on a legacy team, not a key that was never there", () => {
+    const changes = moveMemberChanges({
+      uid: "dave", fromTeamId: "t1", toTeamId: "t2",
+      fromMembers: ["dave", "carol"],
+    });
+    const byPath = Object.fromEntries(changes.map((c) => [c.path, c.after]));
+
+    expect(byPath["teams/t1/members/0"]).toBeNull();
+    expect(byPath["teams/t1/members/dave"]).toBeUndefined();
+    expect(byPath["teams/t2/members/dave"]).toBe(true);
+  });
+
+  test("clears the right slot on a mixed roster (legacy array slots plus a keyed entry)", () => {
+    const changes = moveMemberChanges({
+      uid: "erin", fromTeamId: "t1", toTeamId: "t2",
+      fromMembers: { 0: "dave", 1: "carol", erin: true },
+    });
+    const byPath = Object.fromEntries(changes.map((c) => [c.path, c.after]));
+
+    expect(byPath["teams/t1/members/erin"]).toBeNull();
+    expect(byPath["teams/t2/members/erin"]).toBe(true);
+  });
 });
 
 describe("editing plain fields", () => {

@@ -38,3 +38,29 @@ export function memberIds(members) {
 export function isMember(members, uid) {
   return Boolean(uid) && memberIds(members).includes(uid);
 }
+
+/**
+ * Where to clear one uid out of a `members` node, whichever shape it is
+ * stored in -- pure keyed, pure legacy array, or the mixed shape a join onto
+ * an unmigrated team produces.
+ *
+ * A keyed entry lives at `members/{uid}` and holds `true`; a leftover array
+ * slot lives at `members/{index}` and the VALUE is the uid, the index being
+ * meaningless. Nulling `members/{uid}` on a legacy node deletes nothing,
+ * because that key was never there -- the uid only ever appears as a value.
+ * Callers that need to remove someone must ask this which child to null out
+ * rather than assuming the keyed shape, the way `hasOwnProperty(members, uid)`
+ * used to.
+ *
+ * Returns `{ key, before }` -- the real child to write `null` to, and the
+ * value it holds right now (so an admin-log undo can restore it) -- or `null`
+ * if this uid is not on the roster at all.
+ */
+export function memberRemovalPath(members, uid) {
+  if (!uid || !members || typeof members !== "object") return null;
+  for (const [key, value] of Object.entries(members)) {
+    if (value === true && key === uid) return { key, before: true };
+    if (typeof value === "string" && value === uid) return { key, before: value };
+  }
+  return null;
+}
