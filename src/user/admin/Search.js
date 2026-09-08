@@ -157,7 +157,12 @@ function Search() {
           const isCheckedIn = Boolean(person.checkedIn);
 
           return (
-            <Row key={person.id} accent={isCheckedIn}>
+            // the accent marks the row that still needs something doing to
+            // it, the same as it does on the judging page -- see the note on
+            // Row in adminUi. Flagging the settled rows instead put a bar on
+            // every line of a well-run event, which is the state nobody has to
+            // go looking for.
+            <Row key={person.id} accent={!isCheckedIn}>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 alignItems={{ xs: "flex-start", sm: "center" }}

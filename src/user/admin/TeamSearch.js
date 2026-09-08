@@ -247,7 +247,7 @@ function TeamSearch() {
         title="Teams"
         progress={percentSubmitted}
         stats={[
-          { label: "teams", value: teamCount },
+          { label: "teams", singular: "team", value: teamCount },
           { label: "submitted", value: submittedCount },
           { label: "of teams", value: `${percentSubmitted.toFixed(0)}%` },
         ]}
@@ -278,7 +278,12 @@ function TeamSearch() {
           const submission = team.submission;
 
           return (
-            <Row key={key} accent={Boolean(team.submitted)}>
+            // the accent marks the row that still needs something doing to
+            // it, the same as it does on the judging page -- see the note on
+            // Row in adminUi. Flagging the settled rows instead put a bar on
+            // every line of a well-run event, which is the state nobody has to
+            // go looking for.
+            <Row key={key} accent={!team.submitted}>
               <Stack spacing={0.5}>
                 <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                   <Typography sx={{ fontWeight: 600 }}>{team.name || "Unnamed team"}</Typography>
@@ -355,7 +360,7 @@ function TeamSearch() {
           <DialogContent dividers>
             <Alert severity="warning">
               {deleting.judgeName ?? "This judge"}'s {deleting.round} round card for{" "}
-              {deleting.teamName}. It cannot be undone -- the rules pin a card to the
+              {deleting.teamName}. It cannot be undone — the rules pin a card to the
               person who entered it, so nobody else can write it back. You will be
               offered the values to re-type.
             </Alert>
