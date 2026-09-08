@@ -34,13 +34,29 @@ async function failPath(path, error) {
 }
 const failListenersByPath = {};
 
+// Controls for `get`, used only by the out-of-order-snapshot tests below.
+// Default mode resolves immediately, matching every other test's expectations.
+// "queue" mode defers each call's resolution to the test, which can then
+// resolve two overlapping calls in whichever order it chooses -- modeling two
+// in-flight network reads that land out of sequence. Names start with "mock"
+// so the jest.mock factory below is allowed to close over them.
+const mockGetMode = { current: "default" };
+const mockGetQueue = [];
+
 // create-react-app's `resetMocks: true` strips the implementation off every
 // jest.fn before each test (see the comment in pages.smoke.test.js), so
 // these are plain functions rather than jest.fn(impl) -- there is nothing
 // for resetMocks to strip.
 jest.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: async (r) => ({ exists: () => false, val: () => null }),
+  get: async (r) => {
+    if (mockGetMode.current === "queue") {
+      return new Promise((resolve) => {
+        mockGetQueue.push({ path: r.path, resolve });
+      });
+    }
+    return { exists: () => false, val: () => null };
+  },
   onValue: (r, onNext, onError) => {
     listenersByPath[r.path] = listenersByPath[r.path] ?? [];
     listenersByPath[r.path].push(onNext);
