@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../../firebase.js";
 import { listPending, subscribeToPending } from "./pendingScores.js";
-import { syncPendingScores } from "./getTeamInfo.js";
+import { syncPendingScores, FIRST_ROUND, FINAL_ROUND } from "./getTeamInfo.js";
 
 /**
  * Connection state plus the outbox, for the judging screens.
@@ -77,11 +77,26 @@ export function useJudgingSync(judgeUid) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [pending.length]);
 
+  // Keyed by round, not just by team id. Scored-state is already queried
+  // separately per round (scores/first vs scores/final), and a queued card
+  // carries its round too -- a first-round card sitting in the outbox must
+  // not read as "pending" on that same team's final-round card, or a judge
+  // who scored a team in round one is locked out of scoring their final
+  // pitch until an unrelated entry drains.
+  const pendingTeamIdsByRound = {
+    [FIRST_ROUND]: new Set(
+      pending.filter((entry) => entry.round === FIRST_ROUND).map((entry) => entry.teamId)
+    ),
+    [FINAL_ROUND]: new Set(
+      pending.filter((entry) => entry.round === FINAL_ROUND).map((entry) => entry.teamId)
+    ),
+  };
+
   return {
     online,
     pending,
     pendingCount: pending.length,
-    pendingTeamIds: new Set(pending.map((entry) => entry.teamId)),
+    pendingTeamIdsByRound,
     syncing,
     retry,
   };

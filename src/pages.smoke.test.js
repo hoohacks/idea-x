@@ -241,10 +241,18 @@ describe("pages render without crashing", () => {
     expect(screen.queryByText("Mentoring")).not.toBeInTheDocument();
   });
 
+  /**
+   * The page is titled once, above the tabs that divide it.
+   *
+   * It used to open with the tab strip and no title at all, and the only h1 on
+   * the page was the heading of the card underneath -- so "Schedule preview"
+   * read as the name of the page while the round, which is what the tabs
+   * actually choose between, had nothing over it.
+   */
   test("the planner opens on the first round", async () => {
     renderPage(SchedulePlanner, { userTypes: ["admin"] });
     expect(await screen.findByRole("tab", { name: "First round" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Schedule preview" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Judging schedule" })).toBeInTheDocument();
   });
 
   test("the planner draws one page frame, not two", async () => {
@@ -263,14 +271,18 @@ describe("pages render without crashing", () => {
     renderPage(SchedulePlanner, { userTypes: ["admin"] });
     fireEvent.click(await screen.findByRole("tab", { name: "Final round" }));
 
-    expect(await screen.findByRole("heading", { name: "Final round" })).toBeInTheDocument();
+    // the round is the tab, not a second title repeating it
+    expect(await screen.findByRole("tab", { name: "Final round", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Judging schedule" })).toBeInTheDocument();
     expect(screen.getAllByRole("banner")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /Build a final round plan/ })).toBeInTheDocument();
   });
 
+  // rendered on its own, without the planner's header, so what it owns is the
+  // draft state and the way out of it
   test("schedule preview", async () => {
     renderPage(SchedulePreview, { userTypes: ["admin"] });
-    expect(await screen.findByRole("heading", { name: "Schedule preview" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Build a plan" })).toBeInTheDocument();
   });
 
   test("competitor dashboard", async () => {

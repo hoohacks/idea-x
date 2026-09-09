@@ -11,6 +11,7 @@ import { database, auth, USING_EMULATOR } from "../../../firebase.js";
 import { firebaseConfig } from "../../../firebaseConfig.js";
 import { applyAdminAction } from "../adminAction.js";
 import { grantAdmin, revokeAdmin, revokeGuard } from "../organizers/adminsService.js";
+import { memberRemovalPath } from "../../team/teamMembers.js";
 
 /**
  * Everything about a person that used to need the Firebase console.
@@ -179,9 +180,12 @@ export function removalChanges({
   }
 
   for (const [teamId, team] of Object.entries(teamsData)) {
-    // a competitor leaves their team's roster
-    if (team?.members && Object.prototype.hasOwnProperty.call(team.members, uid)) {
-      changes.push({ path: `teams/${teamId}/members/${uid}`, before: team.members[uid], after: null });
+    // a competitor leaves their team's roster -- whichever shape it is
+    // stored in: a legacy team holds the uid as an array VALUE, not a key,
+    // so hasOwnProperty(members, uid) would silently find nothing to remove
+    const removal = memberRemovalPath(team?.members, uid);
+    if (removal) {
+      changes.push({ path: `teams/${teamId}/members/${removal.key}`, before: removal.before, after: null });
     }
 
     // a judge comes off every team's schedule card

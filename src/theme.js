@@ -119,6 +119,27 @@ const theme = createTheme({
     },
 
     /**
+     * The heading on a block of settings.
+     *
+     * Nine sections of the control panel each wrote `variant="h2"` with an
+     * inline `fontSize: "1.1rem"` -- a tenth size, 0.6px away from h3, that
+     * existed only because the scale appeared to have no slot for "smaller than
+     * a page title, larger than a label". It has one. This is that slot, named,
+     * so a section heading is a decision made once rather than a number copied
+     * eight times and drifted on the ninth.
+     *
+     * Sized as h3 and mapped to `<h2>`: these are the top-level divisions of a
+     * page whose title is the h1, so the outline has to say so even though the
+     * type does not need a step of its own.
+     */
+    sectionTitle: {
+      fontSize: "1.0625rem",
+      fontWeight: 600,
+      letterSpacing: "-0.008em",
+      lineHeight: 1.3,
+    },
+
+    /**
      * Operational data: a time, a room, a slot, a score, a count.
      *
      * Mono with tabular figures so a column of them lines up and a changed
@@ -146,7 +167,7 @@ const theme = createTheme({
     },
 
     MuiTypography: {
-      defaultProps: { variantMapping: { data: "span" } },
+      defaultProps: { variantMapping: { data: "span", sectionTitle: "h2" } },
     },
 
     MuiButton: {

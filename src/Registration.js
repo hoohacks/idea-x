@@ -19,6 +19,7 @@ import {
   LinearProgress,
   Link,
   MenuItem,
+  OutlinedInput,
   Select,
   Stack,
   TextField,
@@ -40,7 +41,6 @@ import {
 import {
   Hero,
   MobileSubmitBar,
-  Question,
   RegistrationShell,
   ResultDialog,
   Section,
@@ -90,8 +90,6 @@ const INITIAL = {
   password: "",
   major: "",
   gender: "",
-  skills: "",
-  learn: "",
   schoolYear: String(GRADUATION_YEARS[0]),
   uvaSchool: "college",
   dietaryRestriction: "none",
@@ -113,7 +111,6 @@ const SECTIONS = [
     required: ["firstName", "lastName", "email", "password"],
   },
   { id: "studies", label: "Studies", required: ["major"] },
-  { id: "bring", label: "Skills and interests", required: ["skills", "learn"] },
   { id: "details", label: "Additional details", required: ["gender"] },
 ];
 
@@ -144,12 +141,6 @@ function problemsFor(values) {
     fail("major", "Enter your major, or the one you plan to declare", "your major");
   }
   if (!isFilled(values.gender)) fail("gender", "Choose an option", "your gender");
-  if (!isFilled(values.skills)) {
-    fail("skills", "Name one skill, or write N/A", "your skills");
-  }
-  if (!isFilled(values.learn)) {
-    fail("learn", "Name one thing, or write N/A", "what you want to learn");
-  }
 
   return problems;
 }
@@ -315,9 +306,7 @@ const RegistrationForm = () => {
         schoolYear: Number(current.schoolYear),
         uvaSchool: current.uvaSchool,
         resume: resumeUrl,
-        skills: current.skills.trim(),
         gender: current.gender,
-        learn: current.learn.trim(),
         major: current.major.trim(),
         registeredAt: serverTimestamp(),
         checkedIn: false,
@@ -490,38 +479,61 @@ const RegistrationForm = () => {
                 />
               </Section>
 
-              <Section id="bring" label="Skills and interests">
-                <Question
-                  htmlFor="skills"
-                  prompt="What skills would you bring to a team?"
-                  hint="Read during team building, so be concrete. Design, market research and pitching count as much as code."
-                >
-                  <TextField
-                    {...fieldProps("skills")}
-                    placeholder="Python, user interviews, financial modelling…"
-                    autoComplete="off"
-                    multiline
-                    minRows={3}
-                    required
-                    fullWidth
-                  />
-                </Question>
+              <Section id="details" label="Additional details">
+                <FormControl fullWidth error={Boolean(errorFor("gender"))}>
+                  {/*
+                    Gender is the one select that opens with nothing chosen, so
+                    it shows a placeholder rather than looking answered. That
+                    needs the label pinned up and the outline notched by hand:
+                    left to itself the label sat down on the placeholder and the
+                    border ran straight through the word.
+                  */}
+                  <InputLabel id="gender-label" shrink>
+                    Gender
+                  </InputLabel>
+                  <Select
+                    labelId="gender-label"
+                    id="gender"
+                    name="gender"
+                    value={values.gender}
+                    onChange={handleChange}
+                    onBlur={markTouched}
+                    displayEmpty
+                    input={<OutlinedInput notched label="Gender" />}
+                    renderValue={(value) =>
+                      value
+                        ? GENDERS.find(([key]) => key === value)?.[1]
+                        : <Box component="span" sx={{ color: "text.secondary" }}>Choose an option</Box>
+                    }
+                  >
+                    {GENDERS.map(([value, label]) => (
+                      <MenuItem key={value} value={value}>
+                        {label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    {errorFor("gender") ?? "Reported to sponsors only as a total."}
+                  </FormHelperText>
+                </FormControl>
 
-                <Question
-                  htmlFor="learn"
-                  prompt="What do you want to get out of the day?"
-                  hint="It shapes which workshops and mentors we point you at."
-                >
-                  <TextField
-                    {...fieldProps("learn")}
-                    placeholder="How to size a market, how to pitch without slides…"
-                    autoComplete="off"
-                    multiline
-                    minRows={3}
-                    required
-                    fullWidth
-                  />
-                </Question>
+                <FormControl fullWidth>
+                  <InputLabel id="dietaryRestriction-label">Dietary restrictions</InputLabel>
+                  <Select
+                    labelId="dietaryRestriction-label"
+                    id="dietaryRestriction"
+                    name="dietaryRestriction"
+                    label="Dietary restrictions"
+                    value={values.dietaryRestriction}
+                    onChange={handleChange}
+                  >
+                    {DIETARY.map(([value, label]) => (
+                      <MenuItem key={value} value={value}>
+                        {label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
                 <Box>
                   <Typography variant="h5" sx={{ mb: 0.5 }}>
@@ -562,54 +574,14 @@ const RegistrationForm = () => {
                 </Box>
               </Section>
 
-              <Section id="details" label="Additional details">
-                <FormControl fullWidth error={Boolean(errorFor("gender"))}>
-                  <InputLabel id="gender-label">Gender</InputLabel>
-                  <Select
-                    labelId="gender-label"
-                    id="gender"
-                    name="gender"
-                    label="Gender"
-                    value={values.gender}
-                    onChange={handleChange}
-                    onBlur={markTouched}
-                    displayEmpty
-                    renderValue={(value) =>
-                      value
-                        ? GENDERS.find(([key]) => key === value)?.[1]
-                        : <Box component="span" sx={{ color: "text.secondary" }}>Choose an option</Box>
-                    }
-                  >
-                    {GENDERS.map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    {errorFor("gender") ?? "Reported to sponsors only as a total."}
-                  </FormHelperText>
-                </FormControl>
-
-                <FormControl fullWidth>
-                  <InputLabel id="dietaryRestriction-label">Dietary restrictions</InputLabel>
-                  <Select
-                    labelId="dietaryRestriction-label"
-                    id="dietaryRestriction"
-                    name="dietaryRestriction"
-                    label="Dietary restrictions"
-                    value={values.dietaryRestriction}
-                    onChange={handleChange}
-                  >
-                    {DIETARY.map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>Lunch and dinner are provided.</FormHelperText>
-                </FormControl>
-              </Section>
+              <Typography variant="body2" color="text.secondary">
+                We do not discriminate in membership or participation in events on the basis
+                of age, color, disability, gender identity or expression, marital status,
+                military status (including active-duty service members, reserve service
+                members, and dependents), national or ethnic origin, political affiliation,
+                pregnancy, race, religion, sex, sexual orientation, veteran status, and
+                family medical or genetic information.
+              </Typography>
             </Stack>
 
             <MobileSubmitBar {...rail} />

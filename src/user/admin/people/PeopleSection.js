@@ -4,6 +4,7 @@ import {
   DialogContentText, DialogTitle, Divider, FormControlLabel, MenuItem, Stack,
   Switch, TextField, Tooltip, Typography,
 } from "@mui/material";
+import { Section } from "../adminUi";
 import {
   listPeople, matchesQuery, setSoleRole, setOrganizer, describeSwitch, deletePerson,
   createPerson, attachRecord, sendReset, bulkSet, ROLE_LABELS, listArchived, restoreArchived,
@@ -27,7 +28,23 @@ import {
  * cannot set someone's password.
  */
 
-const ROLE_COLORS = { admin: "error", judge: "primary", competitor: "default" };
+/**
+ * Roles are told apart by their label; only one of them is told apart by
+ * colour.
+ *
+ * Admin used to be an `error` chip, which is the oxblood this palette reserves
+ * for something being wrong -- so an organizer's badge sat in a list two
+ * columns away from a Delete button in the same ink, saying nothing except
+ * "alarm". Judge was brand crimson, for no reason beyond being the next colour
+ * along. Both were colour doing work the word was already doing.
+ *
+ * Admin keeps an emphasis, because it is the one role that changes what a
+ * person can do to the event, and it is set in ink rather than in a state
+ * colour. The other two are outlined and read as labels, which is what they
+ * are.
+ */
+const ROLE_COLORS = { admin: "secondary", judge: "default", competitor: "default" };
+const ROLE_CHIP_VARIANTS = { admin: "filled", judge: "outlined", competitor: "outlined" };
 
 /**
  * What the dropdown shows: their one role, or that they still hold several.
@@ -101,19 +118,18 @@ export default function PeopleSection({ onResult }) {
   }), [people]);
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>
-        People and roles
-      </Typography>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        One account, one role. Changing it deletes the record for the role they are leaving — a
-        copy is archived first — and creates one for the new role, carrying their name and email
-        across. Fill in the rest from the dashboards. <strong>Admin sits on top of the role</strong>,
-        so an admin who is also a judge can be scheduled and score like anyone else.
-      </Alert>
-
-      <Card sx={{ p: 2 }}>
+    <Section
+      title="People and roles"
+      note={
+        <>
+          One account, one role. Changing it deletes the record for the role they are leaving — a
+          copy is archived first — and creates one for the new role, carrying their name and email
+          across. Fill in the rest from the dashboards. <strong>Admin sits on top of the role</strong>,
+          so an admin who is also a judge can be scheduled and score like anyone else.
+        </>
+      }
+    >
+      <Card sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <TextField
@@ -184,12 +200,14 @@ export default function PeopleSection({ onResult }) {
                 justifyContent="space-between"
                 sx={{ py: 1.25 }}
               >
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, flex: 1 }}>
                   <Checkbox
                     size="small"
                     checked={selected.includes(person.uid)}
                     onChange={() => toggle(person.uid)}
-                    sx={{ flexShrink: 0 }}
+                    // centred on the whole block it sat against the email
+                    // address, one line below the name it actually selects
+                    sx={{ flexShrink: 0, mt: "-7px" }}
                   />
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
@@ -200,13 +218,35 @@ export default function PeopleSection({ onResult }) {
                     </Typography>
                     <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
                       {person.roles.map((role) => (
-                        <Chip key={role} size="small" label={ROLE_LABELS[role]} color={ROLE_COLORS[role]} />
+                        <Chip
+                          key={role}
+                          size="small"
+                          label={ROLE_LABELS[role]}
+                          color={ROLE_COLORS[role]}
+                          variant={ROLE_CHIP_VARIANTS[role] ?? "outlined"}
+                        />
                       ))}
                     </Stack>
                   </Box>
                 </Stack>
 
-                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, flexShrink: 0 }}>
+                {/*
+                  Two groups, not five things in a row.
+
+                  The role select, the admin switch and the three text buttons
+                  shared one 4px gap, so a switch whose FormControlLabel carries
+                  MUI's -11px left margin ended up touching the select's border,
+                  and Reset/History/Delete floated at whatever spacing was left
+                  over. What changes the person's access and what acts on their
+                  account are different jobs; the gap between the groups is
+                  wider than the gap inside either one.
+                */}
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  sx={{ flexWrap: "wrap", gap: 2, flexShrink: 0 }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
                   <TextField
                     select
                     size="small"
@@ -228,7 +268,9 @@ export default function PeopleSection({ onResult }) {
 
                   <Tooltip title="Admin access. Sits on top of the role, so an admin can judge.">
                     <FormControlLabel
-                      sx={{ mr: 0 }}
+                      // both margins: the default -11px on the left is what put
+                      // the switch against the select's border
+                      sx={{ mx: 0 }}
                       label="Admin"
                       control={
                         <Switch
@@ -252,17 +294,26 @@ export default function PeopleSection({ onResult }) {
                       }
                     />
                   </Tooltip>
+                  </Stack>
+
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
                   <Tooltip title={person.email ? "Email them a password reset link" : "No email on file"}>
                     <span>
-                      <Button size="small" disabled={busy || !person.email}
+                      <Button size="small" color="inherit" disabled={busy || !person.email}
                         onClick={() => run(() => sendReset(person.email), `Reset link sent to ${person.email}`)}>
                         Reset
                       </Button>
                     </span>
                   </Tooltip>
                   <Tooltip title="Records deleted by a role change">
+                    {/* Reset and History are ordinary actions and read as ink.
+                        Delete keeps the error colour, which only means anything
+                        while it is the one coloured word in the row -- all three
+                        were the same red, so the destructive one was the hardest
+                        to pick out of a list forty-five rows long. */}
                     <Button
                       size="small"
+                      color="inherit"
                       disabled={busy}
                       onClick={async () => {
                         setArchiveFor(person);
@@ -276,6 +327,7 @@ export default function PeopleSection({ onResult }) {
                     onClick={() => { setAlsoScores(false); setConfirmDelete(person); }}>
                     Delete
                   </Button>
+                  </Stack>
                 </Stack>
               </Stack>
             ))}
@@ -439,7 +491,7 @@ export default function PeopleSection({ onResult }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </section>
+    </Section>
   );
 }
 

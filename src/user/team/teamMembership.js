@@ -146,8 +146,22 @@ export async function joinTeam(teamId) {
     }
 
     try {
+      // just this member, so joining cannot drop or reorder anyone else --
+      // and deliberately NOT a rewrite of the whole `members` node. A team
+      // created before scripts/migrate-team-members.mjs was run still stores
+      // members as an array, and landing this write on one turns the node
+      // mixed (RTDB drops array-ness the moment a non-numeric key appears):
+      // leftover array slots sitting next to this one well-formed entry.
+      // Fixing that shape here, by writing the whole migrated node instead of
+      // just this key, was considered and rejected -- the rule at
+      // members/$memberUid grants a write only where $memberUid === auth.uid,
+      // so a joiner has permission to touch their OWN key and nobody else's;
+      // a client-side rewrite of every existing member's entry would be
+      // refused outright, turning a silently-wrong read into a hard failure
+      // for every join on that team. memberIds (teamMembers.js) reads a mixed
+      // node correctly regardless of how many more people join it, so there
+      // is nothing left for this write to protect against.
       await update(ref(database), {
-        // just this member, so joining cannot drop or reorder anyone else
         [`teams/${trimmed}/members/${uid}`]: true,
         [`competitors/${uid}/teamId`]: trimmed,
       });

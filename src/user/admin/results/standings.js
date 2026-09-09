@@ -1,4 +1,5 @@
 import { compareForRanking, rankingEntry, scoreCard, scoredJudgeCount } from "../../judge/scoreRubric.js";
+import { rosterOf } from "../../judge/assignmentList.js";
 
 /**
  * Who won.
@@ -25,6 +26,61 @@ import { compareForRanking, rankingEntry, scoreCard, scoredJudgeCount } from "..
  * @param panels          { teamId: judgeUid[] } who is expected to score, from
  *                        each judge's finalAssignments
  */
+/**
+ * The order a ranking is read in, for either round.
+ *
+ * `compareForRanking` is the tiebreak the cut is made on and the exports are
+ * written with; the only thing added here is where a team with no card at all
+ * goes. It sorts last whatever it did in the other round, because it has not
+ * been heard yet -- a team that led the field all day and has not presented
+ * tonight is not in first place, and it is not in last place either. Both
+ * rounds share this so the two tabs cannot drift into ranking by different
+ * rules.
+ */
+export function byRank(a, b) {
+  const aScored = typeof a.averageScore === "number";
+  const bScored = typeof b.averageScore === "number";
+  if (aScored !== bScored) return aScored ? -1 : 1;
+  if (!aScored) return String(a.name).localeCompare(String(b.name));
+  return compareForRanking(a, b);
+}
+
+/**
+ * The first round, ranked.
+ *
+ * Same rubric and same tiebreak as the final, so the standing a team is shown
+ * here is the standing the cut was made on. The panel comes off the team's own
+ * schedule roster rather than the judges' assignment lists -- that roster is
+ * what the judging page counts against, and counting `received` over a
+ * different population is how a team gets marked complete that a judge on its
+ * panel has not actually scored.
+ *
+ * @param teams       the /teams node
+ * @param firstScores /scores/first, as { teamId: { judgeUid: card } }
+ */
+export function firstRoundStandings({ teams = {}, firstScores = {} } = {}) {
+  return Object.entries(teams)
+    .map(([teamId, team]) => {
+      const cards = firstScores[teamId] ?? {};
+      const assigned = rosterOf(team?.schedule).map((entry) => entry.judgeId);
+      const expected = assigned.length;
+      const received = assigned.filter((judgeId) => scoreCard(cards[judgeId]) !== null).length;
+
+      return {
+        ...rankingEntry(teamId, team?.name, cards),
+        submitted: Boolean(team?.submitted),
+        timeslot: team?.schedule?.time ?? null,
+        room: team?.schedule?.room ?? null,
+        batch: team?.schedule?.batch ?? null,
+        expected,
+        received,
+        cardsFiled: scoredJudgeCount(cards),
+        complete: expected > 0 && received >= expected,
+      };
+    })
+    .sort(byRank);
+}
+
 export function finalStandings({ finalRoundTeams = {}, finalScores = {}, panels = {} } = {}) {
   return Object.entries(finalRoundTeams)
     .map(([teamId, standing]) => {
@@ -59,28 +115,7 @@ export function finalStandings({ finalRoundTeams = {}, finalScores = {}, panels 
         complete: expected > 0 && received >= expected,
       };
     })
-    .sort((a, b) => {
-      // teams with no final card at all sort last whatever their first-round
-      // average was: they have not presented yet
-      const aScored = typeof a.averageScore === "number";
-      const bScored = typeof b.averageScore === "number";
-      if (aScored !== bScored) return aScored ? -1 : 1;
-      if (!aScored) return String(a.name).localeCompare(String(b.name));
-      return compareForRanking(a, b);
-    });
-}
-
-/**
- * The standings from the most recent closed round, or null.
- *
- * Deactivating the final round clears `finalRound/teams` and every judge's
- * `finalAssignments` -- so closing judging, which is what an organizer does
- * *before* announcing, used to empty the results page at the moment it mattered
- * most. The standings are archived rather than deleted, so this reads them back.
- */
-export function latestArchive(archive = {}) {
-  const [newest] = Object.keys(archive ?? {}).sort().reverse();
-  return newest ? archive[newest]?.teams ?? null : null;
+    .sort(byRank);
 }
 
 /** Who is expected to score each finalist, read off the judges' assignments. */
@@ -100,22 +135,16 @@ export function panelsFrom(judges = {}) {
  * An organizer about to announce a winner needs to know the difference between
  * "this is the result" and "this is the result so far", and the gap between
  * them is usually one judge who has not pressed submit.
+ *
+ * There used to be a `closed` option here, for reading an archived round back
+ * after deactivation had wiped the panels it counts against. The results page
+ * no longer shows a round that is not running, so nothing passes it.
  */
-export function standingsState(standings, { closed = false } = {}) {
+export function standingsState(standings) {
   const outstanding = standings.filter((team) => !team.complete);
   const expected = standings.reduce((sum, team) => sum + team.expected, 0);
-
-  // A closed round is settled by definition: no further card can be written,
-  // because the assignments the rules treat as proof of assignment are gone.
-  // `received` is panel-scoped and the panel is exactly what deactivation
-  // wipes, so it reads as zero here whether or not cards exist -- `cardsFiled`
-  // is the raw count that survives the panel being gone.
-  if (closed) {
-    const cards = standings.reduce((sum, team) => sum + team.cardsFiled, 0);
-    return { settled: cards > 0, cards, expected, waitingOn: [] };
-  }
-
   const cards = standings.reduce((sum, team) => sum + team.received, 0);
+
   return {
     settled: standings.length > 0 && outstanding.length === 0,
     cards,
@@ -133,8 +162,8 @@ export function standingsState(standings, { closed = false } = {}) {
  * `compareForRanking` is a total order, so there is always a first row -- but a
  * first row and a winner are not the same claim while cards are outstanding.
  */
-export function winnerOf(standings, { closed = false } = {}) {
+export function winnerOf(standings) {
   const [first] = standings;
   if (!first || typeof first.averageScore !== "number") return null;
-  return standingsState(standings, { closed }).settled ? first : null;
+  return standingsState(standings).settled ? first : null;
 }

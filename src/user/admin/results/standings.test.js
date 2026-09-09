@@ -8,8 +8,8 @@
  * somebody has not pressed submit yet.
  */
 import {
-  finalStandings, latestArchive, panelsFrom, standingsState, winnerOf,
-} from "./finalStandings";
+  finalStandings, firstRoundStandings, panelsFrom, standingsState, winnerOf,
+} from "./standings";
 
 const card = (problem) => ({
   problem,
@@ -146,50 +146,105 @@ describe("a running total is not a result", () => {
 });
 
 /**
- * Closing the round is what an organizer does before announcing, and it clears
- * both the standings and every judge's assignments. The results page used to go
- * blank at exactly that moment.
+ * A panel nobody is assigned to is not a finished panel.
+ *
+ * Deactivating the final round wipes every judge's `finalAssignments`, which is
+ * the population `received` and `expected` are counted over. The page no longer
+ * reads a round that is not running, so this is only about the live case: an
+ * open round where the plan has not seated anybody yet.
  */
-describe("after the round is closed", () => {
-  const archive = {
-    "1700000000000": { teams: { t9: { name: "Old", averageScore: 20 } } },
-    "1800000000000": { teams: finalRoundTeams },
-  };
-
-  test("the newest archived standings are the ones that come back", () => {
-    expect(Object.keys(latestArchive(archive))).toEqual(["t1", "t2", "t3"]);
-  });
-
-  test("nothing archived is null, not a throw", () => {
-    expect(latestArchive()).toBeNull();
-    expect(latestArchive({})).toBeNull();
-  });
-
-  test("a closed round is settled even though the panels are gone", () => {
-    // deactivation clears finalAssignments, so nothing knows who was expected
-    const standings = finalStandings({
-      finalRoundTeams,
-      finalScores: { t1: { j1: card(9) }, t2: { j1: card(7) }, t3: { j1: card(5) } },
-      panels: {},
-    });
-
-    expect(standingsState(standings).settled).toBe(false);
-    expect(standingsState(standings, { closed: true }).settled).toBe(true);
-    expect(winnerOf(standings, { closed: true }).name).toBe("Alpha");
-  });
-
-  test("a closed round with no cards at all still has no winner", () => {
-    const standings = finalStandings({ finalRoundTeams, finalScores: {}, panels: {} });
-    expect(standingsState(standings, { closed: true }).settled).toBe(false);
-    expect(winnerOf(standings, { closed: true })).toBeNull();
-  });
-
-  test("an open round is not settled just because nobody is assigned", () => {
+describe("a round with no panels", () => {
+  test("is not settled just because nobody is assigned", () => {
     const standings = finalStandings({
       finalRoundTeams,
       finalScores: { t1: { j1: card(9) } },
       panels: {},
     });
     expect(standingsState(standings).settled).toBe(false);
+  });
+
+  test("still counts the cards that were filed", () => {
+    const standings = finalStandings({
+      finalRoundTeams,
+      finalScores: { t1: { j1: card(9) }, t2: { j1: card(7) } },
+      panels: {},
+    });
+    expect(standings.reduce((sum, team) => sum + team.cardsFiled, 0)).toBe(2);
+  });
+});
+
+/**
+ * The first round, ranked by the same rule.
+ *
+ * The panel is the team's own schedule roster rather than the judges'
+ * assignment lists, because that roster is what the judging page counts
+ * against -- two populations would let a team read as fully scored on one page
+ * and short a card on the other.
+ */
+describe("the first round", () => {
+  const roster = (...ids) => ({ judges: ids.map((judgeId) => ({ judgeId })) });
+  const teams = {
+    a: { name: "Alpha", schedule: { batch: 1, time: "5:00 PM", room: "Rice 340", ...roster("j1", "j2") } },
+    b: { name: "Bravo", schedule: { batch: 1, time: "5:00 PM", room: "Rice 342", ...roster("j1", "j2") } },
+    c: { name: "Cosmo", schedule: { batch: 2, time: "5:15 PM", room: "Rice 340", ...roster("j1") } },
+  };
+
+  test("ranks by average, best first", () => {
+    const standings = firstRoundStandings({
+      teams,
+      firstScores: { a: { j1: card(6) }, b: { j1: card(9) }, c: { j1: card(7) } },
+    });
+    expect(standings.map((team) => team.name)).toEqual(["Bravo", "Cosmo", "Alpha"]);
+  });
+
+  test("a team nobody has scored sorts last, by name, without a place", () => {
+    const standings = firstRoundStandings({
+      teams,
+      firstScores: { b: { j1: card(9) } },
+    });
+    expect(standings.map((team) => team.name)).toEqual(["Bravo", "Alpha", "Cosmo"]);
+    expect(standings[1].averageScore).toBeNull();
+  });
+
+  test("counts expected against the roster, not against whoever filed a card", () => {
+    const standings = firstRoundStandings({
+      teams,
+      // j9 is not on Alpha's roster: the card counts toward the average but
+      // cannot stand in for j2's missing one
+      firstScores: { a: { j1: card(8), j9: card(8) } },
+    });
+    const alpha = standings.find((team) => team.name === "Alpha");
+    expect(alpha.expected).toBe(2);
+    expect(alpha.received).toBe(1);
+    expect(alpha.complete).toBe(false);
+    expect(alpha.cardsFiled).toBe(2);
+  });
+
+  test("every judge on the roster in is a complete team", () => {
+    const standings = firstRoundStandings({
+      teams,
+      firstScores: { c: { j1: card(7) } },
+    });
+    expect(standings.find((team) => team.name === "Cosmo").complete).toBe(true);
+  });
+
+  test("carries where the team presented, for checking a surprising score", () => {
+    const [top] = firstRoundStandings({ teams, firstScores: { a: { j1: card(9) } } });
+    expect(top.batch).toBe(1);
+    expect(top.timeslot).toBe("5:00 PM");
+    expect(top.room).toBe("Rice 340");
+  });
+
+  test("a team with no schedule at all is ranked, not dropped", () => {
+    const standings = firstRoundStandings({
+      teams: { z: { name: "Zulu" } },
+      firstScores: { z: { j1: card(9) } },
+    });
+    expect(standings[0].name).toBe("Zulu");
+    expect(standings[0].expected).toBe(0);
+  });
+
+  test("no teams at all is an empty result, not a throw", () => {
+    expect(firstRoundStandings()).toEqual([]);
   });
 });

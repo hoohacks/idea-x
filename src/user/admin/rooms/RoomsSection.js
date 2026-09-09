@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Button, Chip, Stack, TextField, Typography } from "@mui/material";
-import { RowList, Row } from "../adminUi";
+import { Alert, Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import { FIELD, RowList, Row, Section } from "../adminUi";
 import { roomsInUse, finalRoomsInUse, addRoom, renameRoom, removeRoom } from "./roomsService";
 import RemapDialog from "./RemapDialog";
 
@@ -51,16 +51,18 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
   };
 
   return (
-    <section>
-      <Typography variant="h2" sx={{ fontSize: "1.1rem", mb: 1 }}>Judging rooms</Typography>
-
+    <Section
+      title="Judging rooms"
+      note="The order here is the order the scheduler fills them in. Once a schedule is
+            generated the name is copied onto every card, so renaming one afterwards is safe."
+    >
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <TextField
-          size="small"
           placeholder="Add a room, e.g. Rice 110"
+          inputProps={{ "aria-label": "Add a room" }}
           value={newRoom}
           onChange={(event) => setNewRoom(event.target.value)}
-          sx={{ flex: 1 }}
+          sx={{ width: FIELD.name }}
         />
         <Button
           variant="contained"
@@ -90,13 +92,18 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
             <Row key={room}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
                 {isRenaming ? (
-                  <TextField
-                    size="small"
-                    value={renameTo}
-                    onChange={(event) => setRenameTo(event.target.value)}
-                    sx={{ flex: 1 }}
-                    autoFocus
-                  />
+                  // flex on the wrapper, width on the field: the actions stay
+                  // where they were rather than sliding left the moment a row
+                  // goes into rename mode
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <TextField
+                      value={renameTo}
+                      inputProps={{ "aria-label": `Rename ${room}` }}
+                      onChange={(event) => setRenameTo(event.target.value)}
+                      sx={{ width: FIELD.name, maxWidth: "100%" }}
+                      autoFocus
+                    />
+                  </Box>
                 ) : (
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
                     <Typography sx={{ fontWeight: 600 }}>{room}</Typography>
@@ -171,6 +178,6 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
           }}
         />
       )}
-    </section>
+    </Section>
   );
 }

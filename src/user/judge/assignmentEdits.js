@@ -1,6 +1,7 @@
 import { ref, get, update, runTransaction } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
+import { rosterOf } from "./assignmentList.js";
 import { assignmentList } from "./assignmentList.js";
 
 /**
@@ -67,10 +68,57 @@ function fanOut(updates, teamId, assignment, roster, previousRoster) {
   }
 }
 
-function rosterOf(schedule) {
-  const raw = schedule?.judges;
-  const list = Array.isArray(raw) ? raw : Object.values(raw ?? {});
-  return list.filter((entry) => entry && entry.judgeId);
+/**
+ * Does this judge's copy disagree with the roster of record?
+ *
+ * Compared field by field rather than as whole objects on purpose. A copy
+ * written by publishPlan and one built here hold the same values in a
+ * different key order, and `JSON.stringify` would call that a difference --
+ * which would rewrite every copy on every no-op edit forever.
+ */
+function copyIsStale(copy, assignment) {
+  if (!copy) return true;
+  if (JSON.stringify(rosterOf(copy)) !== JSON.stringify(rosterOf(assignment))) return true;
+  return ["teamName", "id", "room", "time", "batch"].some((key) => copy[key] !== assignment[key]);
+}
+
+/**
+ * Bring every judge's copy back into line with the roster of record.
+ *
+ * The roster commits through a transaction and the copies are written after
+ * it, so a failure between the two leaves a judge holding a panel that no
+ * longer exists -- or holding none at all. Nothing repairs that on its own,
+ * and the organizer's natural response is to make the same edit again.
+ *
+ * That is what this is for. Both edits below return early the moment the
+ * roster already says what was asked for, and they used to return without
+ * writing anything, so repeating the edit fixed nothing. Now the early return
+ * reconciles first: it is the same fan-out, restricted to the copies that are
+ * actually wrong, so a no-op edit stays a no-op when everything agrees.
+ *
+ * `judges` is the snapshot loadContext already read, so this costs no
+ * additional round trip.
+ */
+async function repairFanOut({ teamId, schedule, roster, judges }) {
+  const assignment = { ...schedule, judges: roster };
+  const updates = {};
+
+  for (const judgeId of Object.keys(judges ?? {})) {
+    const copy = judges[judgeId]?.teamAssignments?.[teamId];
+    const onRoster = roster.some((entry) => entry.judgeId === judgeId);
+
+    if (!onRoster) {
+      // a judge off the roster still holding a copy is the mirror failure:
+      // they turn up to a team that is no longer theirs
+      if (copy) updates[`judges/${judgeId}/teamAssignments/${teamId}`] = null;
+    } else if (copyIsStale(copy, assignment)) {
+      updates[`judges/${judgeId}/teamAssignments/${teamId}`] = assignment;
+    }
+  }
+
+  if (!Object.keys(updates).length) return false;
+  await update(ref(database), updates);
+  return true;
 }
 
 /**
@@ -298,7 +346,8 @@ export async function assignJudgeToTeam({ judgeUid, teamId, allowConflict = fals
 
   const previous = rosterOf(schedule);
   if (previous.some((entry) => entry.judgeId === judgeUid)) {
-    return { ok: true, unchanged: true, roster: previous };
+    const repaired = await repairFanOut({ teamId, schedule, roster: previous, judges });
+    return { ok: true, unchanged: true, repaired, roster: previous };
   }
 
   if (!allowConflict) {
@@ -322,13 +371,14 @@ export async function assignJudgeToTeam({ judgeUid, teamId, allowConflict = fals
 
 export async function unassignJudgeFromTeam({ judgeUid, teamId }) {
   await requireAdmin("change judging assignments");
-  const { schedule } = await loadContext(teamId, null);
+  const { schedule, judges } = await loadContext(teamId, null);
 
   const previous = rosterOf(schedule);
   const roster = previous.filter((entry) => entry.judgeId !== judgeUid);
 
   if (roster.length === previous.length) {
-    return { ok: true, unchanged: true, roster };
+    const repaired = await repairFanOut({ teamId, schedule, roster, judges });
+    return { ok: true, unchanged: true, repaired, roster };
   }
   if (!roster.length) {
     return {

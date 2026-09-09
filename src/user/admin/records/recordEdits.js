@@ -1,6 +1,7 @@
 import { ref, get } from "firebase/database";
 import { database } from "../../../firebase.js";
 import { applyAdminAction, captureBefore } from "../adminAction.js";
+import { memberRemovalPath } from "../../team/teamMembers.js";
 
 /**
  * Editing a record.
@@ -69,14 +70,27 @@ export function renameTeamChanges({ teamId, from, to, teamData, judgesData, fina
 }
 
 /**
- * Membership is a keyed set -- teams/{id}/members/{uid} = true -- because the
- * rules match on the child KEY. All three paths move together or the person is
- * on both teams, or on neither.
+ * Membership is usually a keyed set -- teams/{id}/members/{uid} = true --
+ * because the rules match on the child KEY. All three paths move together or
+ * the person is on both teams, or on neither.
+ *
+ * A team created before scripts/migrate-team-members.mjs ran can still hold
+ * the uid as an ARRAY VALUE instead, at a numeric key that means nothing --
+ * see teamMembers.js. Nulling `members/{uid}` on that shape deletes nothing,
+ * so `fromMembers` -- the team's actual `members` node, read by the caller --
+ * is used to find the real child to clear. When the caller has not read it
+ * (fromMembers is left undefined, as every existing caller before this one
+ * did), this falls back to assuming the keyed shape, which is right for
+ * every team created after the migration and for a brand-new one.
  */
-export function moveMemberChanges({ uid, fromTeamId, toTeamId }) {
+export function moveMemberChanges({ uid, fromTeamId, toTeamId, fromMembers }) {
   const changes = [];
   if (fromTeamId) {
-    changes.push({ path: `teams/${fromTeamId}/members/${uid}`, before: true, after: null });
+    const removal =
+      fromMembers !== undefined ? memberRemovalPath(fromMembers, uid) : { key: uid, before: true };
+    if (removal) {
+      changes.push({ path: `teams/${fromTeamId}/members/${removal.key}`, before: removal.before, after: null });
+    }
   }
   if (toTeamId) {
     changes.push({ path: `teams/${toTeamId}/members/${uid}`, before: null, after: true });
@@ -170,10 +184,11 @@ export async function moveCompetitorToTeam({ uid, name, toTeamId }) {
   // warn, do not block: an empty team is recoverable, and blocking here would
   // make the last member impossible to move
   let emptiedTeam = null;
+  let fromMembers;
   if (fromTeamId) {
     const membersSnap = await get(ref(database, `teams/${fromTeamId}/members`));
-    const remaining = Object.keys(membersSnap.exists() ? membersSnap.val() ?? {} : {})
-      .filter((memberUid) => memberUid !== uid);
+    fromMembers = membersSnap.exists() ? membersSnap.val() : null;
+    const remaining = Object.keys(fromMembers ?? {}).filter((memberUid) => memberUid !== uid);
     if (!remaining.length) emptiedTeam = fromTeamId;
   }
 
@@ -181,7 +196,7 @@ export async function moveCompetitorToTeam({ uid, name, toTeamId }) {
     action: "competitor.move",
     summary: `Moved ${name || uid.slice(0, 8)} ${fromTeamId ? `from ${fromTeamId} ` : ""}` +
       `to ${toTeamId ?? "no team"}`,
-    changes: moveMemberChanges({ uid, fromTeamId, toTeamId }),
+    changes: moveMemberChanges({ uid, fromTeamId, toTeamId, fromMembers }),
   });
 
   return { ...result, emptiedTeam };

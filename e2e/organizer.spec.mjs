@@ -55,7 +55,10 @@ test("the final round tab opens without leaving the page", async ({ page }) => {
   await goto(page, "/user/admin/schedule?round=final");
   await expectPagePainted(page);
 
-  await expect(page.getByRole("heading", { name: "Final round" })).toBeVisible();
+  // the page is titled once, above the tabs; the round is which tab is on,
+  // not a second heading repeating it
+  await expect(page.getByRole("heading", { name: "Judging schedule" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Final round", selected: true })).toBeVisible();
   await expect(page.getByRole("banner")).toHaveCount(1);
 });
 

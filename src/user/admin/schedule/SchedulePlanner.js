@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Tab, Tabs } from "@mui/material";
 import Layout from "../../Layout.js";
+import { PageHeader } from "../adminUi";
 import SchedulePreview from "./SchedulePreview.js";
 import FinalRoundPlanner from "./FinalRoundPlanner.js";
 
@@ -33,23 +34,30 @@ export default function SchedulePlanner() {
     setParams(next === "final" ? { round: "final" } : {}, { replace: true });
   }
 
-  const tabs = (
-    <Tabs value={round} onChange={(_, next) => pick(next)} sx={{ mb: 2 }}>
-      <Tab value="first" label="First round" />
-      <Tab value="final" label="Final round" />
-    </Tabs>
+  /*
+    Title, then the tabs that divide it -- the order every other page in the
+    portal uses. The planner had it the other way round: a tab strip arrived
+    first with nothing above it saying what was being planned, and the page's
+    only h1 was the heading of the card below. So the round now reads as a
+    division of "Judging schedule" rather than as the page itself.
+  */
+  const header = (
+    <>
+      <PageHeader title="Judging schedule" />
+      <Tabs value={round} onChange={(_, next) => pick(next)} sx={{ mt: -1, mb: 3 }}>
+        <Tab value="first" label="First round" />
+        <Tab value="final" label="Final round" />
+      </Tabs>
+    </>
   );
 
-  // the first-round preview owns its own frame, so the tabs go into it
-  if (round === "first") return <SchedulePreview header={tabs} />;
+  // the first-round preview owns its own frame, so the header goes into it
+  if (round === "first") return <SchedulePreview header={header} />;
 
   return (
     <Layout maxWidth="lg">
-      {tabs}
-      <Stack spacing={2}>
-        <Typography variant="h1">Final round</Typography>
-        <FinalRoundPlanner />
-      </Stack>
+      {header}
+      <FinalRoundPlanner />
     </Layout>
   );
 }

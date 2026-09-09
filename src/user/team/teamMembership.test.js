@@ -24,6 +24,7 @@ jest.mock("firebase/database", () => ({
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "me" } }) }));
 
 const { joinTeam, MAX_TEAM_SIZE } = require("./teamMembership");
+const { memberIds, isMember } = require("./teamMembers");
 
 /** The world as the rules actually expose it to somebody who is not a member. */
 function asNonMember({ name = "Lumen", denyWrite = false, competitor = { firstName: "Alex" } } = {}) {
@@ -149,5 +150,44 @@ describe("when the reads happen to be permitted", () => {
   test("a team with room is joined", async () => {
     asReader({ members: { u0: true } });
     expect((await joinTeam("t1")).ok).toBe(true);
+  });
+});
+
+/**
+ * A team created before the array -> keyed-set migration stores `members` as
+ * a real array: RTDB keys "0", "1" holding the uids as values. `joinTeam`'s
+ * write -- `members/{uid}: true` -- lands on top of that array untouched
+ * (nothing here may rewrite it: the rules grant a joiner write only at
+ * `members/{their own uid}`, not at every other member's key, so `joinTeam`
+ * cannot migrate the node itself). RTDB turns the whole node into a plain
+ * object the moment a non-numeric key like a uid is added, so the result is
+ * mixed: `{"0": "dave", "1": "carol", "erin": true}`.
+ *
+ * Before this fix, memberIds's object branch assumed every value was the
+ * boolean flag of a keyed entry and returned the KEYS -- "0", "1", "erin" --
+ * instead of the real uids. Pre-existing members then rendered as "Unknown
+ * User" and isMember(members, "dave") came back false, on a team that is
+ * currently live.
+ */
+describe("a legacy array survives being joined before it is migrated", () => {
+  const mixed = { "0": "dave", "1": "carol", erin: true };
+
+  test("memberIds reads the leftover array slots by their value, and the new entry by its key", () => {
+    expect(memberIds(mixed)).toEqual(["dave", "carol", "erin"]);
+  });
+
+  test("a pre-existing member is still recognized as one", () => {
+    expect(isMember(mixed, "dave")).toBe(true);
+    expect(isMember(mixed, "carol")).toBe(true);
+  });
+
+  test("the newly-joined member is recognized too", () => {
+    expect(isMember(mixed, "erin")).toBe(true);
+  });
+
+  test("pure shapes are unaffected -- schema.test.js pins this contract", () => {
+    expect(memberIds({ a: true, b: true })).toEqual(["a", "b"]);
+    expect(memberIds(["a", "b"])).toEqual(["a", "b"]);
+    expect(memberIds({ a: true, b: null, c: false })).toEqual(["a"]);
   });
 });

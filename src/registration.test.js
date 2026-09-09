@@ -87,8 +87,6 @@ const COMPETITOR = {
   email: "mj@virginia.edu",
   password: "hunter2!",
   major: "Systems Engineering",
-  skills: "Python, user interviews",
-  learn: "How to size a market",
 };
 
 const JUDGE = {
@@ -113,7 +111,7 @@ describe("competitor registration", () => {
     expect(
       await screen.findByRole("heading", { name: /Ideathon/ })
     ).toBeInTheDocument();
-    expect(shows("8 answers left")).toBeInTheDocument();
+    expect(shows("6 answers left")).toBeInTheDocument();
     expect(submit("Register")).toBeInTheDocument();
   });
 
@@ -123,9 +121,9 @@ describe("competitor registration", () => {
     userEvent.click(submit("Register"));
 
     expect(mockCreateUser).not.toHaveBeenCalled();
-    // eight nouns would be a paragraph, so past three it reports the count
+    // six nouns would be a paragraph, so past three it reports the count
     expect(
-      (await screen.findAllByText(/8 answers still needed, starting with your first name/))[0]
+      (await screen.findAllByText(/6 answers still needed, starting with your first name/))[0]
     ).toBeInTheDocument();
     expect(screen.getByText("Enter your first name")).toBeInTheDocument();
     expect(screen.getByText("Choose a password")).toBeInTheDocument();
@@ -134,14 +132,14 @@ describe("competitor registration", () => {
   test("a nearly finished form names the last few by hand", async () => {
     renderPage(Registration);
 
-    // everything but the skills answer and the gender select
-    autofill({ ...COMPETITOR, skills: "" });
+    // everything but the major and the gender select
+    autofill({ ...COMPETITOR, major: "" });
     announceAutofill("firstName");
     userEvent.click(submit("Register"));
 
     expect(mockCreateUser).not.toHaveBeenCalled();
     expect(
-      (await screen.findAllByText("Still needed: your skills and your gender."))[0]
+      (await screen.findAllByText("Still needed: your major and your gender."))[0]
     ).toBeInTheDocument();
   });
 
@@ -162,12 +160,12 @@ describe("competitor registration", () => {
 
   test("the rail counts autofilled answers as soon as the browser announces them", async () => {
     renderPage(Registration);
-    expect(shows("8 answers left")).toBeInTheDocument();
+    expect(shows("6 answers left")).toBeInTheDocument();
 
     autofill(COMPETITOR);
     announceAutofill("firstName");
 
-    // seven of the eight: gender is a select, and no browser fills those
+    // five of the six: gender is a select, and no browser fills those
     expect((await screen.findAllByText("1 answer left"))[0]).toBeInTheDocument();
   });
 

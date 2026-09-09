@@ -1,9 +1,8 @@
 import { useState } from "react";
 import {
-  Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Card,
-  Divider, MenuItem, Stack, TextField, Typography,
+  Alert, Box, Button, Card, Divider, MenuItem, Stack, TextField, Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { FIELD, Section } from "./adminUi";
 import { createTeam, setConfigValue } from "./people/peopleService";
 
 /**
@@ -100,111 +99,109 @@ export default function AdvancedSection({ config = {}, onResult }) {
   };
 
   return (
-    <section>
-      <Accordion disableGutters elevation={0} sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}>
-        <AccordionSummary expandIcon={<IoChevronDown />} sx={{ px: 0 }}>
-          <Typography variant="h2" sx={{ fontSize: "1.1rem" }}>Advanced</Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ px: 0 }}>
-          <Card sx={{ p: 2 }}>
-            <Stack spacing={2}>
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Create an empty team</Typography>
-                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
-                  For a group who turned up without registering one. Add their members from the
-                  Competitors dashboard afterwards.
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    size="small" label="Team name" value={teamName}
-                    onChange={(event) => setTeamName(event.target.value)} sx={{ flex: 1 }}
-                  />
-                  <Button
-                    variant="outlined" disabled={busy || !teamName.trim()}
-                    onClick={() => run(() => createTeam(teamName), `Created ${teamName.trim()}`).then(() => setTeamName(""))}
-                  >
-                    Create
-                  </Button>
-                </Stack>
-              </Box>
+    <Section title="Advanced" collapsible>
+      <Card sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Create an empty team</Typography>
+            <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
+              For a group who turned up without registering one. Add their members from the
+              Competitors dashboard afterwards.
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                label="Team name" value={teamName}
+                onChange={(event) => setTeamName(event.target.value)}
+                sx={{ width: { xs: "100%", sm: FIELD.name } }}
+              />
+              <Button
+                variant="outlined" disabled={busy || !teamName.trim()}
+                onClick={() => run(() => createTeam(teamName), `Created ${teamName.trim()}`).then(() => setTeamName(""))}
+              >
+                Create
+              </Button>
+            </Stack>
+          </Box>
 
-              <Divider />
+          <Divider />
 
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Write a config key</Typography>
-                <Alert severity="warning" sx={{ mb: 1 }}>
-                  No validation beyond the type. A wrong key here is a setting nothing reads; a
-                  wrong value is one everything reads. The named settings above are safer.
-                </Alert>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Write a config key</Typography>
+            <Alert severity="warning" sx={{ mb: 1 }}>
+              No validation beyond the type. A wrong key here is a setting nothing reads; a
+              wrong value is one everything reads. The named settings above are safer.
+            </Alert>
 
-                <Stack spacing={1}>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                    <TextField
-                      size="small" label="Key" placeholder="targetJudgesPerTeam" value={key}
-                      onChange={(event) => setKey(event.target.value)} sx={{ flex: 1 }}
-                      helperText="Written to config/<key>"
-                    />
-                    <TextField
-                      select size="small" label="Type" value={effectiveType}
-                      onChange={(event) => { setType(event.target.value); setTypeTouched(true); }}
-                      sx={{ minWidth: 130 }}
-                      helperText={expected ? `${key.trim()} must be ${expected}` : "Free-form key"}
-                    >
-                      {TYPES.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Stack>
-
-                  {mismatch && (
-                    <Alert severity="warning">
-                      {key.trim()} is read as a {expected}. Saving it as {type} will not fail —
-                      it will just be wrong in a way nothing reports.
-                    </Alert>
-                  )}
-
-                  {effectiveType === "boolean" ? (
-                    <TextField select size="small" label="Value" value={raw || "true"}
-                      onChange={(event) => setRaw(event.target.value)}>
-                      <MenuItem value="true">Yes</MenuItem>
-                      <MenuItem value="false">No</MenuItem>
-                    </TextField>
-                  ) : (
-                    <TextField
-                      size="small" label="Value" value={raw}
-                      onChange={(event) => setRaw(event.target.value)}
-                      multiline={effectiveType === "json"} minRows={effectiveType === "json" ? 3 : 1}
-                    />
-                  )}
-
-                  {error && <Alert severity="error">{error}</Alert>}
-
-                  <Box>
-                    <Button variant="outlined" disabled={busy || !key.trim()} onClick={saveConfig}>
-                      Save config key
-                    </Button>
-                  </Box>
-                </Stack>
-              </Box>
-
-              <Divider />
-
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Current config</Typography>
-                <Box
-                  component="pre"
-                  sx={{
-                    m: 0, p: 1.5, fontSize: ".78rem", overflowX: "auto",
-                    bgcolor: "action.hover", borderRadius: 1,
-                  }}
+            <Stack spacing={1}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <TextField
+                  label="Key" placeholder="targetJudgesPerTeam" value={key}
+                  onChange={(event) => setKey(event.target.value)}
+                  sx={{ width: { xs: "100%", sm: FIELD.key } }}
+                  helperText="Written to config/<key>"
+                />
+                <TextField
+                  select label="Type" value={effectiveType}
+                  onChange={(event) => { setType(event.target.value); setTypeTouched(true); }}
+                  sx={{ minWidth: 130 }}
+                  helperText={expected ? `${key.trim()} must be ${expected}` : "Free-form key"}
                 >
-                  {JSON.stringify(config, null, 2)}
-                </Box>
+                  {TYPES.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+
+              {mismatch && (
+                <Alert severity="warning">
+                  {key.trim()} is read as a {expected}. Saving it as {type} will not fail —
+                  it will just be wrong in a way nothing reports.
+                </Alert>
+              )}
+
+              {effectiveType === "boolean" ? (
+                <TextField select label="Value" value={raw || "true"}
+                  onChange={(event) => setRaw(event.target.value)}
+                  sx={{ width: { xs: "100%", sm: FIELD.key } }}>
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </TextField>
+              ) : (
+                <TextField
+                  label="Value" value={raw}
+                  onChange={(event) => setRaw(event.target.value)}
+                  multiline={effectiveType === "json"} minRows={effectiveType === "json" ? 3 : 1}
+                  // JSON needs the room; a string or a number does not
+                  sx={{ width: { xs: "100%", sm: effectiveType === "json" ? 640 : FIELD.key } }}
+                />
+              )}
+
+              {error && <Alert severity="error">{error}</Alert>}
+
+              <Box>
+                <Button variant="outlined" disabled={busy || !key.trim()} onClick={saveConfig}>
+                  Save config key
+                </Button>
               </Box>
             </Stack>
-          </Card>
-        </AccordionDetails>
-      </Accordion>
-    </section>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Current config</Typography>
+            <Box
+              component="pre"
+              sx={{
+                m: 0, p: 1.5, fontSize: ".78rem", overflowX: "auto",
+                bgcolor: "action.hover", borderRadius: 1,
+              }}
+            >
+              {JSON.stringify(config, null, 2)}
+            </Box>
+          </Box>
+        </Stack>
+      </Card>
+    </Section>
   );
 }

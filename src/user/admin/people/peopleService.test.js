@@ -143,6 +143,38 @@ describe("removalChanges reaches every copy of a person", () => {
     expect(changes.find((c) => c.path === "teams/t1/schedule/judges").after)
       .toEqual([{ judgeId: "j2" }]);
   });
+
+  /**
+   * A team created before scripts/migrate-team-members.mjs ran still holds
+   * `members` as a real array -- the uid is the VALUE, and the key is a
+   * meaningless index. hasOwnProperty(members, uid) is only true for the
+   * keyed shape, so on a legacy team it silently emits no removal change at
+   * all, and deletePerson/setSoleRole then delete competitors/dave while
+   * teams/t1/members still lists him.
+   */
+  test("a competitor leaves a legacy array-shaped roster too", () => {
+    const changes = removalChanges({
+      uid: "dave",
+      ...args,
+      teamsData: { t1: { members: ["dave", "carol"] } },
+    });
+    const change = changes.find((c) => c.path.startsWith("teams/t1/members/"));
+    expect(change).toBeDefined();
+    expect(change.path).toBe("teams/t1/members/0");
+    expect(change.after).toBeNull();
+  });
+
+  test("a competitor leaves a mixed roster (legacy array slots plus a real keyed entry)", () => {
+    const changes = removalChanges({
+      uid: "erin",
+      ...args,
+      teamsData: { t1: { members: { 0: "dave", 1: "carol", erin: true } } },
+    });
+    const change = changes.find((c) => c.path.startsWith("teams/t1/members/"));
+    expect(change).toBeDefined();
+    expect(change.path).toBe("teams/t1/members/erin");
+    expect(change.after).toBeNull();
+  });
 });
 
 describe("listing people", () => {

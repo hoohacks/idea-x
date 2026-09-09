@@ -157,8 +157,14 @@ export async function captureSnapshot({ label, reason = null, paths = JUDGING_PA
  * activating the final round. With a one-shot read the list a person is looking
  * at is stale the moment the thing they might need to undo happens, which is
  * the worst possible moment for it to be stale.
+ *
+ * `onError`, like `subscribeToPersonalSchedule`'s, is called instead of
+ * `callback` on a failed read -- never both. This used to call `callback([])`
+ * on error, which is indistinguishable on screen from an event that has never
+ * generated a schedule: exactly the moment an organizer reaching for a restore
+ * point to undo a mistake is told, wrongly, that there is nothing to restore.
  */
-export function subscribeToSnapshots(callback) {
+export function subscribeToSnapshots(callback, onError) {
   const stop = onValue(
     ref(database, "snapshotIndex"),
     (snap) => {
@@ -171,7 +177,7 @@ export function subscribeToSnapshots(callback) {
     },
     (error) => {
       console.error("Could not watch restore points:", error);
-      callback([]);
+      if (onError) onError(error);
     }
   );
   return () => stop();

@@ -295,47 +295,43 @@ export default function SchedulePreview({ header = null }) {
     return (
       <Layout maxWidth="lg">
         {header}
-        <Stack spacing={3}>
-          <Typography variant="h1">Schedule preview</Typography>
+        <Card sx={{ p: 3 }}>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              No draft yet. Build a plan to see it before it goes live — nothing is
+              written until you publish it.
+            </Typography>
 
-          <Card sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Typography variant="body2">
-                No draft yet. Build a plan to see it before it goes live -- nothing is
-                written until you publish it.
-              </Typography>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={onlyCheckedIn}
+                  onChange={(event) => setOnlyCheckedIn(event.target.checked)}
+                />
+              }
+              label="Only schedule judges who have checked in"
+            />
 
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={onlyCheckedIn}
-                    onChange={(event) => setOnlyCheckedIn(event.target.checked)}
-                  />
-                }
-                label="Only schedule judges who have checked in"
-              />
+            <Button
+              variant="contained"
+              onClick={handleBuild}
+              disabled={building}
+              sx={{ alignSelf: "flex-start" }}
+            >
+              {building ? "Building…" : "Build a plan"}
+            </Button>
 
-              <Button
-                variant="contained"
-                onClick={handleBuild}
-                disabled={building}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                {building ? "Building…" : "Build a plan"}
-              </Button>
-
-              {buildResult && !buildResult.ok && (
-                <Alert severity="error">{buildResult.error}</Alert>
-              )}
-              {buildResult?.warnings?.map((warning) => (
-                <Alert severity="warning" key={warning}>{warning}</Alert>
-              ))}
-              {buildResult?.advice?.map((line) => (
-                <Alert severity="info" key={line}>{line}</Alert>
-              ))}
-            </Stack>
-          </Card>
-        </Stack>
+            {buildResult && !buildResult.ok && (
+              <Alert severity="error">{buildResult.error}</Alert>
+            )}
+            {buildResult?.warnings?.map((warning) => (
+              <Alert severity="warning" key={warning}>{warning}</Alert>
+            ))}
+            {buildResult?.advice?.map((line) => (
+              <Alert severity="info" key={line}>{line}</Alert>
+            ))}
+          </Stack>
+        </Card>
       </Layout>
     );
   }

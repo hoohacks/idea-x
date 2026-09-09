@@ -130,7 +130,12 @@ function JudgeSearch() {
           const assignments = assignmentList(judge.teamAssignments);
 
           return (
-            <Row key={judge.id} accent={isCheckedIn}>
+            // the accent marks the row that still needs something doing to
+            // it, the same as it does on the judging page -- see the note on
+            // Row in adminUi. Flagging the settled rows instead put a bar on
+            // every line of a well-run event, which is the state nobody has to
+            // go looking for.
+            <Row key={judge.id} accent={!isCheckedIn}>
               <Stack
                 direction={{ xs: "column", md: "row" }}
                 alignItems={{ xs: "flex-start", md: "center" }}

@@ -79,11 +79,36 @@ function gatedSnap(value) {
 }
 
 /** The nodes these functions read, and nothing else. */
-function world({ roster = [{ judgeId: "j1", judgeName: "Ada J" }], assignments = {} } = {}) {
+function world({
+  roster = [{ judgeId: "j1", judgeName: "Ada J" }],
+  assignments = {},
+  // the /judges node itself, so a test can give a judge the copy of a roster
+  // they are supposed to be holding -- or deliberately withhold it
+  judges,
+} = {}) {
   mockScheduleValue = schedule(roster);
+
+  // By default every judge ON the roster also holds the matching copy, because
+  // that is the only state the real database is ever in: publishPlan and these
+  // functions write both halves together. A judge on a roster with no copy is
+  // the broken state repairFanOut exists to correct, so it has to be asked for
+  // deliberately (pass `judges`) rather than being what every fixture happens
+  // to describe.
+  // a roster reaches here in either shape, since a legacy one is stored as a
+  // keyed object rather than an array -- normalised the same way the code does
+  const rosterList = Array.isArray(roster) ? roster : Object.values(roster ?? {});
+  const consistent = Object.fromEntries(
+    Object.entries(JUDGES).map(([uid, person]) => [
+      uid,
+      rosterList.some((entry) => entry?.judgeId === uid)
+        ? { ...person, teamAssignments: { t1: schedule(roster) } }
+        : person,
+    ])
+  );
+
   mockGet.mockImplementation(({ path }) => {
     if (path === "teams/t1/schedule") return gatedSnap(mockScheduleValue);
-    if (path === "judges") return gatedSnap(JUDGES);
+    if (path === "judges") return gatedSnap(judges ?? consistent);
     if (path.startsWith("judges/") && path.endsWith("/teamAssignments")) {
       const uid = path.split("/")[1];
       return Promise.resolve(snap(assignments[uid] ?? null));
@@ -348,5 +373,96 @@ describe("finding a clash", () => {
   test("a judge with nothing booked never clashes", async () => {
     world();
     expect(await findConflict("j3", "t1", 1)).toBeNull();
+  });
+});
+
+/**
+ * The roster of record is committed by a transaction and each judge's copy is
+ * written after it, so a failure between the two leaves a judge holding a copy
+ * that disagrees with the roster -- or missing one entirely.
+ *
+ * The organizer's obvious repair is to do the edit again. That used to fix
+ * nothing: both of these return `unchanged` the moment the roster already says
+ * what was asked for, and returned it without writing anything at all. The
+ * judge went on seeing a panel that no longer existed, and no amount of
+ * retrying would have corrected it.
+ */
+describe("repairing a fan-out that never landed", () => {
+  const ada = { judgeId: "j1", judgeName: "Ada J" };
+  const alan = { judgeId: "j2", judgeName: "Alan J" };
+
+  test("re-adding a judge already on the roster writes the copy they never got", async () => {
+    world({
+      roster: [ada, alan],
+      judges: {
+        j1: { ...judge("Ada"), teamAssignments: { t1: schedule([ada, alan]) } },
+        // j2 is on the roster but holds no copy: the fan-out died here
+        j2: judge("Alan"),
+        j3: judge("Grace"),
+      },
+    });
+
+    const result = await assignJudgeToTeam({ judgeUid: "j2", teamId: "t1" });
+
+    expect(result.ok).toBe(true);
+    expect(result.unchanged).toBe(true);
+    expect(payload()["judges/j2/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual([
+      "j1",
+      "j2",
+    ]);
+  });
+
+  test("re-removing a judge already off the roster clears the copy they kept", async () => {
+    world({
+      roster: [ada],
+      judges: {
+        j1: { ...judge("Ada"), teamAssignments: { t1: schedule([ada]) } },
+        // j2 was dropped from the roster but still holds the old panel
+        j2: { ...judge("Alan"), teamAssignments: { t1: schedule([ada, alan]) } },
+        j3: judge("Grace"),
+      },
+    });
+
+    const result = await unassignJudgeFromTeam({ judgeUid: "j2", teamId: "t1" });
+
+    expect(result.ok).toBe(true);
+    expect(payload()["judges/j2/teamAssignments/t1"]).toBeNull();
+  });
+
+  test("a stale copy is repaired even when it is a third judge's", async () => {
+    // the edit is about j2, but j1's copy is the one that is wrong
+    world({
+      roster: [ada, alan],
+      judges: {
+        j1: { ...judge("Ada"), teamAssignments: { t1: schedule([ada]) } },
+        j2: { ...judge("Alan"), teamAssignments: { t1: schedule([ada, alan]) } },
+        j3: judge("Grace"),
+      },
+    });
+
+    await assignJudgeToTeam({ judgeUid: "j2", teamId: "t1" });
+
+    expect(payload()["judges/j1/teamAssignments/t1"].judges.map((j) => j.judgeId)).toEqual([
+      "j1",
+      "j2",
+    ]);
+  });
+
+  test("copies that already agree are left alone", async () => {
+    // a no-op edit must stay a no-op: this runs whenever an organizer taps a
+    // judge who is already on the team, which is often
+    world({
+      roster: [ada],
+      judges: {
+        j1: { ...judge("Ada"), teamAssignments: { t1: schedule([ada]) } },
+        j2: judge("Alan"),
+        j3: judge("Grace"),
+      },
+    });
+
+    const result = await assignJudgeToTeam({ judgeUid: "j1", teamId: "t1" });
+
+    expect(result.unchanged).toBe(true);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

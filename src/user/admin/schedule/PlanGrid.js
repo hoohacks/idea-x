@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Box, Button, Card, Chip, Grid, Stack, Typography } from "@mui/material";
-import { PageHeader } from "../adminUi";
+import { StatStrip } from "../adminUi";
 
 /**
  * The plan itself: batches as columns, one team card per room, live stats
@@ -84,17 +84,19 @@ export default function PlanGrid({ plan, stats, onOpenTeam }) {
   }));
 
   const headerStats = [
-    { label: "teams", value: stats.teams },
-    { label: "judges", value: stats.judges },
+    { label: "teams", singular: "team", value: stats.teams },
+    { label: "judges", singular: "judge", value: stats.judges },
     { label: "judges per team", value: judgesLabel(stats.minJudgesPerTeam, stats.maxJudgesPerTeam) },
-    { label: "spares", value: stats.spareJudgeIds?.length ?? 0 },
+    { label: "spares", singular: "spare", value: stats.spareJudgeIds?.length ?? 0 },
     { label: "below target", value: stats.belowTarget?.length ?? 0 },
-    { label: "repeat pairings", value: stats.repeatPairings },
+    { label: "repeat pairings", singular: "repeat pairing", value: stats.repeatPairings },
   ];
 
   return (
     <Box>
-      <PageHeader title="Schedule preview" stats={headerStats} />
+      {/* the page title is the planner's; this grid contributes the numbers
+          under it rather than a second h1 saying almost the same word */}
+      <StatStrip stats={headerStats} sx={{ mb: 3 }} />
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={9}>
