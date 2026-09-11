@@ -137,6 +137,46 @@ export const EVENT = {
   siteUrl: "https://ideathon.hoohacks.io",
 };
 
+/**
+ * The schools offered on the registration form.
+ *
+ * Here rather than in Registration.js because the attendee export has to print
+ * these too, and a second copy of the list is how an export ends up saying
+ * "professional" where the form said "School of Continuing & Professional
+ * Studies".
+ */
+export const SCHOOLS = [
+  ["college", "College of Arts and Sciences"],
+  ["engineering", "School of Engineering and Applied Science"],
+  ["commerce", "McIntire School of Commerce"],
+  ["architecture", "School of Architecture"],
+  ["wise", "UVA's College at Wise"],
+  ["medicine", "School of Medicine"],
+  ["law", "School of Law"],
+  ["business", "Darden School of Business"],
+  ["education", "School of Education and Human Development"],
+  ["professional", "School of Continuing & Professional Studies"],
+];
+
+/**
+ * Labels for values the form has stopped offering but the database still holds.
+ *
+ * "other" was "I don't go to UVA", dropped when the event became UVA-only.
+ * Anyone who registered before that still carries it, and a row that rendered
+ * the bare key -- or nothing at all -- would lose the one fact about them that
+ * now matters.
+ */
+const RETIRED_SCHOOLS = { other: "Not a UVA student" };
+
+/** A stored uvaSchool -> what to show a human. Unknown keys pass through. */
+export function schoolLabel(value) {
+  const key = String(value ?? "").trim();
+  if (!key) return "";
+  const offered = SCHOOLS.find(([id]) => id === key);
+  if (offered) return offered[1];
+  return RETIRED_SCHOOLS[key] ?? key;
+}
+
 // Graduation years offered on the registration form: this year's class through
 // four years out, so the list never goes stale.
 export const GRADUATION_YEARS = Array.from(

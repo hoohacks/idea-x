@@ -12,7 +12,9 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   Grid,
   InputLabel,
@@ -26,7 +28,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import { EVENT, GRADUATION_YEARS } from "./eventInfo";
+import { EVENT, GRADUATION_YEARS, SCHOOLS } from "./eventInfo";
 import { REGISTRATION_OPEN } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
 import {
@@ -46,20 +48,6 @@ import {
   Section,
   SubmitRail,
 } from "./registrationUi";
-
-const SCHOOLS = [
-  ["college", "College of Arts and Sciences"],
-  ["engineering", "School of Engineering and Applied Science"],
-  ["commerce", "McIntire School of Commerce"],
-  ["architecture", "School of Architecture"],
-  ["wise", "UVA's College at Wise"],
-  ["medicine", "School of Medicine"],
-  ["law", "School of Law"],
-  ["business", "Darden School of Business"],
-  ["education", "School of Education and Human Development"],
-  ["professional", "School of Continuing & Professional Studies"],
-  ["other", "I don't go to UVA"],
-];
 
 const GENDERS = [
   ["female", "Female"],
@@ -93,6 +81,7 @@ const INITIAL = {
   schoolYear: String(GRADUATION_YEARS[0]),
   uvaSchool: "college",
   dietaryRestriction: "none",
+  eligibilityConfirmed: false,
 };
 
 /**
@@ -112,6 +101,7 @@ const SECTIONS = [
   },
   { id: "studies", label: "Studies", required: ["major"] },
   { id: "details", label: "Additional details", required: ["gender"] },
+  { id: "eligibility", label: "Eligibility", required: ["eligibilityConfirmed"] },
 ];
 
 const REQUIRED = SECTIONS.flatMap((section) => section.required);
@@ -141,6 +131,16 @@ function problemsFor(values) {
     fail("major", "Enter your major, or the one you plan to declare", "your major");
   }
   if (!isFilled(values.gender)) fail("gender", "Choose an option", "your gender");
+
+  // `isFilled` would take this: it stringifies, and an unticked box arrives as
+  // the perfectly non-empty "false".
+  if (values.eligibilityConfirmed !== true) {
+    fail(
+      "eligibilityConfirmed",
+      "Confirm that you are 18 or over and study at UVA",
+      "confirmation that you are eligible"
+    );
+  }
 
   return problems;
 }
@@ -312,6 +312,9 @@ const RegistrationForm = () => {
         checkedIn: false,
         foodCheckIn: false,
         dietaryRestriction: current.dietaryRestriction || "none",
+        // what they attested to at sign-up, kept rather than merely checked, so
+        // the claim can be pointed at afterwards
+        eligibilityConfirmed: true,
       };
 
       try {
@@ -348,10 +351,11 @@ const RegistrationForm = () => {
           title={`${EVENT.name} ${EVENT.year}`}
           facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
         >
-          A one-day event for students from technical and business backgrounds, working in
-          teams on a single idea. The day includes workshops on pitching, valuation and
-          prototyping, one-to-one time with industry mentors, and a two-hour judged pitch
-          event with funding awarded at the end.
+          A one-day event for UVA students from technical and business backgrounds, working
+          in teams on a single idea. You must be a currently enrolled UVA student and 18 or
+          over on the day to take part. The day includes workshops on pitching, valuation
+          and prototyping, one-to-one time with industry mentors, and a two-hour judged
+          pitch event with funding awarded at the end.
         </Hero>
       }
     >
@@ -572,6 +576,27 @@ const RegistrationForm = () => {
                     </Alert>
                   )}
                 </Box>
+              </Section>
+
+              <Section id="eligibility" label="Eligibility">
+                <FormControl error={Boolean(errorFor("eligibilityConfirmed"))}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="eligibilityConfirmed"
+                        id="eligibilityConfirmed"
+                        checked={values.eligibilityConfirmed}
+                        onChange={handleChange}
+                        onBlur={markTouched}
+                      />
+                    }
+                    label="I confirm I am 18 years or older and a currently enrolled UVA student."
+                  />
+                  <FormHelperText>
+                    {errorFor("eligibilityConfirmed") ??
+                      `Both must be true on ${EVENT.dayLabel}.`}
+                  </FormHelperText>
+                </FormControl>
               </Section>
 
               <Typography variant="body2" color="text.secondary">
