@@ -3,6 +3,7 @@ import { database } from "../../firebase.js";
 import { assignmentList, rosterOf } from "../judge/assignmentList.js";
 import { calculateAverageScore, countFundableVotes, scoredJudgeCount, compareForRanking, RUBRIC } from "../judge/scoreRubric.js";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo.js";
+import { schoolLabel } from "../../eventInfo.js";
 
 /**
  * Getting the event out of the database and onto something you can hold.
@@ -204,6 +205,79 @@ export function judgeRows({ judges, scores }, round = FIRST_ROUND) {
   }
 
   return rows;
+}
+
+/**
+ * One row per competitor: who came, who they came with, and what they need.
+ *
+ * The list the other exports never covered. Judges had one from the start;
+ * the several hundred people the registration form exists to collect did not,
+ * so catering counts, a paper door list and the resumes promised to sponsors
+ * all lived only inside a database you have to be online to read.
+ *
+ * Blank beats a guess in every column here. A competitor who registered before
+ * a question was asked has not answered "no" to it, and a row that says
+ * otherwise is exactly the quietly-false file these exports exist to avoid.
+ */
+export function competitorRows({ competitors, teams }) {
+  const rows = [
+    [
+      "Name", "Competitor UID", "Email", "Team", "Team ID", "School",
+      "Graduation year", "Major", "Gender", "Dietary", "Checked in",
+      "Food collected", "Resume", "Eligibility confirmed", "Registered at",
+    ],
+  ];
+
+  Object.entries(competitors ?? {})
+    .map(([uid, person]) => ({
+      uid,
+      person: person ?? {},
+      name: [person?.firstName, person?.lastName].filter(Boolean).join(" ").trim(),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(({ uid, person, name }) => {
+      const teamId = person.teamId ?? "";
+      rows.push([
+        name || "Unnamed",
+        uid,
+        person.email ?? "",
+        // a team that has since been deleted leaves the id behind, which is
+        // still the more useful half of the pair
+        teamId ? teams?.[teamId]?.name ?? "" : "",
+        teamId,
+        schoolLabel(person.uvaSchool),
+        person.schoolYear ?? "",
+        person.major ?? "",
+        person.gender ?? "",
+        person.dietaryRestriction ?? "",
+        person.checkedIn ? "yes" : "no",
+        person.foodCheckIn ? "yes" : "no",
+        resumeLink(person.resume),
+        yesNoOrBlank(person.eligibilityConfirmed),
+        registeredAt(person.registeredAt),
+      ]);
+    });
+
+  return rows;
+}
+
+/** "none" is the sentinel the form writes when the upload was skipped. */
+function resumeLink(resume) {
+  const value = String(resume ?? "").trim();
+  return !value || value === "none" ? "" : value;
+}
+
+/** Blank for a question never asked, so it cannot be read as a refusal. */
+function yesNoOrBlank(value) {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "";
+}
+
+function registeredAt(value) {
+  if (typeof value !== "number") return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
 /**

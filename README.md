@@ -156,6 +156,7 @@ the wifi gives out.
 | A team has no scores, time is short | Assign a spare judge, or record the score yourself. |
 | Scores from an unassigned judge | Expected after republishing. They still count, so Judging progress lists them. |
 | You published a bad schedule or cleared it | Control panel → **Restore points**. |
+| You need a door list, catering numbers or the resumes | Control panel → **Export** → **Competitors**. Everyone registered, with team, dietary needs, check-in and resume link. Print it before doors open. |
 | You want a copy of everything | Control panel → **Export**. |
 
 ---
