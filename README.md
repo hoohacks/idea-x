@@ -518,5 +518,13 @@ listeners, so a controlled form can look full and still refuse to submit.
 first focus, and before submitting. If you rename that keyframe, rename it in
 `index.css` too.
 
-**The root `CNAME` is inert** — its value contains a path and it sits outside
-`public/`, so the build never copies it.
+**There is no custom domain, deliberately.** A root `CNAME` used to sit here
+holding `ideathon.hoohacks.io/registration`; it never did anything — a CNAME
+must be a bare hostname, and a file outside `public/` is never copied into
+`build/`, which is what gets published. It has been removed.
+
+Do not simply put one back. `ideathon.hoohacks.io` already serves the marketing
+site, which links here; a CNAME naming it would point Pages at that host and
+take this app offline. Moving the app to a custom domain means DNS, the Pages
+setting, `homepage` in `package.json`, and the base path baked into
+`public/404.html` — all four, together.
