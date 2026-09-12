@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Card } from "@mui/material";
 import { Section, SettingList, SettingRow } from "./adminUi";
 import {
-  loadEventData, scheduleRows, scoreRows, standingsRows, judgeRows,
+  loadEventData, scheduleRows, scoreRows, standingsRows, judgeRows, competitorRows,
   downloadCsv, downloadJson, stamp,
 } from "./exportData";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
@@ -37,6 +37,14 @@ export default function ExportSection({ onResult }) {
       run: () => run(
         (data) => downloadCsv(`ideathon-schedule-${stamp()}.csv`, scheduleRows(data)),
         "Schedule downloaded"
+      ),
+    },
+    {
+      label: "Competitors",
+      hint: "Everyone registered, with team, dietary needs, check-in and resume. The door list.",
+      run: () => run(
+        (data) => downloadCsv(`ideathon-competitors-${stamp()}.csv`, competitorRows(data)),
+        "Competitor list downloaded"
       ),
     },
     {

@@ -76,6 +76,14 @@ async function pickOption(selectName, optionName) {
   await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
 }
 
+/**
+ * The one answer nothing fills for you: no browser autofills a checkbox and no
+ * select offers it, so every successful submission has to tick it by hand.
+ */
+function confirmEligibility() {
+  userEvent.click(screen.getByRole("checkbox", { name: /18 years or older/ }));
+}
+
 function answer(legend, choice) {
   const group = screen.getByRole("radiogroup", { name: legend });
   userEvent.click(within(group).getByRole("radio", { name: choice }));
@@ -111,7 +119,7 @@ describe("competitor registration", () => {
     expect(
       await screen.findByRole("heading", { name: /Ideathon/ })
     ).toBeInTheDocument();
-    expect(shows("6 answers left")).toBeInTheDocument();
+    expect(shows("7 answers left")).toBeInTheDocument();
     expect(submit("Register")).toBeInTheDocument();
   });
 
@@ -121,9 +129,9 @@ describe("competitor registration", () => {
     userEvent.click(submit("Register"));
 
     expect(mockCreateUser).not.toHaveBeenCalled();
-    // six nouns would be a paragraph, so past three it reports the count
+    // seven nouns would be a paragraph, so past three it reports the count
     expect(
-      (await screen.findAllByText(/6 answers still needed, starting with your first name/))[0]
+      (await screen.findAllByText(/7 answers still needed, starting with your first name/))[0]
     ).toBeInTheDocument();
     expect(screen.getByText("Enter your first name")).toBeInTheDocument();
     expect(screen.getByText("Choose a password")).toBeInTheDocument();
@@ -135,6 +143,7 @@ describe("competitor registration", () => {
     // everything but the major and the gender select
     autofill({ ...COMPETITOR, major: "" });
     announceAutofill("firstName");
+    confirmEligibility();
     userEvent.click(submit("Register"));
 
     expect(mockCreateUser).not.toHaveBeenCalled();
@@ -150,6 +159,7 @@ describe("competitor registration", () => {
     autofill(COMPETITOR);
     // gender is a select, which no browser autofills, so it is answered by hand
     await pickOption("Gender", "Prefer not to say");
+    confirmEligibility();
 
     userEvent.click(submit("Register"));
 
@@ -160,13 +170,14 @@ describe("competitor registration", () => {
 
   test("the rail counts autofilled answers as soon as the browser announces them", async () => {
     renderPage(Registration);
-    expect(shows("6 answers left")).toBeInTheDocument();
+    expect(shows("7 answers left")).toBeInTheDocument();
 
     autofill(COMPETITOR);
     announceAutofill("firstName");
 
-    // five of the six: gender is a select, and no browser fills those
-    expect((await screen.findAllByText("1 answer left"))[0]).toBeInTheDocument();
+    // five of the seven: no browser fills a select or ticks a checkbox, so the
+    // gender and the eligibility confirmation are still outstanding
+    expect((await screen.findAllByText("2 answers left"))[0]).toBeInTheDocument();
   });
 
   test("keeps hyphens, apostrophes and spaces in a name", async () => {
@@ -174,6 +185,7 @@ describe("competitor registration", () => {
 
     autofill(COMPETITOR);
     await pickOption("Gender", "Female");
+    confirmEligibility();
     userEvent.click(submit("Register"));
 
     await waitFor(() => expect(mockDbUpdate).toHaveBeenCalled());
@@ -192,6 +204,7 @@ describe("competitor registration", () => {
 
     autofill({ ...COMPETITOR, email: "mj@virginia" });
     await pickOption("Gender", "Male");
+    confirmEligibility();
     userEvent.click(submit("Register"));
 
     expect(mockCreateUser).not.toHaveBeenCalled();
@@ -203,9 +216,51 @@ describe("competitor registration", () => {
 
     autofill({ ...COMPETITOR, email: "mj@startup.technology" });
     await pickOption("Gender", "Other");
+    confirmEligibility();
     userEvent.click(submit("Register"));
 
     await waitFor(() => expect(mockCreateUser).toHaveBeenCalled());
+  });
+
+  test("refuses a form that is complete apart from the eligibility box", async () => {
+    renderPage(Registration);
+
+    autofill(COMPETITOR);
+    await pickOption("Gender", "Female");
+    userEvent.click(submit("Register"));
+
+    expect(mockCreateUser).not.toHaveBeenCalled();
+    expect(
+      (await screen.findAllByText("Still needed: confirmation that you are eligible."))[0]
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Confirm that you are 18 or over and study at UVA")
+    ).toBeInTheDocument();
+  });
+
+  test("stores the confirmation, so there is a record of what was attested to", async () => {
+    renderPage(Registration);
+
+    autofill(COMPETITOR);
+    await pickOption("Gender", "Female");
+    confirmEligibility();
+    userEvent.click(submit("Register"));
+
+    await waitFor(() => expect(mockDbUpdate).toHaveBeenCalled());
+    const record = mockDbUpdate.mock.calls[0][1]["/competitors/new-uid"];
+    expect(record.eligibilityConfirmed).toBe(true);
+  });
+
+  test("the school list no longer offers a way to say you do not go to UVA", async () => {
+    renderPage(Registration);
+
+    userEvent.click(screen.getByRole("button", { name: /School/ }));
+    const listbox = await screen.findByRole("listbox");
+
+    expect(within(listbox).queryByRole("option", { name: /don.t go to UVA/i })).toBeNull();
+    expect(
+      within(listbox).getByRole("option", { name: "McIntire School of Commerce" })
+    ).toBeInTheDocument();
   });
 });
 

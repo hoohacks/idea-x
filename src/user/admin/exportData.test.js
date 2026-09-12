@@ -14,7 +14,7 @@ jest.mock("firebase/database", () => ({
 }));
 
 import {
-  csvCell, toCsv, scheduleRows, scoreRows, standingsRows, judgeRows,
+  csvCell, toCsv, scheduleRows, scoreRows, standingsRows, judgeRows, competitorRows,
 } from "./exportData";
 
 const world = {
@@ -39,7 +39,30 @@ const world = {
     j1: { firstName: "Ada", lastName: "Lovelace", email: "ada@example.com", company: "Analytical", isRound1Judge: true, checkedIn: true, teamAssignments: { t1: { id: "t1", teamName: "Lumen", batch: 1 }, t2: { id: "t2", teamName: "Beta", batch: 2 } } },
     j2: { firstName: "Alan", lastName: "Turing", email: "alan@example.com", isRound1Judge: true, checkedIn: false, teamAssignments: { t1: { id: "t1", teamName: "Lumen", batch: 1 } } },
   },
-  competitors: {},
+  competitors: {
+    c1: {
+      firstName: "Mary-Jane", lastName: "O'Brien", email: "mj@virginia.edu", teamId: "t1",
+      uvaSchool: "engineering", schoolYear: 2027, major: "Systems Engineering",
+      gender: "female", dietaryRestriction: "vegan", resume: "https://example.com/mj.pdf",
+      checkedIn: true, foodCheckIn: true, eligibilityConfirmed: true,
+      registeredAt: 1700000000000,
+    },
+    // no resume: the form stores the string "none" rather than leaving it out
+    c2: {
+      firstName: "Ada", lastName: "Byron", email: "ada@virginia.edu", teamId: "t1",
+      uvaSchool: "college", schoolYear: 2028, major: "Computer Science",
+      gender: "female", dietaryRestriction: "none", resume: "none",
+      checkedIn: false, foodCheckIn: false, eligibilityConfirmed: true,
+      registeredAt: 1700000001000,
+    },
+    // registered before the event was UVA-only and before eligibility was asked,
+    // never joined a team, and never uploaded anything
+    c9: {
+      firstName: "Sam", lastName: "Reyes", email: "sam@example.com",
+      uvaSchool: "other", schoolYear: 2026, major: "Economics",
+      dietaryRestriction: "gluten-free", checkedIn: false, foodCheckIn: false,
+    },
+  },
   scores: {
     first: {
       t1: {
@@ -210,5 +233,123 @@ describe("the judge export", () => {
 
   test("surfaces check-in, because a no-show is the usual reason", () => {
     expect(judge("Alan Turing")[col("Checked in")]).toBe("no");
+  });
+});
+
+/**
+ * The attendee list.
+ *
+ * This is the one export somebody stands at a door holding. The failure that
+ * matters is not a crash: it is a row that says a person has no dietary
+ * restriction when the field was simply never filled in, or that says they did
+ * not confirm they were eligible when nobody ever asked them.
+ */
+describe("the competitor export", () => {
+  const rows = competitorRows(world);
+  const col = (name) => rows[0].indexOf(name);
+  const person = (name) => rows.slice(1).find((r) => r[0] === name);
+
+  test("has a header and one row per competitor", () => {
+    expect(rows).toHaveLength(4);
+    expect(rows[0][0]).toBe("Name");
+  });
+
+  test("is ordered by name, so it can be read down like a door list", () => {
+    expect(rows.slice(1).map((r) => r[0])).toEqual([
+      "Ada Byron",
+      "Mary-Jane O'Brien",
+      "Sam Reyes",
+    ]);
+  });
+
+  test("names the team a competitor is on, not just its id", () => {
+    expect(person("Mary-Jane O'Brien")[col("Team")]).toBe("Lumen");
+    expect(person("Mary-Jane O'Brien")[col("Team ID")]).toBe("t1");
+  });
+
+  test("leaves somebody who never joined a team blank, not 'undefined'", () => {
+    expect(person("Sam Reyes")[col("Team")]).toBe("");
+    expect(person("Sam Reyes")[col("Team ID")]).toBe("");
+  });
+
+  test("spells the school out, including one the form no longer offers", () => {
+    expect(person("Mary-Jane O'Brien")[col("School")]).toBe(
+      "School of Engineering and Applied Science"
+    );
+    // "other" was "I don't go to UVA"; records written before the rule changed
+    // still hold it and still have to read as something
+    expect(person("Sam Reyes")[col("School")]).toBe("Not a UVA student");
+  });
+
+  test("carries the dietary restriction, which is what catering is counted from", () => {
+    expect(person("Mary-Jane O'Brien")[col("Dietary")]).toBe("vegan");
+    expect(person("Sam Reyes")[col("Dietary")]).toBe("gluten-free");
+  });
+
+  test("reports arriving and being fed as the separate things they are", () => {
+    const mj = person("Mary-Jane O'Brien");
+    expect(mj[col("Checked in")]).toBe("yes");
+    expect(mj[col("Food collected")]).toBe("yes");
+    expect(person("Ada Byron")[col("Checked in")]).toBe("no");
+  });
+
+  test("gives a resume link only where one was actually uploaded", () => {
+    expect(person("Mary-Jane O'Brien")[col("Resume")]).toBe("https://example.com/mj.pdf");
+    // the sentinel the form writes when the upload was skipped
+    expect(person("Ada Byron")[col("Resume")]).toBe("");
+    expect(person("Sam Reyes")[col("Resume")]).toBe("");
+  });
+
+  test("does not claim somebody declined a question they were never asked", () => {
+    expect(person("Mary-Jane O'Brien")[col("Eligibility confirmed")]).toBe("yes");
+    // predates the checkbox: blank, because "no" would be a different claim
+    expect(person("Sam Reyes")[col("Eligibility confirmed")]).toBe("");
+  });
+
+  test("blanks a gender nobody answered rather than printing undefined", () => {
+    expect(person("Sam Reyes")[col("Gender")]).toBe("");
+  });
+});
+
+/**
+ * The records that are not shaped like the happy path. A competitor node can
+ * be half-written -- an admin added somebody by hand, or a registration failed
+ * between creating the account and saving the profile -- and the door list has
+ * to render it rather than printing "undefined" at somebody.
+ */
+describe("the competitor export on malformed records", () => {
+  const odd = {
+    teams: {},
+    competitors: {
+      a: { firstName: "", lastName: "", email: "nobody@virginia.edu" },
+      b: { firstName: "Solo", registeredAt: 1700000000000 },
+      c: { firstName: "Bad", lastName: "Stamp", registeredAt: "not a number" },
+      d: { firstName: "Ghost", lastName: "Team", teamId: "deleted-team" },
+    },
+  };
+  const rows = competitorRows(odd);
+  const col = (name) => rows[0].indexOf(name);
+  const person = (name) => rows.slice(1).find((r) => r[0] === name);
+
+  test("names a record that has no name at all", () => {
+    expect(person("Unnamed")[col("Email")]).toBe("nobody@virginia.edu");
+  });
+
+  test("takes a first name on its own rather than demanding both", () => {
+    expect(person("Solo")).toBeDefined();
+  });
+
+  test("writes the registration time as an ISO stamp", () => {
+    expect(person("Solo")[col("Registered at")]).toBe("2023-11-14T22:13:20.000Z");
+  });
+
+  test("blanks a registration time that is not a timestamp", () => {
+    expect(person("Bad Stamp")[col("Registered at")]).toBe("");
+  });
+
+  test("keeps the id of a team that has since been deleted, and blanks its name", () => {
+    const ghost = person("Ghost Team");
+    expect(ghost[col("Team")]).toBe("");
+    expect(ghost[col("Team ID")]).toBe("deleted-team");
   });
 });
