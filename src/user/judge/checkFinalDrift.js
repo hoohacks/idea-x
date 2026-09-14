@@ -22,7 +22,7 @@ export const ADVISORY = "advisory";
 
 /**
  * @param plan the draft being published
- * @param live { cardCounts, eligibleJudges, submitted, room, size } read now
+ * @param live { cardCounts, registeredJudges, submitted, room, size } read now
  * @returns an array of { kind, level, message, repair? }
  */
 export function checkFinalDrift(plan, live) {
@@ -58,18 +58,26 @@ export function checkFinalDrift(plan, live) {
     });
   }
 
-  // ---- a judge on a panel is no longer eligible ----
+  // ---- a judge on a panel has left the event ----
+  //
+  // Deliberately "is this still a judge at all", not "is this judge in the
+  // marked pool". The pool is who the build seats; an organizer may put any
+  // registered judge on a panel by hand, so being outside it is a choice, not
+  // drift. Checking the pool here would make every such hand edit
+  // unpublishable -- the plan refusing to write the thing it was edited to
+  // say. A judge whose record is gone is the case that genuinely cannot
+  // publish: the write would grant final-score access to nobody.
   for (const slot of slotsOf(plan)) {
     for (const judge of slot.judges) {
-      if (live?.eligibleJudges?.[judge.judgeId]) continue;
+      if (live?.registeredJudges?.[judge.judgeId]) continue;
       issues.push({
         kind: "judge",
         level: BLOCKING,
         teamId: slot.teamId,
         judgeId: judge.judgeId,
         message:
-          `${judge.judgeName} is on ${slot.teamName}'s panel but is no longer eligible for the ` +
-          `final round.`,
+          `${judge.judgeName} is on ${slot.teamName}'s panel but is no longer a judge in this ` +
+          `event.`,
         repair: "removeJudge",
       });
     }

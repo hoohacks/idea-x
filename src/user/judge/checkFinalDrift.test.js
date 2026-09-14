@@ -33,6 +33,7 @@ const plan = (over = {}) => ({
 const live = (over = {}) => ({
   cardCounts: { t1: 3, t2: 3, t3: 2, t9: 2 },
   eligibleJudges: { j1: true, j2: true, j3: true },
+  registeredJudges: { j1: true, j2: true, j3: true },
   submitted: { t1: true, t2: true, t3: true, t9: true },
   room: "Rice 011",
   size: 4,
@@ -94,9 +95,20 @@ describe("a finalist that is no longer there", () => {
   });
 });
 
-describe("a judge who is no longer eligible", () => {
+describe("a judge added by hand from outside the pool", () => {
+  // Any registered judge can be put on a panel by hand, so being outside the
+  // marked pool is not drift. Blocking on it would make every hand edit
+  // unpublishable -- the plan would refuse to write the thing it was edited to
+  // say. Only a judge who is gone from the event is a real problem.
+  test("does not block the publish", () => {
+    const issues = checkFinalDrift(plan(), live({ registeredJudges: { j1: true, j2: true, j3: true } }));
+    expect(kinds(issues)).toEqual([]);
+  });
+});
+
+describe("a judge whose record is gone", () => {
   test("blocks, naming the judge and the team", () => {
-    const issues = checkFinalDrift(plan(), live({ eligibleJudges: { j1: true } }));
+    const issues = checkFinalDrift(plan(), live({ registeredJudges: { j1: true } }));
 
     expect(kinds(issues)).toEqual(["judge"]);
     expect(issues[0].repair).toBe("removeJudge");
@@ -105,13 +117,13 @@ describe("a judge who is no longer eligible", () => {
     expect(issues[0].message).toMatch(/Beta/);
   });
 
-  test("the message does not claim round one is what makes them eligible", () => {
-    // an industry judge marked for the final round only is eligible without
-    // ever having been a first-round judge, so naming that mark misdescribes
-    // the repair an organizer has to make
-    const issues = checkFinalDrift(plan(), live({ eligibleJudges: { j1: true } }));
+  test("the message blames the missing record, not a round mark", () => {
+    // an industry judge is eligible without ever having judged round one, and
+    // an unmarked one can be seated by hand, so naming either mark would
+    // describe a repair that is not the one needed
+    const issues = checkFinalDrift(plan(), live({ registeredJudges: { j1: true } }));
     expect(issues[0].message).not.toMatch(/first-round judge/);
-    expect(issues[0].message).toMatch(/final round/i);
+    expect(issues[0].message).toMatch(/no longer a judge in this event/i);
   });
 
   test("one issue per seat, so each has its own repair", () => {
@@ -128,7 +140,7 @@ describe("a judge who is no longer eligible", () => {
         },
       },
     });
-    const issues = checkFinalDrift(twoSeats, live({ eligibleJudges: {} }));
+    const issues = checkFinalDrift(twoSeats, live({ registeredJudges: {} }));
 
     expect(issues).toHaveLength(2);
     expect(issues.map((issue) => issue.judgeId).sort()).toEqual(["j1", "j2"]);
@@ -179,6 +191,6 @@ describe("blockingOnly", () => {
 test("a plan with no basis is not treated as drift-free by accident", () => {
   // an empty basis means nothing to compare, which must not read as "all clear"
   // for the judge and team checks that do not depend on it
-  const issues = checkFinalDrift(plan({ basis: {} }), live({ eligibleJudges: {} }));
+  const issues = checkFinalDrift(plan({ basis: {} }), live({ registeredJudges: {} }));
   expect(kinds(issues)).toContain("judge");
 });

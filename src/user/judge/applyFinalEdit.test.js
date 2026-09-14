@@ -66,10 +66,51 @@ describe("judges on a panel", () => {
     expect(result.ok).toBe(true);
   });
 
-  test("somebody outside the eligible pool is refused", () => {
+  test("somebody the caller cannot name is refused", () => {
     const result = applyFinalEdit(plan(), { type: "addJudge", teamId: "t1", judgeId: "nobody" });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/eligible pool/);
+    expect(result.error).toMatch(/not a registered judge/i);
+  });
+
+  describe("a judge from outside the prefilled pool", () => {
+    // The pool is who gets SEATED when the plan is built -- the marked,
+    // checked-in judges. Any registered judge can be put on a panel by hand,
+    // which is the only way to seat somebody who registered, or was marked,
+    // after the plan was built.
+    const outsider = { judgeId: "j9", judgeName: "Katherine" };
+
+    test("can be added when the caller names them", () => {
+      const result = applyFinalEdit(plan(), {
+        type: "addJudge", teamId: "t1", judgeId: "j9", judge: outsider,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.plan.assignments.t1.judges.map((j) => j.judgeId)).toContain("j9");
+    });
+
+    test("joins the pool, so the publish and the stats agree about them", () => {
+      const next = applyFinalEdit(plan(), {
+        type: "addJudge", teamId: "t1", judgeId: "j9", judge: outsider,
+      }).plan;
+
+      expect(next.pool.map((j) => j.judgeId)).toContain("j9");
+    });
+
+    test("joining the pool does not seat them on any other team", () => {
+      const next = applyFinalEdit(plan(), {
+        type: "addJudge", teamId: "t1", judgeId: "j9", judge: outsider,
+      }).plan;
+
+      expect(next.assignments.t2.judges.map((j) => j.judgeId)).not.toContain("j9");
+    });
+
+    test("undo takes them back off the panel", () => {
+      const next = applyFinalEdit(plan(), {
+        type: "addJudge", teamId: "t1", judgeId: "j9", judge: outsider,
+      }).plan;
+
+      expect(undoFinalEdit(next).assignments.t1.judges.map((j) => j.judgeId)).not.toContain("j9");
+    });
   });
 
   test("removing leaves the rest of the panel alone", () => {

@@ -113,14 +113,46 @@ async function readFinalWorld() {
   };
 }
 
+function judgeNameOf(judge) {
+  return (
+    [judge?.firstName, judge?.lastName].filter(Boolean).join(" ").trim() || "Unnamed Judge"
+  );
+}
+
 /** The eligible pool with display names, in the shape the plan carries. */
 function poolWithNames(judgesData) {
   return eligibleJudgePool(judgesData).map((uid) => ({
     judgeId: uid,
-    judgeName:
-      [judgesData[uid]?.firstName, judgesData[uid]?.lastName].filter(Boolean).join(" ").trim() ||
-      "Unnamed Judge",
+    judgeName: judgeNameOf(judgesData[uid]),
   }));
+}
+
+/**
+ * Every registered judge, in the same shape, for the per-team picker.
+ *
+ * Wider than the pool on purpose. The pool is who the build seats; this is
+ * everyone an organizer may seat by hand, which has to include the judge who
+ * registered five minutes ago and the one nobody has marked yet -- the two
+ * cases that previously left an organizer clicking a picker that would never
+ * contain the person standing in front of them.
+ *
+ * `marked` and `checkedIn` ride along so the picker can order and label them
+ * rather than presenting a dormant October signup as an ordinary choice.
+ */
+export function allJudgesForPicker(judgesData) {
+  return Object.entries(judgesData ?? {})
+    .map(([uid, judge]) => ({
+      judgeId: uid,
+      judgeName: judgeNameOf(judge),
+      marked: judgesEitherRound(judge),
+      checkedIn: judge?.checkedIn === true,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.marked) - Number(a.marked) ||
+        Number(b.checkedIn) - Number(a.checkedIn) ||
+        a.judgeName.localeCompare(b.judgeName)
+    );
 }
 
 /**
@@ -242,6 +274,12 @@ export async function readLiveFinalBasis() {
     ),
     eligibleJudges: Object.fromEntries(
       poolWithNames(world.judgesData).map((judge) => [judge.judgeId, true])
+    ),
+    // every judge record in the event, which is a wider set than the pool: a
+    // hand edit may seat any of them, so this -- not the pool -- is what
+    // `checkFinalDrift` measures a seated judge against
+    registeredJudges: Object.fromEntries(
+      Object.keys(world.judgesData).map((uid) => [uid, true])
     ),
     submitted: Object.fromEntries(
       Object.entries(world.teamsData).map(([teamId, team]) => [teamId, Boolean(team?.submitted)])

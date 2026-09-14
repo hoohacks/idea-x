@@ -38,7 +38,7 @@ jest.mock("firebase/database", () => ({
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
 
-const { planFinalRound, publishFinalRound } = require("./finalRoundService");
+const { planFinalRound, publishFinalRound, allJudgesForPicker } = require("./finalRoundService");
 const { slotsOf } = require("./finalRoundPlan");
 const { applyFinalEdit } = require("./applyFinalEdit");
 const { requireAdmin } = require("../../roles.js");
@@ -153,6 +153,41 @@ test("somebody marked for neither round is in no pool at all", async () => {
 
   const { plan } = await planFinalRound({});
   expect(plan.pool.map((judge) => judge.judgeId)).not.toContain("nobody");
+});
+
+describe("the roster the per-team picker offers", () => {
+  test("an unmarked judge is offered, because a hand edit may seat anyone", () => {
+    const roster = allJudgesForPicker({
+      ...judgesData,
+      newbie: { firstName: "Just", lastName: "Registered" },
+    });
+    expect(roster.map((j) => j.judgeId)).toContain("newbie");
+  });
+
+  test("it says who is unmarked, so the picker can label them", () => {
+    const roster = allJudgesForPicker({
+      marked: { firstName: "A", lastName: "B", isFinalRoundJudge: true },
+      unmarked: { firstName: "C", lastName: "D" },
+    });
+    expect(roster.find((j) => j.judgeId === "marked").marked).toBe(true);
+    expect(roster.find((j) => j.judgeId === "unmarked").marked).toBe(false);
+  });
+
+  test("marked judges come first, so the usual choice is not buried", () => {
+    const roster = allJudgesForPicker({
+      zed: { firstName: "Zed", isFinalRoundJudge: true },
+      abe: { firstName: "Abe" },
+    });
+    expect(roster.map((j) => j.judgeId)).toEqual(["zed", "abe"]);
+  });
+
+  test("a judge with no name still has something to click", () => {
+    expect(allJudgesForPicker({ x: {} })[0].judgeName).toBe("Unnamed Judge");
+  });
+
+  test("no judges at all is an empty list, not a crash", () => {
+    expect(allJudgesForPicker(undefined)).toEqual([]);
+  });
 });
 
 test("the room comes from config, not the constant", async () => {
