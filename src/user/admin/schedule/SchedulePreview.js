@@ -68,6 +68,9 @@ export default function SchedulePreview({ header = null }) {
 
   const [drift, setDrift] = useState(null);
   const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
+  // the publish was refused because cards already exist for pairings this plan
+  // drops -- the one refusal an organizer can deliberately override
+  const [strandedRefusal, setStrandedRefusal] = useState(null);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [confirmRebuildOpen, setConfirmRebuildOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -244,18 +247,30 @@ export default function SchedulePreview({ header = null }) {
     setConfirmPublishOpen(true);
   }
 
-  async function confirmPublish() {
+  async function confirmPublish({ discardScores = false } = {}) {
     setConfirmPublishOpen(false);
+    setStrandedRefusal(null);
     setPublishing(true);
-    const result = await publishPlan(planRef.current ?? plan);
+    const result = await publishPlan(planRef.current ?? plan, { discardScores });
     setPublishing(false);
 
     if (result.ok) {
-      setToast({ severity: "success", message: "Schedule published." });
+      setToast({
+        severity: "success",
+        message: discardScores
+          ? "Schedule published, and the first round scores were cleared."
+          : "Schedule published.",
+      });
       navigate("/user/admin/judging");
       return;
     }
     if (result.drift) { setDrift(result.drift); return; }
+    // not a failure to report and forget: it is a decision to put back to the
+    // organizer, with the two ways forward the message names
+    if (result.stranded) {
+      setStrandedRefusal({ stranded: result.stranded, message: result.error });
+      return;
+    }
     setToast({ severity: "error", message: result.error });
   }
 
@@ -425,8 +440,28 @@ export default function SchedulePreview({ header = null }) {
         consequences={publishConsequences}
         typeToConfirm={requiresConfirmPhrase ? (eventName || String(stats.teams)) : undefined}
         confirmLabel="Publish"
-        onConfirm={confirmPublish}
+        onConfirm={() => confirmPublish()}
         onCancel={() => setConfirmPublishOpen(false)}
+      />
+
+      {/*
+        The refusal, put back as a choice. Publishing was blocked because cards
+        already exist for pairings this plan drops; the only way through is to
+        destroy those cards, so it is named plainly and gated behind the phrase.
+      */}
+      <ConfirmDialog
+        open={Boolean(strandedRefusal)}
+        title="Judging has already started"
+        consequences={[
+          strandedRefusal?.message ?? "",
+          `Publishing anyway deletes ${strandedRefusal?.stranded?.length ?? 0} score card(s) so ` +
+            "they cannot count toward the standings for judges who are not assigned.",
+          "A restore point is taken first, so this can be put back.",
+        ].filter(Boolean)}
+        typeToConfirm="discard scores"
+        confirmLabel="Discard scores and publish"
+        onConfirm={() => confirmPublish({ discardScores: true })}
+        onCancel={() => setStrandedRefusal(null)}
       />
 
       <ConfirmDialog

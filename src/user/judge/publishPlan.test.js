@@ -47,9 +47,17 @@ const { publishPlan } = require("./publishPlan");
 const { planSchedule } = require("./planSchedule");
 const { requireAdmin } = require("../../roles.js");
 
+/**
+ * First-round cards, as { teamId: { judgeUid: card } }. Module-level and reset
+ * in beforeEach: a test that wants judging to have started writes into it, and
+ * the next `get("scores/first")` sees the change.
+ */
+let scoresData = {};
+
 /** An event with `teams` submitted teams and `judges` round-one judges. */
 function world({
   teams = 12, judges = 12, rooms = 10, batchCount = 3, checkedIn = true, unsubmitted = [],
+  finalJudges = 0,
 } = {}) {
   const teamsData = {};
   for (let i = 0; i < teams; i++) {
@@ -65,6 +73,13 @@ function world({
       firstName: "Judge", lastName: String(i), isRound1Judge: true, checkedIn,
     };
   }
+  if (finalJudges) {
+    for (let i = 0; i < finalJudges; i++) {
+      judgesData[`f${i}`] = {
+        firstName: "Prof", lastName: String(i), isFinalRoundJudge: true, checkedIn,
+      };
+    }
+  }
 
   return async (r) => {
     const table = {
@@ -73,6 +88,7 @@ function world({
       "config/judgingRooms": Array.from({ length: rooms }, (_, i) => `Room ${i}`),
       "config/batchCount": batchCount,
       "config/batchTimes": { 1: "5:00 PM", 2: "5:15 PM", 3: "5:30 PM" },
+      "scores/first": scoresData,
       scheduleDraft: undefined,
     };
     const value = table[r.path];
@@ -88,6 +104,7 @@ const snapshotPayload = () =>
   mockUpdate.mock.calls.map((call) => call[1]).find((p) => p["snapshots/generated-id"]);
 
 beforeEach(() => {
+  scoresData = {};
   mockUpdate.mockReset();
   mockUpdate.mockResolvedValue(undefined);
   mockGet.mockReset();
@@ -222,6 +239,59 @@ describe("what gets written", () => {
     await publishPlan(plan);
 
     expect(schedulePayload()["judges/prof/teamAssignments"].t0).toMatchObject({ id: "t0" });
+  });
+
+  test("a re-plan that would strand a card is refused, and writes nothing", async () => {
+    // j0 scored t0 under the old schedule. This plan does not seat j0 on t0, so
+    // publishing would leave that card counting toward t0's average while
+    // belonging to a judge who is not coming.
+    const plan = await built();
+    const seated = plan.assignments.t0.judges.map((j) => j.judgeId);
+    const notSeated = ["j0", "j1", "j2"].find((id) => !seated.includes(id));
+    scoresData = { t0: { [notSeated]: { problem: 8 } } };
+
+    const result = await publishPlan(plan);
+
+    expect(result.ok).toBe(false);
+    expect(result.stranded).toHaveLength(1);
+    expect(result.error).toMatch(/already been filed/i);
+    // it has to say what the consequence is, not just that it refused
+    expect(result.error).toMatch(/counting toward the standings/i);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("the refusal names the team and judge whose card is at stake", async () => {
+    const plan = await built();
+    const seated = plan.assignments.t0.judges.map((j) => j.judgeId);
+    const notSeated = ["j0", "j1", "j2"].find((id) => !seated.includes(id));
+    scoresData = { t0: { [notSeated]: { problem: 8 } } };
+
+    const { error } = await publishPlan(plan);
+    expect(error).toMatch(/Team 0/);
+  });
+
+  test("a re-plan that strands nothing still publishes", async () => {
+    // the pair that IS seated has the card, so republishing orphans no work
+    const plan = await built();
+    const seatedJudge = plan.assignments.t0.judges[0].judgeId;
+    scoresData = { t0: { [seatedJudge]: { problem: 8 } } };
+
+    const result = await publishPlan(plan);
+    expect(result.ok).toBe(true);
+  });
+
+  test("discardScores publishes anyway and clears the first round cards", async () => {
+    const plan = await built();
+    const seated = plan.assignments.t0.judges.map((j) => j.judgeId);
+    const notSeated = ["j0", "j1", "j2"].find((id) => !seated.includes(id));
+    scoresData = { t0: { [notSeated]: { problem: 8 } } };
+
+    const result = await publishPlan(plan, { discardScores: true });
+
+    expect(result.ok).toBe(true);
+    // cleared in the same atomic update as the schedule, so a dropped
+    // connection cannot leave the cards behind against the new assignments
+    expect(schedulePayload()["scores/first"]).toBeNull();
   });
 
   test("the draft is cleared in the same update as the schedule", async () => {

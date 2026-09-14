@@ -170,3 +170,16 @@ export async function seedFirstRoundScores(request, { teams = 6, perTeam = 2 } =
 
   return teamIds;
 }
+
+/**
+ * Remove every first-round card.
+ *
+ * Publishing a schedule is refused once cards exist for pairings the new plan
+ * drops, so a spec that means to exercise the ordinary publish has to say which
+ * state it starts from rather than inherit whatever the spec before it left
+ * behind. The refusal itself is covered in schedule-replace.spec.mjs.
+ */
+export async function clearFirstRoundScores(request) {
+  const res = await request.delete(`${DB}/scores/first.json?ns=${NS}`, { headers: ADMIN });
+  if (!res.ok()) throw new Error(`could not clear scores: ${res.status()} ${await res.text()}`);
+}
