@@ -201,6 +201,29 @@ describe("what gets written", () => {
     expect(schedulePayload()["judges/stale/teamAssignments"]).toBeNull();
   });
 
+  test("a hand-added final round judge is published like any other", async () => {
+    // the generator never seats one, but an organizer filling a no-show can.
+    // teamAssignments is what the /scores rule treats as proof of assignment,
+    // so if publish skipped them they would turn up unable to score.
+    mockGet.mockImplementation(async (r) => {
+      const base = await world({ teams: 12, judges: 12 })(r);
+      if (r.path !== "judges") return base;
+      return {
+        exists: () => true,
+        val: () => ({
+          ...base.val(),
+          prof: { firstName: "Wei", lastName: "Chen", isFinalRoundJudge: true, checkedIn: true },
+        }),
+      };
+    });
+
+    const plan = await built();
+    plan.assignments.t0.judges.push({ judgeId: "prof", judgeName: "Wei Chen" });
+    await publishPlan(plan);
+
+    expect(schedulePayload()["judges/prof/teamAssignments"].t0).toMatchObject({ id: "t0" });
+  });
+
   test("the draft is cleared in the same update as the schedule", async () => {
     await publishPlan(await built());
     expect(schedulePayload().scheduleDraft).toBeNull();

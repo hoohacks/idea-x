@@ -274,6 +274,7 @@ describe("giving somebody their one role", () => {
     expect(record.email).toBe("grace@example.com");
     expect(record.wantsToJudge).toBe(true);
     expect(record.isRound1Judge).toBe(false);
+    expect(record.isFinalRoundJudge).toBe(false);
   });
 
   test("the role they are leaving is deleted, with its roster entries", async () => {
@@ -491,6 +492,16 @@ describe("bulk edits", () => {
   test("a field that does not belong to the role is refused", async () => {
     const result = await bulkSet({ uids: ["c1"], role: "competitor", field: "isRound1Judge", value: true });
     expect(result.ok).toBe(false);
+  });
+
+  test("the final-round mark can be set in bulk", async () => {
+    const result = await bulkSet({
+      uids: ["j1", "j2"], role: "judge", field: "isFinalRoundJudge", value: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(payload()["judges/j1/isFinalRoundJudge"]).toBe(true);
+    expect(payload()["judges/j2/isFinalRoundJudge"]).toBe(true);
   });
 
   test("an empty selection is refused", async () => {

@@ -75,9 +75,15 @@ export default function TeamSlotDrawer({ open, plan, teamId, onEdit, onClose }) 
 
   const judges = current?.judges ?? [];
   const onTeamIds = new Set(judges.map((j) => j.judgeId));
-  const addableJudges = (plan.basis?.judgeIds ?? [])
+  // `judgeNames` covers everyone marked for either round, which is wider than
+  // `basis.judgeIds` -- the pool the plan was allocated from. That gap is the
+  // point: a final-round judge is never auto-assigned, but an organizer filling
+  // a no-show should be able to reach one, so they are offered and labelled.
+  const finalOnly = new Set(plan.finalOnlyJudgeIds ?? []);
+  const addableJudges = Object.keys(plan.judgeNames ?? {})
     .filter((id) => !onTeamIds.has(id))
-    .map((id) => ({ id, name: plan.judgeNames?.[id] ?? id }));
+    .map((id) => ({ id, name: plan.judgeNames?.[id] ?? id, finalOnly: finalOnly.has(id) }))
+    .sort((a, b) => Number(a.finalOnly) - Number(b.finalOnly) || a.name.localeCompare(b.name));
 
   const removeJudge = (judgeUid) => runEdit({ type: "removeJudge", teamId, judgeUid });
 
@@ -160,7 +166,9 @@ export default function TeamSlotDrawer({ open, plan, teamId, onEdit, onClose }) 
                   sx={{ minWidth: 140 }}
                 >
                   {addableJudges.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.name}{option.finalOnly ? " (final round judge)" : ""}
+                    </MenuItem>
                   ))}
                 </TextField>
                 <Button
@@ -182,10 +190,16 @@ export default function TeamSlotDrawer({ open, plan, teamId, onEdit, onClose }) 
             value={addPick}
             onChange={(event) => addJudge(event.target.value)}
             disabled={busy || !addableJudges.length}
-            helperText={addableJudges.length ? undefined : "Every eligible judge is already on this team"}
+            helperText={
+              addableJudges.length
+                ? "Final round judges are offered but never assigned automatically."
+                : "Every eligible judge is already on this team"
+            }
           >
             {addableJudges.map((option) => (
-              <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+              <MenuItem key={option.id} value={option.id}>
+                {option.name}{option.finalOnly ? " (final round judge)" : ""}
+              </MenuItem>
             ))}
           </TextField>
         </>

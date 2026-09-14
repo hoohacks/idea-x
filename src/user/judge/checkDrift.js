@@ -1,6 +1,7 @@
 import { ref, get } from "firebase/database";
 import { database } from "../../firebase.js";
 import { fetchRooms, fetchBatchConfig, displayName } from "./scheduleConfig.js";
+import { judgesRoundOne } from "./judgeRoles.js";
 
 /**
  * What moved since a plan was built.
@@ -292,7 +293,7 @@ export async function readLiveBasis(onlyCheckedIn) {
   const teamData = teamSnapshot.exists() ? teamSnapshot.val() : {};
 
   const roundOneJudges = Object.entries(judgeData)
-    .filter(([, details]) => details?.isRound1Judge === true)
+    .filter(([, details]) => judgesRoundOne(details))
     .map(([id, details]) => ({ id, ...details }));
 
   const judgesList = onlyCheckedIn

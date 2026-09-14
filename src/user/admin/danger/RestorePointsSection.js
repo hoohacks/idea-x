@@ -68,8 +68,8 @@ function pathLine({ path, added, changed, removed }) {
  * "<n> score card(s) will be destroyed: <team> by <judge>, ..." or null.
  *
  * A `round` on an entry means the same team+judge pair lost more than one
- * card -- the bare "scores" path lets that happen (a first-round judge not
- * excluded from that team in the final, scored in both). Without the round
+ * card -- the bare "scores" path lets that happen (an organizer judges both
+ * rounds, so they score a finalist twice). Without the round
  * in the line, two distinct destroyed cards for "Aurora by Judge Smith"
  * would render as the same text twice, reading as a duplicate or a single
  * card rather than the two that are actually going.

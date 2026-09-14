@@ -68,8 +68,8 @@ export function checkFinalDrift(plan, live) {
         teamId: slot.teamId,
         judgeId: judge.judgeId,
         message:
-          `${judge.judgeName} is on ${slot.teamName}'s panel but is no longer a checked-in ` +
-          `first-round judge.`,
+          `${judge.judgeName} is on ${slot.teamName}'s panel but is no longer eligible for the ` +
+          `final round.`,
         repair: "removeJudge",
       });
     }

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { signIn, goto, expectPagePainted, seedFirstRoundScores } from "./helpers.mjs";
+import { signIn, goto, expectPagePainted, seedFirstRoundScores, judge } from "./helpers.mjs";
 
 /**
  * The last hour of the event: cutting the finalists, correcting the plan, and
@@ -82,4 +82,21 @@ test("a judge is given final round cards, on their own record", async ({ page })
   // who scored every finalist in round one is correctly given nothing to do,
   // so the section is the assertion rather than the cards inside it.
   await expect(page.getByRole("heading", { name: "Final round" })).toBeVisible({ timeout: 20_000 });
+});
+
+test("a final-round-only judge gets cards, despite judging no first round", async ({ page }) => {
+  // The professors and professionals carry isFinalRoundJudge and are never
+  // given a first-round batch, so this judge reaches the page with an empty
+  // first-round list. That must not stop the final round section rendering --
+  // it is the only reason they are here.
+  await signIn(page, judge(13));
+  await goto(page, "/user/judging");
+  await expectPagePainted(page);
+
+  await expect(page.getByRole("heading", { name: "First round" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/No assignments yet/)).toBeVisible();
+
+  await expect(page.getByRole("heading", { name: "Final round" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/No final round assignments for you/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Score team" }).first()).toBeVisible();
 });

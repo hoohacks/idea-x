@@ -32,6 +32,7 @@ function JudgeSearch() {
   // the scheduler only assigns judges carrying this flag, so the count belongs
   // where an admin will see it before building a plan
   const roundOneCount = judges.filter((judge) => judge.isRound1Judge === true).length;
+  const finalRoundCount = judges.filter((judge) => judge.isFinalRoundJudge === true).length;
   const percentCheckedIn = judges.length ? (checkedInCount / judges.length) * 100 : 0;
 
   const handleCheckIn = (judge) => {
@@ -43,6 +44,15 @@ function JudgeSearch() {
   const handleToggleRoundOne = (judge) => {
     update(ref(database, `/judges/${judge.id}`), {
       isRound1Judge: judge.isRound1Judge !== true,
+    });
+  };
+
+  // Deliberately independent of the round-one mark rather than exclusive with
+  // it. The two roles answer different questions -- who the generator may
+  // assign, and who is in the room for the final -- and somebody can be both.
+  const handleToggleFinalRound = (judge) => {
+    update(ref(database, `/judges/${judge.id}`), {
+      isFinalRoundJudge: judge.isFinalRoundJudge !== true,
     });
   };
 
@@ -59,11 +69,15 @@ function JudgeSearch() {
           checkedInFilter === "" ||
           String(Boolean(judge.checkedIn)) === checkedInFilter;
 
-        const matchesRoundOne =
+        const roundOne = judge.isRound1Judge === true;
+        const finalRound = judge.isFinalRoundJudge === true;
+        const matchesRole =
           roundOneFilter === "" ||
-          String(judge.isRound1Judge === true) === roundOneFilter;
+          (roundOneFilter === "round1" && roundOne) ||
+          (roundOneFilter === "final" && finalRound) ||
+          (roundOneFilter === "none" && !roundOne && !finalRound);
 
-        return matchesQuery && matchesCheckedIn && matchesRoundOne;
+        return matchesQuery && matchesCheckedIn && matchesRole;
       })
       .sort((a, b) =>
         `${a.firstName ?? ""} ${a.lastName ?? ""}`.localeCompare(
@@ -81,6 +95,7 @@ function JudgeSearch() {
           { label: "signed up", value: judges.length },
           { label: "checked in", value: checkedInCount },
           { label: "first round", value: roundOneCount },
+          { label: "final round", value: finalRoundCount },
         ]}
       />
 
@@ -116,8 +131,9 @@ function JudgeSearch() {
           sx={{ minWidth: 175 }}
         >
           <MenuItem value="">Any</MenuItem>
-          <MenuItem value="true">First round</MenuItem>
-          <MenuItem value="false">Not first round</MenuItem>
+          <MenuItem value="round1">First round</MenuItem>
+          <MenuItem value="final">Final round</MenuItem>
+          <MenuItem value="none">Marked for neither</MenuItem>
         </TextField>
       </FilterBar>
 
@@ -127,6 +143,7 @@ function JudgeSearch() {
             `${judge.firstName ?? ""} ${judge.lastName ?? ""}`.trim() || "Unnamed judge";
           const isCheckedIn = Boolean(judge.checkedIn);
           const isRoundOne = judge.isRound1Judge === true;
+          const isFinalRound = judge.isFinalRoundJudge === true;
           const assignments = assignmentList(judge.teamAssignments);
 
           return (
@@ -145,6 +162,7 @@ function JudgeSearch() {
                   <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                     <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
                     {isRoundOne && <Chip label="first round" size="small" color="primary" />}
+                    {isFinalRound && <Chip label="final round" size="small" color="secondary" />}
                     {judge.wantsToMentor && (
                       <Chip label="mentor" size="small" variant="outlined" />
                     )}
@@ -181,6 +199,15 @@ function JudgeSearch() {
                     sx={{ minWidth: 130 }}
                   >
                     {isRoundOne ? "First round" : "Mark first round"}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={isFinalRound ? "contained" : "outlined"}
+                    color="secondary"
+                    onClick={() => handleToggleFinalRound(judge)}
+                    sx={{ minWidth: 130 }}
+                  >
+                    {isFinalRound ? "Final round" : "Mark final round"}
                   </Button>
                   <Button
                     size="small"

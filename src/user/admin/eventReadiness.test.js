@@ -36,6 +36,40 @@ const ready = {
   judges: judges(12),
 };
 
+describe("the two judging roles", () => {
+  const withProfessors = {
+    ...ready,
+    judges: {
+      ...judges(12),
+      p0: { isFinalRoundJudge: true, checkedIn: true },
+      p1: { isFinalRoundJudge: true, checkedIn: true },
+    },
+  };
+
+  test("final-round judges are counted separately from round-one judges", () => {
+    const { counts } = readEventState(withProfessors);
+    expect(counts.judges.roundOne).toBe(12);
+    expect(counts.judges.finalRound).toBe(2);
+    expect(counts.judges.total).toBe(14);
+  });
+
+  test("they do not make an unschedulable event look ready", () => {
+    // supply is a first-round question: nobody marked for the final round
+    // alone can stand in a room during a first-round batch
+    const shortHanded = {
+      ...ready,
+      judges: {
+        ...judges(1),
+        ...Object.fromEntries(
+          Array.from({ length: 20 }, (_, i) => [`p${i}`, { isFinalRoundJudge: true }])
+        ),
+      },
+    };
+
+    expect(readEventState(shortHanded).supply.ok).toBe(false);
+  });
+});
+
 describe("which part of the day this is", () => {
   test("nothing set up yet is setup", () => {
     expect(readEventState({}).phase).toBe(SETUP);

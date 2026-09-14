@@ -178,6 +178,7 @@ describe("judges", () => {
 
   test.each([
     ["isRound1Judge", { isRound1Judge: true }],
+    ["isFinalRoundJudge", { isFinalRoundJudge: true }],
     ["teamAssignments", { teamAssignments: { team1: assignment("team1") } }],
     ["finalAssignments", { finalAssignments: { team1: finalAssignment("team1") } }],
   ])("a judge cannot seed %s at registration", async (_label, extra) => {
@@ -227,6 +228,17 @@ describe("judges", () => {
 
   test("an admin can flag a round one judge", async () => {
     await assertSucceeds(set(ref(db("admin"), "judges/judge2/isRound1Judge"), true));
+  });
+
+  test("a judge cannot promote themselves into the final round afterwards", async () => {
+    // the final-round mark is what puts somebody in the eligible pool, and the
+    // publish turns that into finalAssignments -- which the /scores rule
+    // treats as proof of assignment
+    await assertFails(set(ref(db("judge2"), "judges/judge2/isFinalRoundJudge"), true));
+  });
+
+  test("an admin can flag a final round judge", async () => {
+    await assertSucceeds(set(ref(db("admin"), "judges/judge2/isFinalRoundJudge"), true));
   });
 
   test("an admin can check a judge in", async () => {

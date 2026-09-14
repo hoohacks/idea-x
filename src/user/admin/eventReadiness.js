@@ -65,6 +65,10 @@ function countJudges(judges) {
   return {
     total: all.length,
     roundOne: all.filter((judge) => judge?.isRound1Judge === true).length,
+    // counted, but deliberately not fed to describeSupply below: the supply
+    // question is "can the first round run", and these judges are not in the
+    // building for it
+    finalRound: all.filter((judge) => judge?.isFinalRoundJudge === true).length,
     checkedIn: all.filter((judge) => judge?.checkedIn === true).length,
   };
 }

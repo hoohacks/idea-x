@@ -52,6 +52,7 @@ export function blankJudge({ firstName = "", lastName = "", email = "", company 
     checkedIn: false,
     foodCheckIn: false,
     isRound1Judge: false,
+    isFinalRoundJudge: false,
     registeredAt: serverTimestamp(),
   };
 }
@@ -312,6 +313,7 @@ export function describeSwitch({ person, role }) {
     lines.push(`Removes ${assignments} judging assignment${assignments === 1 ? "" : "s"}, and their name from those teams' cards.`);
   }
   if (judge?.isRound1Judge) lines.push("Clears their first-round judge mark.");
+  if (judge?.isFinalRoundJudge) lines.push("Clears their final-round judge mark.");
   if (judge) lines.push("Scores they filed are kept, because they count toward averages.");
 
   if (leaving.length) {
@@ -643,7 +645,7 @@ export async function sendReset(email) {
  */
 export async function bulkSet({ uids, role, field, value }) {
   const allowed = {
-    judge: ["checkedIn", "foodCheckIn", "isRound1Judge"],
+    judge: ["checkedIn", "foodCheckIn", "isRound1Judge", "isFinalRoundJudge"],
     competitor: ["checkedIn", "foodCheckIn"],
   };
   if (!allowed[role]?.includes(field)) {

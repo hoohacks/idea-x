@@ -132,11 +132,27 @@ test("the top four teams by average make the cut, in rank order", async () => {
   expect(slotsOf(plan).map((s) => s.teamId)).toEqual(["t0", "t1", "t2", "t3"]);
 });
 
-test("every panel is prefilled with the judges who did not score that team", async () => {
+test("every panel is prefilled with the whole pool", async () => {
   const { plan } = await planFinalRound({});
-  // j0 scored every team, j1 scored t0, t2 and t3
-  expect(plan.assignments.t0.judges.map((j) => j.judgeId)).toEqual(["j2", "j3", "j4"]);
-  expect(plan.assignments.t1.judges.map((j) => j.judgeId)).toEqual(["j1", "j2", "j3", "j4"]);
+  // j0 scored every team in round one and is still seated on all of them: the
+  // finalists present in sequence to one room, so everyone there scores everyone
+  expect(plan.assignments.t0.judges.map((j) => j.judgeId)).toEqual(["j0", "j1", "j2", "j3", "j4"]);
+  expect(plan.assignments.t1.judges.map((j) => j.judgeId)).toEqual(["j0", "j1", "j2", "j3", "j4"]);
+});
+
+test("a final-round judge is in the pool without judging round one", async () => {
+  judgesData.prof = { firstName: "Ada", lastName: "Prof", isFinalRoundJudge: true, checkedIn: true };
+
+  const { plan } = await planFinalRound({});
+  expect(plan.pool.map((judge) => judge.judgeId)).toContain("prof");
+  expect(plan.assignments.t0.judges.map((j) => j.judgeId)).toContain("prof");
+});
+
+test("somebody marked for neither round is in no pool at all", async () => {
+  judgesData.nobody = { firstName: "Un", lastName: "Marked", checkedIn: true };
+
+  const { plan } = await planFinalRound({});
+  expect(plan.pool.map((judge) => judge.judgeId)).not.toContain("nobody");
 });
 
 test("the room comes from config, not the constant", async () => {
@@ -224,8 +240,25 @@ describe("publishing", () => {
     const payload = publishPayload();
     expect(payload["judges/j2/finalAssignments"].t0).toBeUndefined();
     expect(payload["judges/j2/finalAssignments"].t1).toBeTruthy();
-    // j0 scored every team in round one, so is on no panel at all
-    expect(payload["judges/j0/finalAssignments"]).toBeNull();
+    // j0 scored every team in round one and is seated on every finalist anyway
+    expect(Object.keys(payload["judges/j0/finalAssignments"]).sort()).toEqual(
+      slotsOf(plan).map((slot) => slot.teamId).sort()
+    );
+  });
+
+  test("a judge seated on nothing has their assignments cleared", async () => {
+    let plan = await publishable();
+    for (const slot of slotsOf(plan)) {
+      plan = applyFinalEdit(plan, {
+        type: "removeJudge", teamId: slot.teamId, judgeId: "j4",
+      }).plan;
+    }
+
+    await publishFinalRound(plan);
+
+    // that node is what the rules treat as proof of assignment, so leaving it
+    // behind would leave j4 able to write a final score
+    expect(publishPayload()["judges/j4/finalAssignments"]).toBeNull();
   });
 
   test("the room on the plan is the room that is written", async () => {

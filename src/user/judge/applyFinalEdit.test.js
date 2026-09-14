@@ -23,20 +23,25 @@ const ranked = [
   { teamId: "t5", name: "Epsilon", averageScore: 20, fundableVotes: 0, judgeCount: 2 },
 ];
 
-// j1 scored Alpha in round one, so cannot judge it again
-const scoresByTeam = { t1: { j1: {} }, t2: { j2: {} }, t3: {}, t4: {}, t5: {} };
-
-const plan = () => buildFinalPlan({ ranked, scoresByTeam, pool, size: 4, room: "Rice 011" });
+// No scoresByTeam: the final round is one room with the teams in sequence, so
+// everyone present scores everyone and a round-one card bars nobody. The plan
+// builder no longer reads the first-round cards at all.
+const plan = () => buildFinalPlan({ ranked, pool, size: 4, room: "Rice 011" });
 
 describe("building the plan an organizer starts from", () => {
   test("the cut is the top `size`, in rank order", () => {
     expect(slotsOf(plan()).map((s) => s.teamName)).toEqual(["Alpha", "Beta", "Gamma", "Delta"]);
   });
 
-  test("panels are prefilled with everyone who did not score that team", () => {
+  test("panels are prefilled with the whole pool", () => {
     const slots = slotsOf(plan());
-    expect(slots[0].judges.map((j) => j.judgeId)).toEqual(["j2", "j3"]);
+    expect(slots[0].judges.map((j) => j.judgeId)).toEqual(["j1", "j2", "j3"]);
     expect(slots[2].judges.map((j) => j.judgeId)).toEqual(["j1", "j2", "j3"]);
+  });
+
+  test("a judge who scored that team in round one is still seated on it", () => {
+    const alpha = slotsOf(plan()).find((slot) => slot.teamName === "Alpha");
+    expect(alpha.judges.map((j) => j.judgeId)).toContain("j1");
   });
 
   test("the basis fingerprints every ranked team, not just the finalists", () => {
@@ -45,10 +50,14 @@ describe("building the plan an organizer starts from", () => {
 });
 
 describe("judges on a panel", () => {
-  test("a judge who scored that team in round one is refused", () => {
-    const result = applyFinalEdit(plan(), { type: "addJudge", teamId: "t1", judgeId: "j1" });
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/already scored Alpha in round one/);
+  test("a judge who scored that team in round one can be added back", () => {
+    // seated by the prefill, so removing is what makes room for the add
+    const removed = applyFinalEdit(plan(), { type: "removeJudge", teamId: "t1", judgeId: "j1" });
+    expect(removed.ok).toBe(true);
+
+    const result = applyFinalEdit(removed.plan, { type: "addJudge", teamId: "t1", judgeId: "j1" });
+    expect(result.ok).toBe(true);
+    expect(result.plan.assignments.t1.judges.map((j) => j.judgeId)).toContain("j1");
   });
 
   test("the same judge is fine on a team they did not score", () => {
@@ -65,18 +74,18 @@ describe("judges on a panel", () => {
 
   test("removing leaves the rest of the panel alone", () => {
     const next = applyFinalEdit(plan(), { type: "removeJudge", teamId: "t2", judgeId: "j1" }).plan;
-    expect(next.assignments.t2.judges.map((j) => j.judgeId)).toEqual(["j3"]);
+    expect(next.assignments.t2.judges.map((j) => j.judgeId)).toEqual(["j2", "j3"]);
     expect(next.assignments.t3.judges).toHaveLength(3);
   });
 
-  test("a swap is one edit, so undo walks it back in one step", () => {
+  test("swapping in somebody already on the panel is refused", () => {
     const next = applyFinalEdit(plan(), {
       type: "swapJudge",
       teamId: "t2",
       fromJudgeId: "j1",
       toJudgeId: "j2",
     });
-    expect(next.ok).toBe(false); // j2 scored Beta in round one
+    expect(next.ok).toBe(false); // the prefill already seated j2 on Beta
   });
 
   test("a legal swap replaces one judge with another in a single entry", () => {
@@ -95,7 +104,7 @@ describe("judges on a panel", () => {
 
   test("a team can be left with nobody, and the stats say so", () => {
     let next = plan();
-    for (const judgeId of ["j2", "j3"]) {
+    for (const judgeId of ["j1", "j2", "j3"]) {
       next = applyFinalEdit(next, { type: "removeJudge", teamId: "t1", judgeId }).plan;
     }
     expect(finalStats(next).unjudged).toEqual(["Alpha"]);
@@ -230,10 +239,8 @@ describe("invariants hold across a randomised walk", () => {
         const judgeIds = slot.judges.map((j) => j.judgeId);
         expect(new Set(judgeIds).size).toBe(judgeIds.length);
 
+        // nobody on a panel is outside the pool
         for (const judgeId of judgeIds) {
-          // nobody judges a team they scored in round one
-          expect(current.excluded[slot.teamId]?.[judgeId]).toBeFalsy();
-          // and nobody on a panel is outside the pool
           expect(pool.some((j) => j.judgeId === judgeId)).toBe(true);
         }
       }

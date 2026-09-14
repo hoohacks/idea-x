@@ -10,7 +10,7 @@ import {
   subscribeFinalDraft, saveFinalDraft, clearFinalDraft,
 } from "../../judge/finalDraftStore.js";
 import { applyFinalEdit, undoFinalEdit } from "../../judge/applyFinalEdit.js";
-import { slotsOf, slotLabel, finalStats, eligibleFor } from "../../judge/finalRoundPlan.js";
+import { slotsOf, slotLabel, finalStats } from "../../judge/finalRoundPlan.js";
 
 /**
  * Planning the final round, the way the first round is planned.
@@ -424,13 +424,9 @@ function PanelDrawer({ plan, slot, onClose, onEdit }) {
 
   const seated = slot.judges;
   const seatedIds = new Set(seated.map((judge) => judge.judgeId));
-  // everyone eligible for THIS team who is not already on it: the round-one
-  // scorers are excluded here as well as refused by applyFinalEdit, so nobody
-  // is offered a choice that will be rejected
-  const available = eligibleFor(plan.pool, plan.excluded?.[slot.teamId]).filter(
-    (judge) => !seatedIds.has(judge.judgeId)
-  );
-  const barred = (plan.pool ?? []).filter((judge) => plan.excluded?.[slot.teamId]?.[judge.judgeId]);
+  // everyone in the pool who is not already on this team -- the only thing
+  // applyFinalEdit refuses now, so nobody is offered a choice that is rejected
+  const available = (plan.pool ?? []).filter((judge) => !seatedIds.has(judge.judgeId));
 
   const choices = mode === "remove" ? seated : available;
   const ready = target && (mode !== "swap" || replacing);
@@ -460,12 +456,6 @@ function PanelDrawer({ plan, slot, onClose, onEdit }) {
             Nothing is written until the plan is published.
           </Alert>
 
-          {barred.length > 0 && (
-            <Typography variant="caption" color="text.secondary">
-              Not offered: {barred.map((judge) => judge.judgeName).join(", ")} — they scored
-              {" "}{slot.teamName} in round one.
-            </Typography>
-          )}
 
           <TextField
             select

@@ -5,6 +5,7 @@ import { renameTeam } from "./recordEdits";
 import { overrideTeamSlot, setTeamSubmitted, forceIntoFinalRound } from "../danger/dangerZone";
 import { listRooms } from "../rooms/roomsService";
 import { findOpenSlots, scheduleTeamIntoBatch } from "../../judge/assignmentEdits";
+import { judgePickerOptions } from "../../judge/judgeRoles";
 import { deleteTeam } from "../people/peopleService";
 import { ref, get } from "firebase/database";
 import { database } from "../../../firebase";
@@ -200,16 +201,9 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
       .then(([openSlots, judgesData]) => {
         if (!live) return;
         setSlots(openSlots);
-        setJudges(
-          Object.entries(judgesData)
-            .filter(([, judge]) => judge?.isRound1Judge)
-            .map(([uid, judge]) => ({
-              uid,
-              name: [judge.firstName, judge.lastName].filter(Boolean).join(" ") || uid.slice(0, 8),
-              checkedIn: judge.checkedIn === true,
-            }))
-            .sort((a, b) => Number(b.checkedIn) - Number(a.checkedIn) || a.name.localeCompare(b.name))
-        );
+        // both roles, because this places a team by hand: the generator would
+        // not seat a final-round judge, but an organizer filling a gap may
+        setJudges(judgePickerOptions(judgesData));
       })
       .catch(() => { if (live) setSlots([]); })
       .finally(() => { if (live) setLoading(false); });
@@ -278,7 +272,9 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
       >
         {judges.map((judge) => (
           <MenuItem key={judge.uid} value={judge.uid}>
-            {judge.name}{judge.checkedIn ? "" : " (not checked in)"}
+            {judge.name}
+            {judge.finalOnly ? " (final round judge)" : ""}
+            {judge.checkedIn ? "" : " (not checked in)"}
           </MenuItem>
         ))}
       </TextField>

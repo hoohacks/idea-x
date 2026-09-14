@@ -64,7 +64,7 @@ export function decodeDraft(raw) {
     ...raw,
     ranked: decodeList(raw?.ranked),
     pool: decodeList(raw?.pool),
-    excluded: raw?.excluded ?? {},
+
     assignments: Object.fromEntries(
       Object.entries(raw?.assignments ?? {}).map(([teamId, assignment]) => [
         teamId,

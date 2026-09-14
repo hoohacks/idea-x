@@ -20,6 +20,8 @@
  *
  * Options:
  *   --teams=10 --judges=12 --rooms=10 --batches=3
+ *   --final-judges=4  judges marked for the final round only -- the professors
+ *                   and professionals, who are never given a first-round batch
  *   --scores        also file first-round score cards, so the final round and
  *                   the standings can be exercised straight away
  *   --schedule      also generate the first-round schedule
@@ -44,6 +46,7 @@ const args = Object.fromEntries(
 
 const TEAMS = Number(args.teams ?? 10);
 const JUDGES = Number(args.judges ?? 12);
+const FINAL_JUDGES = Number(args["final-judges"] ?? 4);
 const ROOMS = Number(args.rooms ?? 10);
 const BATCHES = Number(args.batches ?? 3);
 const PASSWORD = String(args.password ?? "testtest");
@@ -183,7 +186,10 @@ function buildSchedule(teams, judges, rooms, batchTimes) {
 
 async function main() {
   console.log(`\nSeeding ${PROJECT_ID} on the emulator`);
-  console.log(`  ${TEAMS} teams · ${JUDGES} judges · ${ROOMS} rooms · ${BATCHES} batches\n`);
+  console.log(
+    `  ${TEAMS} teams · ${JUDGES} judges (+${FINAL_JUDGES} final round) · ` +
+    `${ROOMS} rooms · ${BATCHES} batches\n`
+  );
 
   if (TEAMS < 8) {
     console.warn(
@@ -201,8 +207,11 @@ async function main() {
   process.stdout.write("  creating accounts... ");
   const adminUid = await createAccount("admin@example.com");
 
+  // The first JUDGES are organizers (round one, and in the room for the final);
+  // the rest are marked for the final round only, so a seeded event exercises
+  // both roles -- including the generator's refusal to seat the second kind.
   const judges = [];
-  for (let i = 0; i < JUDGES; i++) {
+  for (let i = 0; i < JUDGES + FINAL_JUDGES; i++) {
     const { firstName, lastName } = person(i);
     judges.push({
       uid: await createAccount(`judge${i + 1}@example.com`),
@@ -210,6 +219,7 @@ async function main() {
       lastName,
       name: `${firstName} ${lastName}`,
       index: i,
+      finalOnly: i >= JUDGES,
     });
   }
 
@@ -263,7 +273,8 @@ async function main() {
       timeslots: [],
       checkedIn: true,
       foodCheckIn: false,
-      isRound1Judge: true,
+      isRound1Judge: !judge.finalOnly,
+      isFinalRoundJudge: judge.finalOnly,
       registeredAt: now - (JUDGES - i) * 60000,
     };
   });
@@ -311,9 +322,12 @@ async function main() {
 
   // ---- optional schedule and scores ----
   if (WITH_SCHEDULE) {
+    // round-one judges only, the same filter planSchedule applies: a judge
+    // marked for the final round is not in the building for the first one
+    const roundOneJudges = judges.filter((judge) => !judge.finalOnly);
     const { byTeam, byJudge } = buildSchedule(
       teams,
-      judges,
+      roundOneJudges,
       tree.config.judgingRooms,
       batchTimes
     );
@@ -328,7 +342,7 @@ async function main() {
       generatedAt: now,
       generatedBy: adminUid,
       teams: teams.length,
-      judges: judges.length,
+      judges: roundOneJudges.length,
       onlyCheckedIn: false,
     };
 
@@ -371,10 +385,18 @@ async function main() {
   console.log("  database written\n");
   console.log("  Sign in with any of these (password: " + PASSWORD + ")");
   console.log("    admin@example.com          organizer, listed in /admins");
-  console.log(`    judge1@example.com  …  judge${JUDGES}@example.com`);
+  console.log(`    judge1@example.com  …  judge${JUDGES}@example.com  round one`);
+  if (FINAL_JUDGES > 0) {
+    console.log(
+      `    judge${JUDGES + 1}@example.com  …  judge${JUDGES + FINAL_JUDGES}@example.com  final round only`
+    );
+  }
   console.log(`    competitor1@example.com  …  competitor${TEAMS * MEMBERS_PER_TEAM}@example.com`);
   console.log("\n  State:");
-  console.log(`    ${TEAMS} teams, all submitted · ${JUDGES} judges, all round-one and checked in`);
+  console.log(
+    `    ${TEAMS} teams, all submitted · ${JUDGES} round-one judges and ` +
+    `${FINAL_JUDGES} final-round judges, all checked in`
+  );
   console.log(`    schedule: ${WITH_SCHEDULE ? "generated" : "not generated — press Generate Schedule"}`);
   console.log(`    scores:   ${WITH_SCORES ? "filed for every assignment" : "none"}`);
   console.log("\n  Now run:  npm run start:emulator");

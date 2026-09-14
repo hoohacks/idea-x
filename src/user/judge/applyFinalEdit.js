@@ -6,10 +6,10 @@
  * publish can list what was changed by hand and `undoFinalEdit` can walk back.
  *
  * The refusals are different, because the round is. There is one room, so no
- * edit can put a judge in two places at once and no op refuses on a clash. What
- * it does refuse is a judge scoring the same team twice: whoever marked a team
- * in round one is excluded from its final panel, and adding them back is a
- * mistake rather than an override.
+ * edit can put a judge in two places at once and no op refuses on a clash.
+ * Nor does scoring a team in round one bar anybody from it -- the finalists
+ * present in sequence to one room, so everyone there scores everyone. What is
+ * left to refuse is bookkeeping: somebody outside the pool, or already seated.
  */
 
 import { slotLabel, slotsOf } from "./finalRoundPlan.js";
@@ -71,13 +71,6 @@ export function applyFinalEdit(plan, op) {
       }
       if (current.judges.some((entry) => entry.judgeId === op.judgeId)) {
         return fail(`${judge.judgeName} is already judging ${teamName}.`);
-      }
-      // the one refusal that is about fairness rather than bookkeeping
-      if (next.excluded?.[op.teamId]?.[op.judgeId]) {
-        return fail(
-          `${judge.judgeName} already scored ${teamName} in round one, so they cannot judge it ` +
-            `again. Pick someone who did not.`
-        );
       }
 
       current.judges.push({ judgeId: judge.judgeId, judgeName: judge.judgeName });
@@ -147,14 +140,11 @@ export function applyFinalEdit(plan, op) {
       if (current) return fail(`${teamName} is already in the final round.`);
       if (!ranked) return fail("That team is not in the ranking, so it cannot be a finalist.");
 
-      const eligible = (next.pool ?? []).filter(
-        (judge) => !next.excluded?.[op.teamId]?.[judge.judgeId]
-      );
       next.assignments[op.teamId] = {
         teamId: op.teamId,
         teamName: ranked.name,
         order: slotsOf(next).length,
-        judges: eligible,
+        judges: [...(next.pool ?? [])],
       };
       reseat(next);
       return commit(next, op, before, `Added ${ranked.name} to the final round`, orderBefore);

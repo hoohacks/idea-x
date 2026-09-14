@@ -105,6 +105,15 @@ describe("a judge who is no longer eligible", () => {
     expect(issues[0].message).toMatch(/Beta/);
   });
 
+  test("the message does not claim round one is what makes them eligible", () => {
+    // an industry judge marked for the final round only is eligible without
+    // ever having been a first-round judge, so naming that mark misdescribes
+    // the repair an organizer has to make
+    const issues = checkFinalDrift(plan(), live({ eligibleJudges: { j1: true } }));
+    expect(issues[0].message).not.toMatch(/first-round judge/);
+    expect(issues[0].message).toMatch(/final round/i);
+  });
+
   test("one issue per seat, so each has its own repair", () => {
     const twoSeats = plan({
       assignments: {

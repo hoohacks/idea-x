@@ -13,10 +13,12 @@
  *    room. What an organizer edits is who is on a panel, and what order the
  *    teams go in.
  *
- * 2. **A judge does not mark the same team twice.** Whoever scored a team in
- *    round one is excluded from its final panel, and the edit layer refuses to
- *    add them back. That exclusion is per team, not per judge: a judge barred
- *    from one finalist is usually fine for the other three.
+ * 2. **Everyone present judges everyone.** Because the finalists present one
+ *    after another to the room, whoever is in that room hears every pitch, so
+ *    every eligible judge is seated on every finalist. Scoring a team in round
+ *    one bars nobody -- the pool is made of organizers who judged round one,
+ *    so a per-team exclusion would punch a different hole in every panel and,
+ *    at a small event, leave a finalist with nobody able to score it.
  */
 
 /** Slot labels are 1-based; `order` is not. */
@@ -25,39 +27,24 @@ export function slotLabel(order) {
 }
 
 /**
- * Who may sit on this team's panel: the eligible pool minus everyone who
- * already scored them in round one.
- */
-export function eligibleFor(pool, excludedForTeam) {
-  return pool.filter((judge) => !excludedForTeam?.[judge.judgeId]);
-}
-
-/**
  * Build the plan an organizer starts from.
  *
  * The cut is the top `size` of `ranked`, in rank order, and every finalist's
- * panel is prefilled with everyone eligible for it -- which is exactly what
- * activation used to derive at the moment of the write. The difference is that
- * this is now a starting point rather than the answer.
+ * panel is prefilled with the whole pool -- which is exactly what activation
+ * used to derive at the moment of the write. The difference is that this is now
+ * a starting point rather than the answer: an organizer who wants a smaller
+ * panel on one team takes people off it.
  *
  * Pure. `ranked` must already be sorted; ranking is `scoreRubric`'s job.
  */
-export function buildFinalPlan({ ranked = [], scoresByTeam = {}, pool = [], size = 4, room = "" }) {
-  const excluded = {};
-  for (const team of ranked) {
-    excluded[team.teamId] = Object.keys(scoresByTeam[team.teamId] ?? {}).reduce((acc, uid) => {
-      acc[uid] = true;
-      return acc;
-    }, {});
-  }
-
+export function buildFinalPlan({ ranked = [], pool = [], size = 4, room = "" }) {
   const assignments = {};
   ranked.slice(0, size).forEach((team, order) => {
     assignments[team.teamId] = {
       teamId: team.teamId,
       teamName: team.name,
       order,
-      judges: eligibleFor(pool, excluded[team.teamId]),
+      judges: [...pool],
     };
   });
 
@@ -67,7 +54,6 @@ export function buildFinalPlan({ ranked = [], scoresByTeam = {}, pool = [], size
     size,
     ranked,
     assignments,
-    excluded,
     pool,
     edits: [],
     basis: {
@@ -108,15 +94,4 @@ export function finalStats(plan) {
     idle: (plan?.pool ?? []).filter((judge) => !working.has(judge.judgeId)).length,
     edits: (plan?.edits ?? []).length,
   };
-}
-
-/**
- * Teams that made the cut but have nobody eligible to judge them: every judge
- * in the pool already scored them in round one. Reachable at small events --
- * with six teams or fewer every judge sees every team.
- */
-export function orphanedIn(plan) {
-  return slotsOf(plan)
-    .filter((slot) => eligibleFor(plan.pool ?? [], plan.excluded?.[slot.teamId]).length === 0)
-    .map((slot) => slot.teamName);
 }

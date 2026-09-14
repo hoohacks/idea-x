@@ -3,6 +3,7 @@ import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
 import { splitIntoBatches, allocateBatch, describeSupply } from "./schedulePlan.js";
 import { fetchRooms, fetchBatchConfig, displayName } from "./scheduleConfig.js";
+import { judgesRoundOne, judgesEitherRound } from "./judgeRoles.js";
 
 /**
  * Builds the first round judging schedule as a plan, without writing it.
@@ -46,7 +47,18 @@ export async function planSchedule({ onlyCheckedIn = false } = {}) {
         const teamData = teamSnapshot.val();
 
         const roundOneJudges = Object.entries(judgeData)
-            .filter(([, details]) => details?.isRound1Judge === true)
+            .filter(([, details]) => judgesRoundOne(details))
+            .map(([id, details]) => ({ id, ...details }));
+
+        // Everyone an organizer could legitimately put on a panel, which is a
+        // wider set than the one allocated from. Judges marked for the final
+        // round only -- the professors and professionals -- are never handed a
+        // batch here, but they are named below so the plan drawer can offer one
+        // by hand when a round-one judge does not turn up. `basis.judgeIds`
+        // deliberately stays the round-one pool: it is what drift is checked
+        // against, and it has to describe what was actually allocated from.
+        const pickableJudges = Object.entries(judgeData)
+            .filter(([, details]) => judgesEitherRound(details))
             .map(([id, details]) => ({ id, ...details }));
 
         const judgesList = onlyCheckedIn
@@ -180,8 +192,14 @@ export async function planSchedule({ onlyCheckedIn = false } = {}) {
                 },
                 onlyCheckedIn,
                 judgeNames: Object.fromEntries(
-                    judgesList.map((j) => [j.id, displayName(j, "Unnamed Judge")])
+                    pickableJudges.map((j) => [j.id, displayName(j, "Unnamed Judge")])
                 ),
+                // the ids in `judgeNames` that the generator would never seat,
+                // so the drawer can mark them as the reach outside the pool
+                // that they are
+                finalOnlyJudgeIds: pickableJudges
+                    .filter((j) => !judgesRoundOne(j))
+                    .map((j) => j.id),
                 teamNames: Object.fromEntries(
                     teamsList.map((t) => [t.id, t.name ?? "Unnamed Team"])
                 ),

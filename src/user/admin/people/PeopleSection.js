@@ -173,6 +173,14 @@ export default function PeopleSection({ onResult }) {
                         onClick={() => run(() => bulkSet({ uids: selectedJudges, role: "judge", field: "isRound1Judge", value: false }), "Removed from round one")}>
                         Unmark round one
                       </Button>
+                      <Button size="small" variant="outlined" disabled={busy}
+                        onClick={() => run(() => bulkSet({ uids: selectedJudges, role: "judge", field: "isFinalRoundJudge", value: true }), "Marked for the final round")}>
+                        Mark final round
+                      </Button>
+                      <Button size="small" variant="outlined" disabled={busy}
+                        onClick={() => run(() => bulkSet({ uids: selectedJudges, role: "judge", field: "isFinalRoundJudge", value: false }), "Removed from the final round")}>
+                        Unmark final round
+                      </Button>
                     </>
                   )}
                   {selectedCompetitors.length > 0 && (

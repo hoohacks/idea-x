@@ -1,5 +1,5 @@
 {
-  // rulesVersion: 7 -- bump this whenever anything below changes, and republish
+  // rulesVersion: 8 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
   // drifted from the ones in git. See "Publishing the rules" in the README.
@@ -52,14 +52,18 @@
         ".read": "auth != null && $uid === auth.uid",
 
         // A judge writes their own record once, at registration. isRound1Judge,
-        // checkedIn, teamAssignments and finalAssignments are set by admins
-        // through the root rule, so a judge cannot add themselves to the
-        // judging pool, check themselves in, or hand themselves extra teams.
+        // isFinalRoundJudge, checkedIn, teamAssignments and finalAssignments are
+        // set by admins through the root rule, so a judge cannot add themselves
+        // to either judging pool, check themselves in, or hand themselves extra
+        // teams.
         //
         // finalAssignments is the load-bearing one: the /scores write rule
         // treats an entry there as proof of assignment, so a judge who could
         // seed it at registration could file a final-round score for any team.
-        ".write": "auth != null && $uid === auth.uid && !data.exists() && !newData.hasChild('isRound1Judge') && !newData.hasChild('teamAssignments') && !newData.hasChild('finalAssignments') && newData.child('checkedIn').val() === false && newData.child('foodCheckIn').val() === false",
+        // isFinalRoundJudge is one step behind it -- it is what puts somebody in
+        // the pool the final round plan seats, and publishing that plan is what
+        // turns a seat into finalAssignments.
+        ".write": "auth != null && $uid === auth.uid && !data.exists() && !newData.hasChild('isRound1Judge') && !newData.hasChild('isFinalRoundJudge') && !newData.hasChild('teamAssignments') && !newData.hasChild('finalAssignments') && newData.child('checkedIn').val() === false && newData.child('foodCheckIn').val() === false",
 
         // Final round assignments, denormalised the same way teamAssignments
         // is, so a judge can load them from a node they already read. Keyed by
