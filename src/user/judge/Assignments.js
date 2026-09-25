@@ -45,6 +45,33 @@ function Section({ title, caption, children }) {
   );
 }
 
+/**
+ * How far through their list a judge is: a count, and one segment per team so
+ * the shape of what is left is visible at a glance on a phone.
+ */
+function ScoredProgress({ scored, total }) {
+  return (
+    <Stack spacing={0.75} alignItems={{ xs: "flex-start", sm: "flex-end" }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }} aria-live="polite">
+        {scored === total ? "All teams scored" : `${scored} of ${total} scored`}
+      </Typography>
+      <Stack direction="row" spacing={0.5} aria-hidden>
+        {Array.from({ length: total }, (_, index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 22,
+              height: 6,
+              borderRadius: 3,
+              bgcolor: index < scored ? "success.main" : "action.selected",
+            }}
+          />
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
 function Assignments() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -377,11 +404,10 @@ function Assignments() {
         >
           <Typography variant="h1">Judging</Typography>
           {canViewAssignments && personalAssignments.length > 0 && (
-            <Typography variant="body2">
-              {remaining === 0
-                ? "All teams scored"
-                : `${remaining} of ${personalAssignments.length} left to score`}
-            </Typography>
+            <ScoredProgress
+              scored={personalAssignments.length - remaining}
+              total={personalAssignments.length}
+            />
           )}
         </Stack>
 

@@ -2,9 +2,10 @@ import Layout from "./Layout";
 import { useContext, useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { AuthContext } from "../App";
-import { hasRole, roleList } from "../roles";
+import { hasRole } from "../roles";
 import AdminHome from "./admin/AdminHome";
-import { Box, Button, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+import { PiCalendarBlank, PiClock, PiMapPin, PiQrCode, PiPresentationChart, PiUsers } from "react-icons/pi";
 import { ref, onValue } from "firebase/database";
 import { database } from "../firebase";
 import { EVENT, EVENT_START, eventPhase } from "../eventInfo";
@@ -32,7 +33,7 @@ function Unit({ value, label }) {
                     // A clock. Tabular figures so the digits hold their
                     // columns as they tick rather than nudging each other.
                     color: tokens.INK,
-                    fontSize: { xs: "2.25rem", sm: "2.75rem" },
+                    fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4rem" },
                     fontWeight: 700,
                     letterSpacing: "-0.03em",
                     lineHeight: 1.05,
@@ -41,7 +42,7 @@ function Unit({ value, label }) {
             >
                 {String(value).padStart(2, "0")}
             </Typography>
-            <Typography variant="overline" sx={{ display: "block" }}>
+            <Typography variant="body2" sx={{ display: "block", fontWeight: 600, mt: 0.5 }}>
                 {label}
             </Typography>
         </Box>
@@ -49,36 +50,61 @@ function Unit({ value, label }) {
 }
 
 /**
- * One thing to do next, with the button that does it. An empty page is the one
- * thing a landing screen must not be, and the portal's used to be a countdown
- * on an otherwise blank canvas.
+ * One thing to do next, with the button that does it. A row in one list rather
+ * than a card each: they are steps in an order, and equal cards side by side
+ * said they were interchangeable.
  */
-function NextStep({ label, title, body, actions }) {
+function NextStep({ icon, title, body, actions }) {
+    // the icon stays beside the title at every width; the button moves under
+    // the text on a phone rather than squeezing the text into a sliver
+    const buttons = (
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, flexShrink: 0 }}>
+            {actions}
+        </Stack>
+    );
     return (
-        <Card sx={{ height: "100%" }}>
-            <CardContent
+        <Stack direction="row" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ gap: 2, p: { xs: 2, sm: 2.5 } }}>
+            <Box
+                aria-hidden
                 sx={{
-                    p: 2.5,
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    "&:last-child": { pb: 2.5 },
+                    flexShrink: 0,
+                    width: 44,
+                    height: 44,
+                    borderRadius: "50%",
+                    bgcolor: "background.paper",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 22,
+                    color: "text.primary",
                 }}
             >
-                <Typography variant="overline" sx={{ display: "block", mb: 0.5 }}>
-                    {label}
-                </Typography>
-                <Typography variant="h5" gutterBottom>
-                    {title}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
+                {icon}
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h5">{title}</Typography>
+                <Typography variant="body2" sx={{ mt: 0.25, maxWidth: "60ch" }}>
                     {body}
                 </Typography>
-                <Stack direction="row" sx={{ mt: "auto", flexWrap: "wrap", gap: 1 }}>
-                    {actions}
-                </Stack>
-            </CardContent>
-        </Card>
+                <Box sx={{ display: { xs: "block", sm: "none" }, mt: 1.5 }}>{buttons}</Box>
+            </Box>
+            <Box sx={{ display: { xs: "none", sm: "block" } }}>{buttons}</Box>
+        </Stack>
+    );
+}
+
+/** Date, hours and venue, each as a pill with its icon. */
+function EventFacts() {
+    const facts = [
+        { icon: <PiCalendarBlank />, text: EVENT.dateLabel },
+        { icon: <PiClock />, text: EVENT.hours },
+        { icon: <PiMapPin />, text: EVENT.venue },
+    ];
+    return (
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+            {facts.map((fact) => (
+                <Chip key={fact.text} icon={fact.icon} label={fact.text} sx={{ pl: 0.5, "& .MuiChip-icon": { fontSize: 18, color: "text.primary" } }} />
+            ))}
+        </Stack>
     );
 }
 
@@ -108,7 +134,6 @@ function Home() {
         return () => clearInterval(interval);
     }, [eventStart]);
 
-    const roles = roleList(userTypes);
     const isAdmin = hasRole(userTypes, "admin");
     const isCompetitor = hasRole(userTypes, "competitor");
     const isJudge = hasRole(userTypes, "judge");
@@ -121,7 +146,7 @@ function Home() {
             onATeam
                 ? {
                       key: "team",
-                      label: "Your team",
+                      icon: <PiPresentationChart />,
                       title: "Get the pitch ready",
                       body: "Your idea, the problem it solves and your deck all live on the team page. Judges read it before you present.",
                       actions: (
@@ -132,7 +157,7 @@ function Home() {
                   }
                 : {
                       key: "team",
-                      label: "First thing",
+                      icon: <PiUsers />,
                       title: "Find a team",
                       body: "Nobody pitches alone. Start a team and share the ID, or join one a friend has already made.",
                       actions: (
@@ -152,7 +177,7 @@ function Home() {
     if (isJudge) {
         steps.push({
             key: "judging",
-            label: "On the day",
+            icon: <PiPresentationChart />,
             title: "Your judging list",
             body: `Teams, rooms and times appear here once the schedule is set. Judging runs ${EVENT.judgingHours}.`,
             actions: (
@@ -166,7 +191,7 @@ function Home() {
     if (isCompetitor || isJudge) {
         steps.push({
             key: "checkin",
-            label: "Check-in",
+            icon: <PiQrCode />,
             title: "Check-in code",
             body: `Show this at the desk in ${EVENT.venue}. It also covers lunch and dinner.`,
             actions: (
@@ -180,43 +205,29 @@ function Home() {
     return (
         <Layout maxWidth="md">
             <Stack spacing={3}>
-                <Box>
+                <Stack spacing={1.5}>
                     <Typography variant="h1">
-                        Welcome{userData?.firstName ? `, ${userData.firstName}` : ""}
+                        {userData?.firstName ? `Hi, ${userData.firstName}` : "Welcome"}
                     </Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {EVENT.dateLabel} · {EVENT.hours} · {EVENT.venue}
-                    </Typography>
-                    {roles.length > 0 && (
-                        <Stack direction="row" sx={{ mt: 1.5, flexWrap: "wrap", gap: 0.75 }}>
-                            {roles.map((role) => (
-                                <Chip
-                                    key={role}
-                                    label={role}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ textTransform: "capitalize" }}
-                                />
-                            ))}
-                        </Stack>
-                    )}
-                </Box>
+                    <EventFacts />
+                </Stack>
 
                 {/* organizers first: this page used to build nothing for them */}
                 {isAdmin && <AdminHome />}
 
-                <Card>
-                    <CardContent sx={{ py: 3.5, "&:last-child": { pb: 3.5 } }}>
+                {/* The countdown is the page's one large moment: the date is the
+                    thing everyone opening this wants to know first. */}
+                <Card sx={{ borderRadius: 4 }}>
+                    <CardContent sx={{ py: { xs: 3.5, sm: 5 }, "&:last-child": { pb: { xs: 3.5, sm: 5 } } }}>
                         {time ? (
                             <>
-                                <Typography variant="overline" align="center" sx={{ display: "block", mb: 1.5 }}>
-                                    Event starts in
+                                <Typography variant="h3" component="p" align="center" sx={{ mb: 2 }}>
+                                    {EVENT.name} starts in
                                 </Typography>
                                 <Stack
                                     direction="row"
-                                    spacing={{ xs: 1, sm: 2 }}
+                                    spacing={{ xs: 1, sm: 3 }}
                                     justifyContent="center"
-                                    divider={<Box sx={{ borderLeft: 1, borderColor: "divider" }} />}
                                 >
                                     <Unit value={time.days} label="days" />
                                     <Unit value={time.hours} label="hours" />
@@ -230,28 +241,10 @@ function Home() {
                                     true. The countdown reaching zero used to be the only
                                     condition, which meant the site said the event was
                                     happening every day after it for the rest of the year. */}
-                                {phase === "during" && (
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        {/* the only place the brand colour appears in the
-                                            interface: something is genuinely happening */}
-                                        <Box
-                                            sx={{
-                                                width: 7,
-                                                height: 7,
-                                                borderRadius: "50%",
-                                                bgcolor: "secondary.main",
-                                            }}
-                                        />
-                                        <Typography variant="overline" sx={{ color: "secondary.main" }}>
-                                            In progress
-                                        </Typography>
-                                    </Stack>
-                                )}
+                                {phase === "during" && <Chip label="In progress" color="success" size="small" />}
                                 <Typography variant="h2">{EVENT.name} {EVENT.year}</Typography>
                                 <Typography variant="body2">
-                                    {phase === "during"
-                                        ? `${EVENT.hours} · ${EVENT.venue}`
-                                        : `${EVENT.dateLabel} · ${EVENT.venue}`}
+                                    {phase === "during" ? `Until ${EVENT.hours.split(" - ")[1]} in ${EVENT.venue}` : `${EVENT.dateLabel}, ${EVENT.venue}`}
                                 </Typography>
                             </Stack>
                         )}
@@ -259,19 +252,18 @@ function Home() {
                 </Card>
 
                 {steps.length > 0 && (
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gap: 2,
-                            gridTemplateColumns: {
-                                xs: "1fr",
-                                sm: steps.length > 1 ? "repeat(2, 1fr)" : "1fr",
-                            },
-                        }}
-                    >
-                        {steps.map((step) => (
-                            <NextStep key={step.key} {...step} />
-                        ))}
+                    <Box>
+                        <Typography variant="h3" component="h2" sx={{ mb: 1.5 }}>
+                            What to do next
+                        </Typography>
+                        <Card>
+                            {steps.map((step, index) => (
+                                <Box key={step.key}>
+                                    {index > 0 && <Divider sx={{ mx: 2.5 }} />}
+                                    <NextStep {...step} />
+                                </Box>
+                            ))}
+                        </Card>
                     </Box>
                 )}
             </Stack>

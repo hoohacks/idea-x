@@ -12,6 +12,7 @@ import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 import {
     Alert,
+    Avatar,
     Box,
     Button,
     Card,
@@ -23,12 +24,12 @@ import {
     DialogTitle,
     Divider,
     LinearProgress,
-    Link as MuiLink,
     Stack,
     TextField,
     Typography,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { PiArrowSquareOut, PiPresentationChart } from "react-icons/pi";
 
 function Team() {
     const navigate = useNavigate();
@@ -232,7 +233,8 @@ function Team() {
                 }
                 return "Unknown User";
             }));
-            const teamData = { ...snapshot.val(), memberNames };
+            // the ids ride along in the same order, so the page can mark "you"
+            const teamData = { ...snapshot.val(), memberNames, memberUids: members };
 
             // Seed the form from the database ONCE per team, not on every
             // snapshot.
@@ -321,25 +323,23 @@ function Team() {
 
                         <TeamIdCard teamId={teamId} />
 
+                        {/* When and where, as the sentence a team repeats to itself
+                            on the day, not two chips to decode. */}
                         {(schedule || finalSlot) && (
-                            <Card>
-                                <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                    <Typography variant="h5" gutterBottom>Your pitch</Typography>
-                                    {schedule && (
-                                        <Stack direction="row" spacing={0.75} sx={{ mb: finalSlot ? 1.5 : 0 }}>
-                                            <Chip label={schedule.time} size="small" color="primary" />
-                                            <Chip label={schedule.room} size="small" variant="outlined" />
-                                        </Stack>
-                                    )}
-                                    {finalSlot && (
-                                        <>
-                                            <Typography variant="body2" sx={{ mb: 0.75 }}>Final round</Typography>
-                                            <Stack direction="row" spacing={0.75}>
-                                                <Chip label={finalSlot.timeslot} size="small" color="primary" />
-                                                <Chip label={finalSlot.room} size="small" variant="outlined" />
-                                            </Stack>
-                                        </>
-                                    )}
+                            <Card sx={{ borderRadius: 4 }}>
+                                <CardContent sx={{ p: { xs: 2.5, sm: 3 }, "&:last-child": { pb: { xs: 2.5, sm: 3 } } }}>
+                                    <Stack spacing={1.25}>
+                                        {schedule && (
+                                            <PitchLine time={schedule.time} room={schedule.room} />
+                                        )}
+                                        {finalSlot && (
+                                            <PitchLine
+                                                label="Final round"
+                                                time={finalSlot.timeslot}
+                                                room={finalSlot.room}
+                                            />
+                                        )}
+                                    </Stack>
                                 </CardContent>
                             </Card>
                         )}
@@ -347,23 +347,37 @@ function Team() {
                         {schedule ? (
                             teamData.submission && (
                                 <Card>
-                                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                        <Typography variant="h5" gutterBottom>
+                                    <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            Your submission
+                                        </Typography>
+                                        {/* the idea's own name: the team's is already the page title */}
+                                        <Typography variant="h3" component="h2" sx={{ mt: 0.5 }}>
                                             {teamData.submission.ideaName}
                                         </Typography>
-                                        <Typography variant="body2">
+                                        <Typography variant="body1" sx={{ mt: 1, maxWidth: "65ch" }}>
                                             {teamData.submission.problemStatement}
                                         </Typography>
+                                        {teamData.submission.targetIndustry && (
+                                            <Chip
+                                                label={teamData.submission.targetIndustry}
+                                                size="small"
+                                                sx={{ mt: 1.5, textTransform: "capitalize" }}
+                                            />
+                                        )}
                                         {teamData.submission.pitchDeckURL && (
-                                            <MuiLink
-                                                href={teamData.submission.pitchDeckURL}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                variant="body2"
-                                                sx={{ display: "inline-block", mt: 1 }}
-                                            >
-                                                Pitch deck
-                                            </MuiLink>
+                                            <Box sx={{ mt: 2 }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    href={teamData.submission.pitchDeckURL}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    endIcon={<PiArrowSquareOut />}
+                                                >
+                                                    Open pitch deck
+                                                </Button>
+                                            </Box>
                                         )}
                                     </CardContent>
                                 </Card>
@@ -434,17 +448,39 @@ function Team() {
                         )}
 
                         <Card>
-                            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                <Typography variant="h5" gutterBottom>Members</Typography>
-                                <Stack spacing={0.5}>
-                                    {teamData.memberNames?.length ? (
-                                        teamData.memberNames.map((name, index) => (
-                                            <Typography key={index} variant="body1">{name}</Typography>
-                                        ))
-                                    ) : (
-                                        <Typography variant="body2">No members yet.</Typography>
-                                    )}
-                                </Stack>
+                            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                                <Typography variant="h5" sx={{ mb: 1.5 }}>Members</Typography>
+                                {teamData.memberNames?.length ? (
+                                    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+                                        {teamData.memberNames.map((name, index) => {
+                                            const isYou = teamData.memberUids?.[index] === auth.currentUser?.uid;
+                                            return (
+                                                <Chip
+                                                    key={teamData.memberUids?.[index] ?? index}
+                                                    avatar={<Avatar>{initialsOfName(name)}</Avatar>}
+                                                    label={isYou ? `${name} (you)` : name}
+                                                    sx={{
+                                                        height: 40,
+                                                        pr: 0.5,
+                                                        bgcolor: "background.paper",
+                                                        fontWeight: isYou ? 700 : 500,
+                                                        "& .MuiChip-avatar": {
+                                                            width: 30,
+                                                            height: 30,
+                                                            fontSize: "0.75rem",
+                                                            bgcolor: isYou ? "primary.main" : "action.selected",
+                                                            color: isYou ? "#fff" : "text.primary",
+                                                        },
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2">
+                                        No members yet. Share the team ID above to bring people in.
+                                    </Typography>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -460,6 +496,37 @@ function Team() {
             </Layout>
         </>
     );
+}
+
+/** "You pitch at 5:00 PM in Rice 340." with the time and room in bold. */
+function PitchLine({ label, time, room }) {
+    return (
+        <Stack direction="row" alignItems="flex-start" sx={{ gap: 1.5 }}>
+            <Box aria-hidden sx={{ fontSize: 24, lineHeight: 0, mt: 0.25, color: "primary.main" }}>
+                <PiPresentationChart />
+            </Box>
+            <Box>
+                {label && (
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {label}
+                    </Typography>
+                )}
+                <Typography sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, fontWeight: 600, lineHeight: 1.3, color: "text.primary" }}>
+                    You pitch at <Box component="span" sx={{ fontWeight: 800 }}>{time}</Box> in{" "}
+                    <Box component="span" sx={{ fontWeight: 800 }}>{room}</Box>.
+                </Typography>
+            </Box>
+        </Stack>
+    );
+}
+
+function initialsOfName(name) {
+    return String(name ?? "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join("");
 }
 
 /**
