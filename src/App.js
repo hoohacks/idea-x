@@ -183,6 +183,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/login" element={<Login />} />
         <Route path="/user">
+          {/* /user and /user/admin are prefixes, not pages. Without these they
+              matched, rendered nothing, and never reached the catch-all below. */}
+          <Route index element={<Navigate to="/user/home" replace />} />
           <Route path="home" element={<ProtectedRoute><UserHome /></ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
           <Route path="judging" element={<ProtectedRoute requiredRoles={["judge", "admin"]}><Assignments /></ProtectedRoute>} />
@@ -193,6 +196,7 @@ function App() {
             <Route path="create" element={<ProtectedRoute requiredRoles={["competitor"]}><CreateTeam /></ProtectedRoute>} />
           </Route>
           <Route path="admin">
+            <Route index element={<Navigate to="/user/home" replace />} />
             <Route path="metrics" element={<ProtectedRoute requiredRoles={["admin"]}><RegisteredAtDisplay /></ProtectedRoute>} />
             <Route path="scan" element={<ProtectedRoute requiredRoles={["admin"]}><AdminScan /></ProtectedRoute>} />
             <Route path="search" element={<ProtectedRoute requiredRoles={["admin"]}><Search /></ProtectedRoute>} />

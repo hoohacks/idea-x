@@ -95,7 +95,9 @@ const ADMIN_GROUPS = [
 function initialsOf(userData) {
     const first = userData?.firstName?.[0] ?? "";
     const last = userData?.lastName?.[0] ?? "";
-    return (first + last).toUpperCase() || "?";
+    // an account with no name on it still has an email to go by
+    const email = userData?.email || auth.currentUser?.email;
+    return (first + last || email?.[0] || "?").toUpperCase();
 }
 
 export function Wordmark({ height = 30, to = "/user/home", href }) {

@@ -202,7 +202,9 @@ const theme = createTheme({
       // React sees a change event, which left the label sitting on top of it.
       defaultProps: { size: "small", InputLabelProps: { shrink: true } },
     },
-    MuiSelect: { defaultProps: { size: "small" } },
+    // displayEmpty so a filter whose "Any" option has the value "" shows that
+    // label; without it MUI renders "" as a blank box that looks broken.
+    MuiSelect: { defaultProps: { size: "small", displayEmpty: true } },
     MuiFormControl: { defaultProps: { size: "small" } },
     MuiInputLabel: {
       defaultProps: { shrink: true },
