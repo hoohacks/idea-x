@@ -16,17 +16,19 @@ import { Hero, PublicShell } from "./registrationUi";
  */
 export default function ClosedNotice({ what = "Registration" }) {
   return (
-    <PublicShell>
-      <Hero
-        eyebrow={`${EVENT.name} ${EVENT.year}`}
-        title={`${what} is not open yet`}
-        facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
-      >
-        Sign-ups have not started. This page will become the form when they do —
-        there is nothing to do here until then, and nothing has gone wrong.
-      </Hero>
-
-      <Box sx={{ pb: 8 }}>
+    <PublicShell
+      hero={
+        <Hero
+          eyebrow={`${EVENT.name} ${EVENT.year}`}
+          title={`${what} is not open yet`}
+          facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
+        >
+          Sign-ups have not started. This page will become the form when they do —
+          there is nothing to do here until then, and nothing has gone wrong.
+        </Hero>
+      }
+    >
+      <Box sx={{ py: { xs: 4, md: 5 } }}>
         <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           <Button variant="contained" href={EVENT.siteUrl}>
             About the event

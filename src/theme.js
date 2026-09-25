@@ -109,12 +109,15 @@ const theme = createTheme({
     button: { textTransform: "none", fontWeight: 500, letterSpacing: 0, fontSize: "0.875rem" },
 
     // Structural label above a section or a stat.
+    // A small section label. Sentence case: tracked-out capitals on every
+    // label read as template chrome, and shouted louder than the headings
+    // they sat above.
     overline: {
-      fontSize: "0.6875rem",
+      fontSize: "0.8125rem",
       fontWeight: 600,
-      letterSpacing: "0.07em",
-      textTransform: "uppercase",
-      lineHeight: 1.6,
+      letterSpacing: 0,
+      textTransform: "none",
+      lineHeight: 1.5,
       color: MUTED,
     },
 

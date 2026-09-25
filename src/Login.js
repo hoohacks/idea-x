@@ -14,8 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { EVENT } from "./eventInfo";
-import { PublicShell } from "./registrationUi";
+import { AuthFrame } from "./registrationUi";
 import { REGISTRATION_OPEN, isStaffEntrance } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
 
@@ -66,14 +65,13 @@ function SignInForm() {
   };
 
   return (
-    <PublicShell maxWidth="xs" pad>
+    <AuthFrame>
       <Card>
         <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
-          {/* the bar carries the wordmark, so the page says what it is for */}
-          <Typography variant="h1" gutterBottom>
+          {/* the band above carries the event and its date */}
+          <Typography variant="h2" component="h1">
             Sign in
           </Typography>
-          <Typography variant="body2">{EVENT.dateLabel}</Typography>
 
           <Box component="form" onSubmit={handleSubmit}>
             <Stack spacing={2} sx={{ mt: 2 }}>
@@ -136,6 +134,6 @@ function SignInForm() {
           </Box>
         </CardContent>
       </Card>
-    </PublicShell>
+    </AuthFrame>
   );
 }
