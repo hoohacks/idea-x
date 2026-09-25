@@ -316,10 +316,9 @@ function Team() {
                     <Stack spacing={2}>
                         <Box>
                             <Typography variant="h1">{teamData.name}</Typography>
-                            <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                Team ID {teamId} — share this so teammates can join
-                            </Typography>
                         </Box>
+
+                        <TeamIdCard teamId={teamId} />
 
                         {(schedule || finalSlot) && (
                             <Card>
@@ -459,6 +458,61 @@ function Team() {
                 )}
             </Layout>
         </>
+    );
+}
+
+/**
+ * The ID teammates type to join. It is a database push key, and those start
+ * with a dash -- which, set inline after "Team ID", read as punctuation and got
+ * left off. So it sits on its own, in mono, with a copy button and a line
+ * saying the dash belongs to it.
+ */
+function TeamIdCard({ teamId }) {
+    const [copied, setCopied] = useState(false);
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(teamId);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // no clipboard access (an insecure origin, a refused permission):
+            // the ID is still on screen to select by hand
+        }
+    };
+
+    return (
+        <Card>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                <Typography variant="h5" gutterBottom>Team ID</Typography>
+                <Stack direction="row" sx={{ gap: 1 }} alignItems="center" flexWrap="wrap">
+                    <Typography
+                        variant="data"
+                        component="code"
+                        sx={{
+                            fontSize: "1rem",
+                            px: 1.25,
+                            py: 0.75,
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            bgcolor: "background.default",
+                            userSelect: "all",
+                            wordBreak: "break-all",
+                        }}
+                    >
+                        {teamId}
+                    </Typography>
+                    <Button size="small" variant="outlined" onClick={copy}>
+                        {copied ? "Copied" : "Copy"}
+                    </Button>
+                </Stack>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                    Share this so teammates can join.
+                    {teamId?.startsWith("-") && " The dash at the start is part of the ID."}
+                </Typography>
+            </CardContent>
+        </Card>
     );
 }
 
