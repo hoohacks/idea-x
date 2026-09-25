@@ -290,8 +290,10 @@ function TeamSearch() {
                   <Chip
                     label={team.submitted ? "submitted" : "not submitted"}
                     size="small"
-                    variant={team.submitted ? "filled" : "outlined"}
-                    color={team.submitted ? "primary" : "default"}
+                    variant="outlined"
+                    // green for done, as everywhere state is shown -- crimson is
+                    // the brand and the next action, not a status
+                    color={team.submitted ? "success" : "default"}
                   />
                   {team.schedule && (
                     <Chip

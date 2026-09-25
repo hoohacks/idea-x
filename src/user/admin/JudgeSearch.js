@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from "@mui/material";
 import Layout from "../Layout";
 import { assignmentList } from "../judge/assignmentList";
-import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
+import { PageHeader, FilterBar, SearchField, RowList, Row, StateToggle } from "./adminUi";
 import JudgeEditDrawer from "./records/JudgeEditDrawer";
 
 function JudgeSearch() {
@@ -161,8 +161,6 @@ function JudgeSearch() {
                 <Stack sx={{ flex: 1, minWidth: 0 }}>
                   <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                     <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
-                    {isRoundOne && <Chip label="first round" size="small" color="primary" />}
-                    {isFinalRound && <Chip label="final round" size="small" color="secondary" />}
                     {judge.wantsToMentor && (
                       <Chip label="mentor" size="small" variant="outlined" />
                     )}
@@ -192,31 +190,29 @@ function JudgeSearch() {
                   <Button size="small" variant="outlined" onClick={() => setEditing(judge)}>
                     Edit
                   </Button>
-                  <Button
-                    size="small"
-                    variant={isRoundOne ? "contained" : "outlined"}
+                  {/* the buttons carry the round and check-in state, so the row
+                      does not also repeat it as chips beside the name */}
+                  <StateToggle
+                    on={isRoundOne}
+                    onLabel="First round"
+                    offLabel="Mark first round"
                     onClick={() => handleToggleRoundOne(judge)}
-                    sx={{ minWidth: 130 }}
-                  >
-                    {isRoundOne ? "First round" : "Mark first round"}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant={isFinalRound ? "contained" : "outlined"}
-                    color="secondary"
+                    minWidth={140}
+                  />
+                  <StateToggle
+                    on={isFinalRound}
+                    onLabel="Final round"
+                    offLabel="Mark final round"
                     onClick={() => handleToggleFinalRound(judge)}
-                    sx={{ minWidth: 130 }}
-                  >
-                    {isFinalRound ? "Final round" : "Mark final round"}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant={isCheckedIn ? "contained" : "outlined"}
+                    minWidth={140}
+                  />
+                  <StateToggle
+                    on={isCheckedIn}
+                    onLabel="Checked in"
+                    offLabel="Check in"
                     onClick={() => handleCheckIn(judge)}
-                    sx={{ minWidth: 116 }}
-                  >
-                    {isCheckedIn ? "Checked in" : "Check in"}
-                  </Button>
+                    minWidth={124}
+                  />
                 </Stack>
               </Stack>
             </Row>

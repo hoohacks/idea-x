@@ -4,7 +4,7 @@ import {
     Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogContentText,
     DialogTitle, Divider, LinearProgress, Stack, TextField, Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { IoCheckmark, IoChevronDown } from "react-icons/io5";
 
 /**
  * Shared furniture for the three admin dashboards. They used to each carry
@@ -336,6 +336,37 @@ export function Row({ children, accent = false }) {
         >
             {children}
         </Box>
+    );
+}
+
+/**
+ * A yes/no flag on a row: first round, final round, checked in.
+ *
+ * These were filled crimson buttons when on, so a judges list where most people
+ * were checked in and marked became a wall of the brand colour -- the one
+ * colour the theme reserves for the action to take next. On reads as a check
+ * in the success green instead, and off stays a plain outlined action, so the
+ * rows that still need something are the ones that stand out.
+ */
+export function StateToggle({ on, onLabel, offLabel, onClick, minWidth }) {
+    return (
+        <Button
+            size="small"
+            variant="outlined"
+            aria-pressed={on}
+            onClick={onClick}
+            startIcon={on ? <IoCheckmark aria-hidden /> : undefined}
+            sx={{
+                minWidth,
+                ...(on && {
+                    color: "success.main",
+                    borderColor: "success.main",
+                    "&:hover": { borderColor: "success.main" },
+                }),
+            }}
+        >
+            {on ? onLabel : offLabel}
+        </Button>
     );
 }
 
