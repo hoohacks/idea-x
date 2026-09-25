@@ -118,7 +118,9 @@ export default function AdminHome() {
 
             <Stack direction="row" sx={{ gap: 2.5, flexWrap: "wrap", rowGap: 1 }}>
               <Figure value={counts.teams.submitted} of={counts.teams.total} label="submitted" />
-              <Figure value={counts.judges.checkedIn} of={counts.judges.roundOne} label="judges in" />
+              {/* every judge in the building out of every judge, the same pair the judges
+                  page shows; over the round-one count it read 16/12 */}
+              <Figure value={counts.judges.checkedIn} of={counts.judges.total} label="judges in" />
               <Figure value={counts.people.checkedIn} of={counts.people.competitors} label="checked in" />
               {counts.scoredTeams > 0 && (
                 <Figure value={counts.scoredTeams} of={counts.teams.submitted} label="scored" />
