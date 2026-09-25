@@ -33,7 +33,7 @@ test("the cut can be built, corrected and published", async ({ page }) => {
   if (await build.isVisible()) await build.click();
 
   // the plan is a running order, not a list of ids
-  await expect(page.getByText("Running order —", { exact: false })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Running order in", { exact: false })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Slot 1")).toBeVisible();
 
   // correcting it: move the first team later, which renumbers everything between

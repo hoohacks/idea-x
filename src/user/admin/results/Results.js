@@ -186,7 +186,7 @@ export default function Results() {
       {standings.length > 0 && (
         <Typography variant="caption" component="p" sx={{ mt: 2 }}>
           Ranked on the {final ? "final" : "first"} round only, by average, then fundable votes,
-          then judges, then name — the same tiebreak the cut uses.{" "}
+          then judges, then name. It is the same tiebreak the cut uses.{" "}
           {final
             ? active
               ? "The final round is still open."
@@ -218,7 +218,7 @@ function StandingRow({ team, place, final }) {
       sx={{ py: 1.5 }}
     >
       <Typography variant="data" sx={{ width: 24, color: "text.secondary" }}>
-        {scored ? place : "—"}
+        {scored ? place : "-"}
       </Typography>
 
       <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -229,7 +229,7 @@ function StandingRow({ team, place, final }) {
               First round{" "}
               {typeof team.firstRound.averageScore === "number"
                 ? team.firstRound.averageScore.toFixed(1)
-                : "—"}{" "}
+                : "-"}{" "}
               · {team.timeslot ?? "no slot"} · {team.room ?? "no room"}
             </>
           ) : (
@@ -244,7 +244,7 @@ function StandingRow({ team, place, final }) {
       <Stack direction="row" spacing={2} alignItems="center">
         <Box sx={{ textAlign: "right", minWidth: 64 }}>
           <Typography variant="data" sx={{ fontSize: "1rem", fontWeight: 600 }}>
-            {scored ? team.averageScore.toFixed(1) : "—"}
+            {scored ? team.averageScore.toFixed(1) : "-"}
           </Typography>
           <Typography variant="caption" component="p">
             of {SCORE_MAX_TOTAL}

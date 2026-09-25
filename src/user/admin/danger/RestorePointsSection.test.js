@@ -139,7 +139,7 @@ describe("the preview dialog", () => {
     // the per-path counts are shown too -- scoped to the diff line's <strong>,
     // since "teams" also appears in the row's path Chip
     const teamsLine = screen.getByText("teams", { selector: "strong" }).closest("p");
-    expect(teamsLine).toHaveTextContent("teams — 0 added, 0 changed, 1 removed");
+    expect(teamsLine).toHaveTextContent("teams: 0 added, 0 changed, 1 removed");
   });
 
   test("names both cards distinguishably when the same team+judge loses a card in two different rounds", async () => {

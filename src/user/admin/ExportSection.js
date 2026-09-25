@@ -48,7 +48,7 @@ export default function ExportSection({ onResult }) {
       ),
     },
     {
-      label: "Scores — first round",
+      label: "Scores: first round",
       hint: "One row per score card, with the judge and who entered it.",
       run: () => run(
         (data) => downloadCsv(`ideathon-scores-first-${stamp()}.csv`, scoreRows(data, FIRST_ROUND)),
@@ -56,7 +56,7 @@ export default function ExportSection({ onResult }) {
       ),
     },
     {
-      label: "Scores — final round",
+      label: "Scores: final round",
       hint: "The same, for the final.",
       run: () => run(
         (data) => downloadCsv(`ideathon-scores-final-${stamp()}.csv`, scoreRows(data, FINAL_ROUND)),
@@ -64,7 +64,7 @@ export default function ExportSection({ onResult }) {
       ),
     },
     {
-      label: "Standings — first round",
+      label: "Standings: first round",
       hint: "Ranked by average, with judge counts and fundable votes.",
       run: () => run(
         (data) => downloadCsv(`ideathon-standings-first-${stamp()}.csv`, standingsRows(data, FIRST_ROUND)),
@@ -72,7 +72,7 @@ export default function ExportSection({ onResult }) {
       ),
     },
     {
-      label: "Standings — final round",
+      label: "Standings: final round",
       hint: "The result, ranked the same way. Matches the Results page.",
       run: () => run(
         (data) => downloadCsv(`ideathon-standings-final-${stamp()}.csv`, standingsRows(data, FINAL_ROUND)),

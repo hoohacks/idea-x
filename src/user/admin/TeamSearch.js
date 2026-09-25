@@ -30,7 +30,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { PiCaretDown } from "react-icons/pi";
 import Layout from "../Layout";
 import { memberIds } from "../team/teamMembers";
 import { personName } from "../../roles";
@@ -49,7 +49,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
 
   return (
     <Accordion disableGutters elevation={0} sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}>
-      <AccordionSummary expandIcon={<IoChevronDown />} sx={{ px: 0, minHeight: 40 }}>
+      <AccordionSummary expandIcon={<PiCaretDown />} sx={{ px: 0, minHeight: 40 }}>
         <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
           <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
             {label}
@@ -71,7 +71,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
             return (
               <Box key={judgeId} sx={{ pl: 1.5, borderLeft: 2, borderColor: "divider" }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
-                  {card === null ? "—" : `${card.toFixed(1)} / ${SCORE_MAX_TOTAL}`}
+                  {card === null ? "-" : `${card.toFixed(1)} / ${SCORE_MAX_TOTAL}`}
                   <Box component="span" sx={{ fontWeight: 400, color: "text.secondary" }}>
                     {"  "}
                     {judgeNames[judgeId] ?? `judge ${judgeId.slice(0, 8)}`}
@@ -82,7 +82,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
                   {Object.entries(SCORE_FIELDS)
                     .map(
                       ([criterion, max]) =>
-                        `${criterion.replace(/_/g, " ")} ${scoreObj?.[criterion] ?? "—"}/${max}`
+                        `${criterion.replace(/_/g, " ")} ${scoreObj?.[criterion] ?? "-"}/${max}`
                     )
                     .join(" · ")}
                   {scoreObj?.fundable ? " · fundable" : ""}
@@ -362,7 +362,7 @@ function TeamSearch() {
           <DialogContent dividers>
             <Alert severity="warning">
               {deleting.judgeName ?? "This judge"}'s {deleting.round} round card for{" "}
-              {deleting.teamName}. It cannot be undone — the rules pin a card to the
+              {deleting.teamName}. It cannot be undone: the rules pin a card to the
               person who entered it, so nobody else can write it back. You will be
               offered the values to re-type.
             </Alert>

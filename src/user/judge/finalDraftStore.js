@@ -121,7 +121,7 @@ export async function saveFinalDraft(plan) {
       return {
         ok: false,
         error:
-          "This draft was discarded while you were editing it. Build a new plan — your edits " +
+          "This draft was discarded while you were editing it. Build a new plan; your edits " +
           "cannot be re-applied to a draft that no longer exists.",
       };
     }

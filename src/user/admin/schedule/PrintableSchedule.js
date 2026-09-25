@@ -57,7 +57,7 @@ export default function PrintableSchedule() {
 
       {rooms.length === 0 ? (
         <Typography variant="body2" className="no-print">
-          Nothing to print yet — no team has a room. Publish a schedule first.
+          Nothing to print yet. No team has a room. Publish a schedule first.
         </Typography>
       ) : (
         rooms.map((room) => (
@@ -106,10 +106,10 @@ export default function PrintableSchedule() {
                 <Box component="tbody">
                   {room.slots.map((slot) => (
                     <Box component="tr" key={`${slot.batch}-${slot.teamId}`}>
-                      <Cell data>{slot.batch ?? "—"}</Cell>
-                      <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "—"}</Cell>
+                      <Cell data>{slot.batch ?? "-"}</Cell>
+                      <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "-"}</Cell>
                       <Cell>{slot.teamName}</Cell>
-                      <Cell>{slot.judges.join(", ") || "—"}</Cell>
+                      <Cell>{slot.judges.join(", ") || "-"}</Cell>
                       {/* deliberately blank: this column is why the sheet exists */}
                       <Cell />
                     </Box>

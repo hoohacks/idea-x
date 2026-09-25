@@ -162,7 +162,7 @@ export default function RestorePointsSection({ onResult }) {
     setBusy(true);
     try {
       const result = await captureSnapshot({
-        label: `Manual restore point — ${new Date().toLocaleString()}`,
+        label: `Manual restore point, ${new Date().toLocaleString()}`,
         reason: "taken by hand from the control panel",
         paths: JUDGING_PATHS,
       });
@@ -321,13 +321,13 @@ export default function RestorePointsSection({ onResult }) {
               <Stack spacing={1.5} sx={{ py: 1 }}>
                 <Typography variant="body2">
                   Restoring replaces every path below with the values held in this restore point.
-                  Anything written since then — including scores judges have submitted in the
-                  meantime — is overwritten.
+                  Anything written since then is overwritten, including scores judges have submitted in the
+                  meantime.
                 </Typography>
                 <Stack spacing={0.5}>
                   {diff.byPath.map((p) => (
                     <Typography key={p.path} variant="body2">
-                      <strong>{p.path}</strong> — {p.added} added, {p.changed} changed,{" "}
+                      <strong>{p.path}</strong>: {p.added} added, {p.changed} changed,{" "}
                       {p.removed} removed
                     </Typography>
                   ))}

@@ -40,7 +40,7 @@ export default function DangerSection({ onResult }) {
             <Typography sx={{ fontWeight: 600 }}>Clear the judging schedule</Typography>
             <Typography variant="body2">
               Removes every team slot and every judge assignment. Scores are kept
-              by default — they are keyed by team and judge, so they survive and
+              by default. They are keyed by team and judge, so they survive and
               re-attach if the same pairing comes back.
             </Typography>
           </Stack>
@@ -57,7 +57,7 @@ export default function DangerSection({ onResult }) {
                 }}
               />
             }
-            label="Also delete every score — start completely from scratch"
+            label="Also delete every score and start from scratch"
           />
 
           {includeScores && (

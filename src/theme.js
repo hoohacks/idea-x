@@ -1,4 +1,5 @@
 import { createTheme } from "@mui/material/styles";
+import { PiCaretDown, PiCheckCircle, PiInfo, PiWarning, PiWarningCircle } from "react-icons/pi";
 
 /**
  * One theme for the whole app.
@@ -27,7 +28,9 @@ const BRAND_DARK = "#b41f3c";
 const BRAND_WASH = "#fdf0f3";
 
 // Text, darkest to lightest.
-const INK = "#000000";
+// near-black rather than #000: pure black on white is harsher than the rest
+// of the palette, and flattens the step between a heading and its body text
+const INK = "#111110";
 const INK_HOVER = "#262622";
 const BODY_TEXT = "#33332e";
 const MUTED = "#62625b";
@@ -75,6 +78,11 @@ const DISPLAY = BODY;
 const ACCENT = BRAND;
 const ACCENT_DARK = BRAND_DARK;
 const ACCENT_WASH = BRAND_WASH;
+
+// MUI positions its select arrow by class name, so the icon has to accept one
+function SelectCaret(props) {
+  return <PiCaretDown {...props} style={{ width: 18, height: 18, right: 12, color: INK }} />;
+}
 
 const theme = createTheme({
   palette: {
@@ -168,6 +176,10 @@ const theme = createTheme({
           paddingInline: 16,
           minHeight: 40,
           borderRadius: RADIUS,
+          // a slight press, so a tap on a phone visibly lands; reduced motion
+          // collapses the transition to nothing (index.css)
+          transition: "background-color 150ms ease, transform 120ms ease",
+          "&:active:not(.Mui-disabled)": { transform: "scale(0.98)" },
           "&.Mui-disabled": { backgroundColor: SURFACE_CARD, color: ASH, borderColor: "transparent" },
         },
         containedPrimary: {
@@ -226,7 +238,7 @@ const theme = createTheme({
     },
     // displayEmpty so a filter whose "Any" option has the value "" shows that
     // label; without it MUI renders "" as a blank box that looks broken.
-    MuiSelect: { defaultProps: { size: "small", displayEmpty: true } },
+    MuiSelect: { defaultProps: { size: "small", displayEmpty: true, IconComponent: SelectCaret } },
     MuiFormControl: { defaultProps: { size: "small" } },
     MuiInputLabel: {
       defaultProps: { shrink: true },
@@ -346,7 +358,15 @@ const theme = createTheme({
 
     // Filled and soft rather than outlined: the state colour is in the tint.
     MuiAlert: {
-      defaultProps: { variant: "standard" },
+      defaultProps: {
+        variant: "standard",
+        iconMapping: {
+          success: <PiCheckCircle size={20} />,
+          info: <PiInfo size={20} />,
+          warning: <PiWarning size={20} />,
+          error: <PiWarningCircle size={20} />,
+        },
+      },
       styleOverrides: {
         root: { alignItems: "center", borderRadius: RADIUS, fontSize: "0.875rem" },
         standardError: { backgroundColor: DANGER_PALE, color: DANGER, "& .MuiAlert-icon": { color: DANGER } },

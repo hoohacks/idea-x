@@ -32,10 +32,10 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-text-fill-color: #000000;
+  -webkit-text-fill-color: #111110;
   -webkit-box-shadow: 0 0 0 100px #ffffff inset;
   box-shadow: 0 0 0 100px #ffffff inset;
-  caret-color: #000000;
+  caret-color: #111110;
   transition: background-color 600000s 0s;
   animation-name: onAutofill;
   animation-duration: 1ms;

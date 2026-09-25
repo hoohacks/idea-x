@@ -447,7 +447,7 @@ export async function restoreArchived({ uid, key }) {
     return {
       ok: false,
       error:
-        `They already have a ${entry.role} record. Restoring would overwrite what is there now — ` +
+        `They already have a ${entry.role} record. Restoring would overwrite what is there now. ` +
         `change their role away from ${entry.role} first if you mean to replace it.`,
     };
   }

@@ -14,7 +14,7 @@ import { StatStrip } from "../adminUi";
  */
 
 function judgesLabel(min, max) {
-  return min === max ? String(min) : `${min}–${max}`;
+  return min === max ? String(min) : `${min}-${max}`;
 }
 
 function TeamCard({ assignment, target, onOpenTeam }) {

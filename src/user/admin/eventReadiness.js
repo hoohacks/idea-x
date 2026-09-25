@@ -138,7 +138,7 @@ function checksFor({ rooms, judge, team, config, supply }) {
       id: "rooms",
       label: "Judging rooms added",
       done: rooms > 0,
-      detail: rooms ? `${rooms} room${rooms === 1 ? "" : "s"}` : "None yet — a plan cannot be built without them",
+      detail: rooms ? `${rooms} room${rooms === 1 ? "" : "s"}` : "None yet. A plan cannot be built without them",
       to: "/user/admin/control?tab=setup",
     },
     {
@@ -147,7 +147,7 @@ function checksFor({ rooms, judge, team, config, supply }) {
       done: judge.roundOne > 0 && supply.ok,
       detail: judge.roundOne
         ? `${judge.roundOne} of ${judge.total} judges`
-        : "None yet — nobody would be assigned",
+        : "None yet, so nobody would be assigned",
       to: "/user/admin/judges",
     },
     {
@@ -168,7 +168,7 @@ function checksFor({ rooms, judge, team, config, supply }) {
       id: "schedule",
       label: "Schedule published",
       done: team.scheduled > 0,
-      detail: team.scheduled ? `${team.scheduled} teams scheduled` : "Not yet — judges see nothing until it is",
+      detail: team.scheduled ? `${team.scheduled} teams scheduled` : "Not yet. Judges see nothing until it is",
       to: "/user/admin/schedule",
     },
   ];

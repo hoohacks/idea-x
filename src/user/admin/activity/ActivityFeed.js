@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Accordion, AccordionDetails, AccordionSummary, Button, Chip, Stack, Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { PiCaretDown } from "react-icons/pi";
 import { RowList, Row, Section } from "../adminUi";
 import { decodeChanges, undoAdminAction } from "../adminAction";
 import { describeChange } from "./describeChange";
@@ -61,7 +61,7 @@ export default function ActivityFeed({ log, onResult }) {
                       elevation={0}
                       sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}
                     >
-                      <AccordionSummary expandIcon={<IoChevronDown />} sx={{ px: 0, minHeight: 36 }}>
+                      <AccordionSummary expandIcon={<PiCaretDown />} sx={{ px: 0, minHeight: 36 }}>
                         <Typography variant="body2">
                           {changes.length} path{changes.length === 1 ? "" : "s"}
                         </Typography>

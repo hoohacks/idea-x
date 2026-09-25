@@ -4,7 +4,7 @@ import {
     Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogContentText,
     DialogTitle, Divider, LinearProgress, Stack, TextField, Typography,
 } from "@mui/material";
-import { IoCheckmark, IoChevronDown } from "react-icons/io5";
+import { PiCheck, PiCaretDown } from "react-icons/pi";
 
 /**
  * Shared furniture for the three admin dashboards. They used to each carry
@@ -149,7 +149,7 @@ export function Section({
                     sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}
                 >
                     <AccordionSummary
-                        expandIcon={<IoChevronDown />}
+                        expandIcon={<PiCaretDown />}
                         sx={{
                             px: 0,
                             minHeight: 0,
@@ -366,7 +366,7 @@ export function StateToggle({ on, onLabel, offLabel, onClick, minWidth }) {
             variant="outlined"
             aria-pressed={on}
             onClick={onClick}
-            startIcon={on ? <IoCheckmark aria-hidden /> : undefined}
+            startIcon={on ? <PiCheck aria-hidden /> : undefined}
             sx={{
                 minWidth,
                 ...(on && {

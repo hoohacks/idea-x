@@ -17,7 +17,7 @@ import {
     Typography,
 } from "@mui/material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { IoChevronDown, IoMenu, IoClose } from "react-icons/io5";
+import { PiCaretDown, PiList, PiX } from "react-icons/pi";
 import { AuthContext, NavDrawerContext } from "./App";
 import { auth } from "./firebase";
 import { tokens } from "./theme";
@@ -254,7 +254,7 @@ function Nav({ variant = "app" }) {
                         }}
                         aria-label="Open menu"
                     >
-                        <IoMenu />
+                        <PiList />
                     </IconButton>
 
                     <Wordmark height={30} />
@@ -270,7 +270,7 @@ function Nav({ variant = "app" }) {
                     {isAdmin && (
                         <Button
                             onClick={(e) => setAdminAnchor(e.currentTarget)}
-                            endIcon={<IoChevronDown size={14} />}
+                            endIcon={<PiCaretDown size={14} />}
                             disableRipple
                             sx={{
                                 position: "relative",
@@ -397,7 +397,7 @@ function Nav({ variant = "app" }) {
                         aria-label="Close menu"
                         sx={{ color: tokens.INK }}
                     >
-                        <IoClose />
+                        <PiX />
                     </IconButton>
                 </Stack>
 

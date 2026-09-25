@@ -122,8 +122,8 @@ export default function PeopleSection({ onResult }) {
       title="People and roles"
       note={
         <>
-          One account, one role. Changing it deletes the record for the role they are leaving — a
-          copy is archived first — and creates one for the new role, carrying their name and email
+          One account, one role. Changing it deletes the record for the role they are leaving (a
+          copy is archived first) and creates one for the new role, carrying their name and email
           across. Fill in the rest from the dashboards. <strong>Admin sits on top of the role</strong>,
           so an admin who is also a judge can be scheduled and score like anyone else.
         </>
@@ -267,7 +267,7 @@ export default function PeopleSection({ onResult }) {
                     {roleValue(person) === "multiple" && (
                       // they predate one-role-per-account; the value has to be
                       // selectable or the field renders blank and looks broken
-                      <MenuItem value="multiple">Multiple — pick one</MenuItem>
+                      <MenuItem value="multiple">Multiple, pick one</MenuItem>
                     )}
                     <MenuItem value="judge">Judge</MenuItem>
                     <MenuItem value="competitor">Competitor</MenuItem>
@@ -475,7 +475,7 @@ export default function PeopleSection({ onResult }) {
               label="Also delete every score they filed"
             />
             <Typography variant="caption" color="text.secondary" component="div">
-              Scores are kept by default — they still count toward the averages the final round is
+              Scores are kept by default. They still count toward the averages the final round is
               picked from, and Judging progress shows them as coming from an unassigned judge.
             </Typography>
           </DialogContentText>
@@ -559,7 +559,7 @@ function CreatePersonDialog({ open, onClose, onDone }) {
           {mode === "attach" && (
             <>
               <Alert severity="info">
-                For someone who can already sign in but has no record — usually because it was
+                For someone who can already sign in but has no record, usually because it was
                 deleted. Their uid is on the Authentication tab in the Firebase console.
               </Alert>
               <TextField size="small" label="Account uid" value={fields.uid} onChange={set("uid")} />
@@ -584,7 +584,7 @@ function CreatePersonDialog({ open, onClose, onDone }) {
                 helperText="At least 6 characters. Tell them to change it, or send a reset from the list."
               />
               <Alert severity="info">
-                Creating the account will not sign you out — it runs on a separate connection.
+                Creating the account will not sign you out. It runs on a separate connection.
               </Alert>
             </>
           )}

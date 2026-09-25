@@ -10,7 +10,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { IoChevronDown, IoChevronUp } from "react-icons/io5";
+import { PiCaretDown, PiCaretUp } from "react-icons/pi";
 import { getTeamSubmission } from "./getTeamInfo";
 
 /**
@@ -110,7 +110,7 @@ function ScheduleCard({
             <Button
               size="small"
               onClick={toggleSubmission}
-              endIcon={open ? <IoChevronUp /> : <IoChevronDown />}
+              endIcon={open ? <PiCaretUp /> : <PiCaretDown />}
               sx={{ px: 0.5, minWidth: 0 }}
             >
               Submission

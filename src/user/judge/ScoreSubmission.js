@@ -17,7 +17,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { IoInformationCircleOutline } from "react-icons/io5";
+import { PiInfo } from "react-icons/pi";
 import { RUBRIC, SCORE_MAX_TOTAL, NOTES_MAX_LENGTH } from "./scoreRubric";
 import { loadDraft, saveDraft } from "./scoreDraft";
 
@@ -45,7 +45,7 @@ function Criterion({ field, spec, value, onChange }) {
             component="span"
             sx={{ display: "flex", color: "text.secondary", cursor: "help", fontSize: "1rem" }}
           >
-            <IoInformationCircleOutline />
+            <PiInfo />
           </Box>
         </Tooltip>
       </Stack>

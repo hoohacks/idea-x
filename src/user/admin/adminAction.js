@@ -142,7 +142,7 @@ export async function applyAdminAction({
     const tooBig = JSON.stringify(encoded).length > UNDO_SIZE_CAP;
 
     const oversizeNote = hasRestorePoint
-      ? `${summary} (${changes.length} paths — undo from Restore points)`
+      ? `${summary} (${changes.length} paths; undo from Restore points)`
       : `${summary} (${changes.length} paths, too large to undo)`;
 
     const entry = {

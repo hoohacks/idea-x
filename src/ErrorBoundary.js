@@ -38,7 +38,7 @@ export default class ErrorBoundary extends React.Component {
         <Stack spacing={2}>
           <Typography variant="h1">Something went wrong on this page</Typography>
           <Typography variant="body1">
-            Nothing you were looking at was saved or lost by this — it is a display problem. Reload
+            Nothing you were looking at was saved or lost by this. It is a display problem. Reload
             to try again. If it keeps happening, send the message below to whoever is looking after
             the site.
           </Typography>

@@ -257,7 +257,7 @@ export default function FinalRoundPlanner() {
           <Stat label="finalists" value={`${stats.finalists} of ${stats.ranked}`} />
           <Stat label="panel" value={stats.minPanel === stats.maxPanel
             ? String(stats.minPanel)
-            : `${stats.minPanel}–${stats.maxPanel}`} />
+            : `${stats.minPanel}-${stats.maxPanel}`} />
           <Stat label="no panel" value={stats.unjudged.length} warn={stats.unjudged.length > 0} />
           <Stat label="idle judges" value={stats.idle} />
           <Stat label="hand edits" value={stats.edits} />
@@ -319,7 +319,7 @@ export default function FinalRoundPlanner() {
 
       <Card sx={{ p: 2 }}>
         <Typography variant="h3" sx={{ fontSize: "1rem", mb: 1 }}>
-          Running order — {plan.room}
+          Running order in {plan.room}
         </Typography>
         {!slots.length ? (
           <Typography variant="body2">
@@ -341,7 +341,7 @@ export default function FinalRoundPlanner() {
                   <Typography variant="caption" color="text.secondary">
                     {slot.judges.length
                       ? slot.judges.map((judge) => judge.judgeName).join(", ")
-                      : "nobody on the panel — presents to an empty room"}
+                      : "nobody on the panel, so it presents to an empty room"}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.5}>

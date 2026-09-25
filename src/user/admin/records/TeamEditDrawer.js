@@ -154,7 +154,7 @@ function FinalRoundControls({ team, teamId, name, saving, run }) {
 
       <Alert severity="warning">
         This adds the team to the standings and gives it a slot. It does not assign
-        judges — do that from the judging progress page.
+        judges. Do that from the judging progress page.
       </Alert>
 
       <Button
@@ -227,7 +227,7 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
     <>
       <Alert severity="warning">
         This team submitted after the schedule was generated, so it has no slot. Give it one here
-        rather than regenerating — a regenerate moves every assignment in the event and strands the
+        rather than regenerating: a regenerate moves every assignment in the event and strands the
         scores already collected.
       </Alert>
 

@@ -313,7 +313,7 @@ export default function SchedulePreview({ header = null }) {
         <Card sx={{ p: 3 }}>
           <Stack spacing={2}>
             <Typography variant="body2">
-              No draft yet. Build a plan to see it before it goes live — nothing is
+              No draft yet. Build a plan to see it before it goes live. Nothing is
               written until you publish it.
             </Typography>
 
