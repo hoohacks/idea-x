@@ -29,12 +29,12 @@ function Unit({ value, label }) {
         <Box sx={{ textAlign: "center", minWidth: { xs: 60, sm: 78 } }}>
             <Typography
                 sx={{
-                    // A clock. Mono with tabular figures so the digits hold
-                    // their columns as they tick rather than nudging each other.
-                    fontFamily: tokens.MONO,
-                    fontSize: { xs: "2rem", sm: "2.5rem" },
-                    fontWeight: 500,
-                    letterSpacing: "-0.04em",
+                    // A clock. Tabular figures so the digits hold their
+                    // columns as they tick rather than nudging each other.
+                    color: tokens.INK,
+                    fontSize: { xs: "2.25rem", sm: "2.75rem" },
+                    fontWeight: 700,
+                    letterSpacing: "-0.03em",
                     lineHeight: 1.05,
                     fontVariantNumeric: "tabular-nums",
                 }}

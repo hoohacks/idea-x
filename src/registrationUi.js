@@ -165,7 +165,7 @@ export function ProgressMeter({ answered, total }) {
             width: 12,
             height: 6,
             borderRadius: 3,
-            bgcolor: index < answered ? "primary.main" : "#d3d8e0",
+            bgcolor: index < answered ? "primary.main" : "action.selected",
             transition: "background-color 160ms ease",
           }}
         />
@@ -268,10 +268,8 @@ export function MobileSubmitBar({ answered, total, error, busy, submitLabel, bus
         mt: 4,
         p: 2,
         bgcolor: "background.paper",
-        border: 1,
-        borderColor: "divider",
         borderRadius: 2,
-        boxShadow: "0 -2px 12px rgba(20, 23, 31, 0.06)",
+        boxShadow: "0 0 16px rgba(0, 0, 0, 0.12)",
       }}
     >
       {error && (

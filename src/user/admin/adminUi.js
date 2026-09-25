@@ -259,6 +259,7 @@ export function FilterBar({ children }) {
         <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={1}
+            alignItems={{ xs: "stretch", sm: "flex-end" }}
             sx={{ mb: 2 }}
         >
             {children}
@@ -325,13 +326,23 @@ export function Row({ children, accent = false }) {
     return (
         <Box
             sx={{
-                // the accent replaces padding rather than adding to it, so a
-                // flagged row's content stays on the same left edge as the rest
-                pl: accent ? "14px" : 2,
-                pr: 2,
+                position: "relative",
+                px: 2,
                 py: 1.5,
-                borderLeft: accent ? "2px solid" : 0,
-                borderLeftColor: "primary.main",
+                // a rounded bar inset from the edge: a full-height border ran
+                // square into the list's 16px corners and read as a glitch
+                "&::before": accent
+                    ? {
+                          content: '""',
+                          position: "absolute",
+                          left: 5,
+                          top: 14,
+                          bottom: 14,
+                          width: 3,
+                          borderRadius: 3,
+                          bgcolor: "primary.main",
+                      }
+                    : undefined,
             }}
         >
             {children}
@@ -345,8 +356,8 @@ export function Row({ children, accent = false }) {
  * These were filled crimson buttons when on, so a judges list where most people
  * were checked in and marked became a wall of the brand colour -- the one
  * colour the theme reserves for the action to take next. On reads as a check
- * in the success green instead, and off stays a plain outlined action, so the
- * rows that still need something are the ones that stand out.
+ * on the pale success green instead, and off stays the plain secondary button,
+ * so the rows that still need something are the ones that stand out.
  */
 export function StateToggle({ on, onLabel, offLabel, onClick, minWidth }) {
     return (
@@ -360,8 +371,8 @@ export function StateToggle({ on, onLabel, offLabel, onClick, minWidth }) {
                 minWidth,
                 ...(on && {
                     color: "success.main",
-                    borderColor: "success.main",
-                    "&:hover": { borderColor: "success.main" },
+                    bgcolor: "success.light",
+                    "&:hover": { bgcolor: "success.light", filter: "brightness(0.96)" },
                 }),
             }}
         >

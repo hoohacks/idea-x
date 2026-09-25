@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
 
     return (
         <PublicShell maxWidth="xs" pad>
-            <Card>
-                <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+            <Card sx={{ borderRadius: 4 }}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, "&:last-child": { pb: { xs: 3, sm: 4 } } }}>
                     <Typography variant="h1">Reset password</Typography>
 
                     {sentReset ? (

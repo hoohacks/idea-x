@@ -39,9 +39,9 @@ import { hasRole } from "./roles";
  * navigation.
  */
 
-// The logo is two inks on transparency, crimson and white, so it needs the dark
-// bar under it -- on white, half the word disappears.
-export const LOGO_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo.png`;
+// The bar is white, so this is the ink cut of the logo: the original is crimson
+// and white on transparency, and on white its bulb and "thon" disappear.
+export const LOGO_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo-ink.png`;
 const LOGO_RATIO = 768 / 227;
 
 const PRIMARY = [
@@ -131,13 +131,13 @@ function TopLink({ to, label, active }) {
                 position: "relative",
                 display: "flex",
                 alignItems: "center",
-                height: 60,
+                height: 64,
                 px: 1.5,
-                fontSize: "0.9375rem",
-                fontWeight: active ? 600 : 500,
+                fontSize: "1rem",
+                fontWeight: 600,
                 textDecoration: "none",
-                color: active ? tokens.ON_NIGHT : tokens.ON_NIGHT_MUTED,
-                "&:hover": { color: tokens.ON_NIGHT },
+                color: active ? tokens.INK : tokens.MUTED,
+                "&:hover": { color: tokens.INK },
                 "&::after": active
                     ? {
                           content: '""',
@@ -145,8 +145,8 @@ function TopLink({ to, label, active }) {
                           left: 12,
                           right: 12,
                           bottom: 0,
-                          height: 2,
-                          borderRadius: 1,
+                          height: 3,
+                          borderRadius: 3,
                           bgcolor: "primary.main",
                       }
                     : undefined,
@@ -160,7 +160,7 @@ function TopLink({ to, label, active }) {
 // PaperProps, not slotProps: MUI only taught Menu and Drawer about slotProps
 // in 5.15 and this project is on 5.10, so the whole object was being dropped --
 // which is why the menus had no outline and the drawer no width.
-const menuPaper = { variant: "outlined", sx: { minWidth: 200, mt: 0.5 } };
+const menuPaper = { sx: { minWidth: 220, mt: 0.75, py: 0.5 } };
 
 function Nav({ variant = "app" }) {
     const isPublic = variant === "public";
@@ -211,26 +211,30 @@ function Nav({ variant = "app" }) {
 
     const fullName = [userData?.firstName, userData?.lastName].filter(Boolean).join(" ");
 
-    const onAuthPage = pathname.startsWith("/login") || pathname.startsWith("/forgot-password");
+    const onRegistrationPage =
+        pathname === "/" ||
+        pathname.startsWith("/ideathon-registration") ||
+        pathname.startsWith("/judge-registration");
 
     if (isPublic) {
         return (
             <AppBar position="sticky">
                 <Container maxWidth="lg">
-                    <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 60 }, gap: 2 }}>
+                    <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1 }}>
                         <Wordmark height={30} href="https://ideathon.hoohacks.io" />
                         <Box sx={{ flexGrow: 1 }} />
-                        {/* offer the door the person is not already standing in */}
-                        <Button
-                            component={Link}
-                            to={onAuthPage ? "/ideathon-registration" : "/login"}
-                            sx={{
-                                color: tokens.ON_NIGHT_MUTED,
-                                "&:hover": { color: tokens.ON_NIGHT, bgcolor: "transparent" },
-                            }}
-                        >
-                            {onAuthPage ? "Register" : "Sign in"}
-                        </Button>
+                        {/* both doors, the red one for signing up -- leaving out
+                            whichever one the person is already standing in */}
+                        {!pathname.startsWith("/login") && (
+                            <Button component={Link} to="/login" variant="outlined">
+                                Sign in
+                            </Button>
+                        )}
+                        {!onRegistrationPage && (
+                            <Button component={Link} to="/ideathon-registration" variant="contained">
+                                Register
+                            </Button>
+                        )}
                     </Toolbar>
                 </Container>
             </AppBar>
@@ -240,13 +244,13 @@ function Nav({ variant = "app" }) {
     return (
         <AppBar position="sticky">
             <Container maxWidth="lg">
-                <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 60 }, gap: 1 }}>
+                <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1 }}>
                     <IconButton
                         onClick={() => setDrawerOpen(true)}
                         sx={{
                             display: { xs: "inline-flex", md: "none" },
                             ml: -1,
-                            color: tokens.ON_NIGHT,
+                            color: tokens.INK,
                         }}
                         aria-label="Open menu"
                     >
@@ -271,13 +275,14 @@ function Nav({ variant = "app" }) {
                             sx={{
                                 position: "relative",
                                 display: { xs: "none", md: "inline-flex" },
-                                height: 60,
+                                height: 64,
+                                minHeight: 64,
                                 borderRadius: 0,
                                 px: 1.5,
-                                color: adminActive ? tokens.ON_NIGHT : tokens.ON_NIGHT_MUTED,
-                                fontWeight: adminActive ? 600 : 500,
-                                fontSize: "0.9375rem",
-                                "&:hover": { bgcolor: "transparent", color: tokens.ON_NIGHT },
+                                color: adminActive ? tokens.INK : tokens.MUTED,
+                                fontWeight: 600,
+                                fontSize: "1rem",
+                                "&:hover": { bgcolor: "transparent", color: tokens.INK },
                                 "&::after": adminActive
                                     ? {
                                           content: '""',
@@ -285,8 +290,8 @@ function Nav({ variant = "app" }) {
                                           left: 12,
                                           right: 12,
                                           bottom: 0,
-                                          height: 2,
-                                          borderRadius: 1,
+                                          height: 3,
+                                          borderRadius: 3,
                                           bgcolor: "primary.main",
                                       }
                                     : undefined,
@@ -303,12 +308,12 @@ function Nav({ variant = "app" }) {
                     >
                         <Avatar
                             sx={{
-                                width: 32,
-                                height: 32,
-                                fontSize: "0.8125rem",
-                                fontWeight: 600,
-                                bgcolor: "primary.main",
-                                color: "#fff",
+                                width: 36,
+                                height: 36,
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                bgcolor: tokens.SECONDARY_BG,
+                                color: tokens.INK,
                             }}
                         >
                             {initialsOf(userData)}
@@ -333,11 +338,10 @@ function Nav({ variant = "app" }) {
                         disableSticky
                         sx={{
                             bgcolor: "transparent",
-                            lineHeight: 2,
-                            fontSize: "0.6875rem",
+                            lineHeight: 2.25,
+                            fontSize: "0.75rem",
                             fontWeight: 600,
-                            letterSpacing: "0.07em",
-                            textTransform: "uppercase",
+                            color: tokens.MUTED,
                         }}
                     >
                         {group.label}
@@ -375,13 +379,13 @@ function Nav({ variant = "app" }) {
                 <MenuItem onClick={logOut}>Log out</MenuItem>
             </Menu>
 
-            {/* Mobile. Night as well, so opening it is not a flash of white. */}
+            {/* Mobile. White, the same as the bar it opens from. */}
             <Drawer
                 anchor="left"
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
                 PaperProps={{
-                    sx: { width: 268, bgcolor: tokens.NIGHT, color: tokens.ON_NIGHT },
+                    sx: { width: 280, bgcolor: tokens.SURFACE, color: tokens.INK },
                 }}
             >
                 <Stack direction="row" alignItems="center" sx={{ p: 2, pb: 1.5 }}>
@@ -391,7 +395,7 @@ function Nav({ variant = "app" }) {
                     <IconButton
                         onClick={() => setDrawerOpen(false)}
                         aria-label="Close menu"
-                        sx={{ color: tokens.ON_NIGHT }}
+                        sx={{ color: tokens.INK }}
                     >
                         <IoClose />
                     </IconButton>
@@ -410,13 +414,13 @@ function Nav({ variant = "app" }) {
 
                 {isAdmin && (
                     <>
-                        <Divider sx={{ borderColor: tokens.NIGHT_LINE }} />
+                        <Divider />
                         <Box sx={{ px: 1, pb: 1 }}>
                             {ADMIN_GROUPS.map((group) => (
                                 <Box key={group.id} sx={{ mb: 0.5 }}>
                                     <Typography
                                         variant="overline"
-                                        sx={{ display: "block", px: 1, pt: 1, color: tokens.ON_NIGHT_MUTED }}
+                                        sx={{ display: "block", px: 1.5, pt: 1.5, pb: 0.5, color: tokens.MUTED, fontWeight: 600, fontSize: "0.8125rem" }}
                                     >
                                         {group.label}
                                     </Typography>
@@ -435,7 +439,7 @@ function Nav({ variant = "app" }) {
                 )}
 
                 <Box sx={{ flexGrow: 1 }} />
-                <Divider sx={{ borderColor: tokens.NIGHT_LINE }} />
+                <Divider />
                 <Box sx={{ px: 1, py: 1 }}>
                     <DrawerLink label="Profile" onClick={() => go("/user/profile")} />
                     <DrawerLink label="Log out" onClick={logOut} />
@@ -450,11 +454,11 @@ function DrawerLink({ label, active = false, onClick }) {
         <ListItemButton
             onClick={onClick}
             sx={{
-                borderRadius: 1.5,
-                color: active ? tokens.ON_NIGHT : tokens.ON_NIGHT_MUTED,
-                fontWeight: active ? 600 : 500,
-                bgcolor: active ? tokens.NIGHT_RAISED : "transparent",
-                "&:hover": { bgcolor: tokens.NIGHT_RAISED, color: tokens.ON_NIGHT },
+                borderRadius: 2,
+                color: tokens.INK,
+                fontWeight: active ? 700 : 500,
+                bgcolor: active ? tokens.SURFACE_CARD : "transparent",
+                "&:hover": { bgcolor: tokens.SURFACE_CARD },
             }}
         >
             {label}
