@@ -123,7 +123,17 @@ export async function joinTeam(teamId) {
     }
 
     // the one thing a non-member may read, and the only one this depends on
-    const nameSnap = await get(ref(database, `teams/${trimmed}/name`));
+    let id = trimmed;
+    let nameSnap = await get(ref(database, `teams/${id}/name`));
+    // Team IDs are push keys, which start with a dash, and people drop it as
+    // punctuation. Only tried once the ID as typed has missed.
+    if (!nameSnap.exists() && !trimmed.startsWith("-")) {
+      const dashed = await get(ref(database, `teams/-${trimmed}/name`));
+      if (dashed.exists()) {
+        id = `-${trimmed}`;
+        nameSnap = dashed;
+      }
+    }
     if (!nameSnap.exists()) {
       return { ok: false, error: `No team found with the ID "${trimmed}".` };
     }
@@ -132,8 +142,8 @@ export async function joinTeam(teamId) {
     // Best effort. Denied for the person this function is usually for, which is
     // fine: the rules make the same decision a moment later.
     const [submitted, members] = await Promise.all([
-      readOrNull(`teams/${trimmed}/submitted`),
-      readOrNull(`teams/${trimmed}/members`),
+      readOrNull(`teams/${id}/submitted`),
+      readOrNull(`teams/${id}/members`),
     ]);
 
     if (submitted === true) return { ok: false, error: closedMessage(teamName) };
@@ -162,8 +172,8 @@ export async function joinTeam(teamId) {
       // node correctly regardless of how many more people join it, so there
       // is nothing left for this write to protect against.
       await update(ref(database), {
-        [`teams/${trimmed}/members/${uid}`]: true,
-        [`competitors/${uid}/teamId`]: trimmed,
+        [`teams/${id}/members/${uid}`]: true,
+        [`competitors/${uid}/teamId`]: id,
       });
     } catch (error) {
       // The write rule refuses for exactly two reasons, so a refusal is not
@@ -179,7 +189,7 @@ export async function joinTeam(teamId) {
       return { ok: false, error: closedMessage(teamName) };
     }
 
-    return { ok: true, teamId: trimmed, teamName };
+    return { ok: true, teamId: id, teamName };
   } catch (error) {
     console.error("Error joining team:", error);
     return { ok: false, error: "Could not join that team. Please try again." };
