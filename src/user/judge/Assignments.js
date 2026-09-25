@@ -330,6 +330,23 @@ function Assignments() {
     [personalAssignments, scoredTeamIds, pendingTeamIdsByRound]
   );
 
+  // the first card on each list still to score -- the lists are already in
+  // presentation order -- so exactly one card per round reads as "now"
+  const nextFirstRoundId = useMemo(
+    () =>
+      personalAssignments.find(
+        (a) => !scoredTeamIds.has(a.id) && !pendingTeamIdsByRound[FIRST_ROUND].has(a.id)
+      )?.id ?? null,
+    [personalAssignments, scoredTeamIds, pendingTeamIdsByRound]
+  );
+  const nextFinalRoundId = useMemo(
+    () =>
+      finalAssignments.find(
+        (t) => !finalRoundScoredTeamIds.has(t.id) && !pendingTeamIdsByRound[FINAL_ROUND].has(t.id)
+      )?.id ?? null,
+    [finalAssignments, finalRoundScoredTeamIds, pendingTeamIdsByRound]
+  );
+
   const draftTarget = useMemo(() => {
     if (!selected?.teamId || !currentUserId) return null;
     return {
@@ -455,6 +472,7 @@ function Assignments() {
                         onButtonClick={(card) => openFor({ ...card, round: FIRST_ROUND })}
                         disabled={scoredTeamIds.has(assignment.id)}
                         pending={pendingTeamIdsByRound[FIRST_ROUND].has(assignment.id)}
+                        next={assignment.id != null && assignment.id === nextFirstRoundId}
                       />
                     </Grid>
                   ))}
@@ -483,6 +501,7 @@ function Assignments() {
                             time={team.timeslot ?? team.time}
                             disabled={finalRoundScoredTeamIds.has(team.id)}
                             pending={pendingTeamIdsByRound[FINAL_ROUND].has(team.id)}
+                            next={team.id === nextFinalRoundId}
                             onButtonClick={(card) => openFor({ ...card, round: FINAL_ROUND })}
                           />
                         </Grid>

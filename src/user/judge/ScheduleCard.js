@@ -21,6 +21,9 @@ import { getTeamSubmission } from "./getTeamInfo";
  *   this rather than the name.
  * - pending: the score is written on this device but has not reached the
  *   database yet. Distinct from `disabled`, which means it has landed.
+ * - next: the first team on this judge's list still to score. Only that card
+ *   gets the filled button; three identical crimson buttons in a row told a
+ *   judge walking between rooms nothing about which one was now.
  */
 function ScheduleCard({
   teamId = null,
@@ -30,6 +33,7 @@ function ScheduleCard({
   onButtonClick = () => {},
   disabled = false,
   pending = false,
+  next = false,
 }) {
   const [open, setOpen] = useState(false);
   const [submission, setSubmission] = useState(null);
@@ -55,7 +59,14 @@ function ScheduleCard({
   const buttonLabel = pending ? "Saved on device" : disabled ? "Scored" : "Score team";
 
   return (
-    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        ...(next && { borderColor: "primary.main", boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` }),
+      }}
+    >
       <CardContent
         sx={{
           p: 2,
@@ -67,6 +78,11 @@ function ScheduleCard({
         }}
       >
         <Stack spacing={0.75}>
+          {next && (
+            <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600 }}>
+              Up next
+            </Typography>
+          )}
           <Typography variant="h5" sx={{ lineHeight: 1.3 }}>
             {teamName}
           </Typography>
@@ -148,7 +164,7 @@ function ScheduleCard({
 
         <Button
           fullWidth
-          variant={disabled || pending ? "outlined" : "contained"}
+          variant={next ? "contained" : "outlined"}
           disabled={disabled || pending}
           onClick={(e) => {
             if (!disabled && !pending) onButtonClick({ teamId, teamName, room, time, event: e });
