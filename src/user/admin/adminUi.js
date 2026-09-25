@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
     Accordion, AccordionDetails, AccordionSummary,
-    Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogContentText,
+    Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogContentText,
     DialogTitle, Divider, LinearProgress, Stack, TextField, Typography,
 } from "@mui/material";
 import { PiCheck, PiCaretDown } from "react-icons/pi";
@@ -43,21 +43,33 @@ export const FIELD = {
 export function StatStrip({ stats = [], sx }) {
     if (stats.length === 0) return null;
 
+    // Tiles rather than a run of "8 teams 8 submitted" words: the number is
+    // what an organizer reads off the screen, so it is set large on its own
+    // line with the label under it.
     return (
-        <Stack direction="row" sx={{ gap: 2.5, flexWrap: "wrap", rowGap: 1, ...sx }}>
+        <Box
+            sx={{
+                display: "grid",
+                gap: 1,
+                gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))",
+                ...sx,
+            }}
+        >
             {stats.map(({ label, singular, value }) => (
-                <Stack key={label} direction="row" spacing={0.75} alignItems="baseline">
-                    {/* the numbers an organizer reads off the screen and acts on,
-                        so they are set as data rather than as prose */}
-                    <Typography variant="data" sx={{ fontSize: "1rem", fontWeight: 600 }}>
+                <Box key={label} sx={{ bgcolor: "action.hover", borderRadius: 2, px: 2, py: 1.5 }}>
+                    <Typography
+                        variant="data"
+                        component="p"
+                        sx={{ fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}
+                    >
                         {value}
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ mt: 0.25 }}>
                         {singular && value === 1 ? singular : label}
                     </Typography>
-                </Stack>
+                </Box>
             ))}
-        </Stack>
+        </Box>
     );
 }
 
@@ -74,7 +86,7 @@ export function PageHeader({ title, stats = [], progress, children }) {
                 {children}
             </Stack>
 
-            <StatStrip stats={stats} sx={{ mt: 1.5 }} />
+            <StatStrip stats={stats} sx={{ mt: 2 }} />
 
             {typeof progress === "number" && progress > 0 && (
                 <LinearProgress
@@ -256,19 +268,53 @@ export function SettingRow({ label, hint, children }) {
 
 export function FilterBar({ children }) {
     return (
-        <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            alignItems={{ xs: "stretch", sm: "flex-end" }}
-            sx={{ mb: 2 }}
-        >
+        <Stack spacing={1.5} sx={{ mb: 2 }}>
             {children}
         </Stack>
     );
 }
 
+/** Several `FilterChips` groups on one wrapping line. */
+export function FilterGroups({ children }) {
+    return (
+        <Stack direction="row" sx={{ flexWrap: "wrap", columnGap: 3, rowGap: 1.5 }}>
+            {children}
+        </Stack>
+    );
+}
+
+/**
+ * A single-choice filter as a row of pills, the selected one filled in ink.
+ *
+ * These were dropdowns: every change was open, read, pick, close, and the
+ * current choice was a word inside a box. As pills every option is on screen
+ * and one tap away, which on a phone at the check-in desk is most of the point.
+ */
+export function FilterChips({ label, value, onChange, options }) {
+    return (
+        <Stack direction="row" alignItems="center" sx={{ gap: 0.75, flexWrap: "wrap" }} role="group" aria-label={label}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", mr: 0.5 }}>
+                {label}
+            </Typography>
+            {options.map((option) => {
+                const selected = option.value === value;
+                return (
+                    <Chip
+                        key={option.value}
+                        label={option.label}
+                        onClick={() => onChange(option.value)}
+                        color={selected ? "secondary" : "default"}
+                        aria-pressed={selected}
+                        sx={{ height: 34, px: 0.5, fontSize: "0.875rem" }}
+                    />
+                );
+            })}
+        </Stack>
+    );
+}
+
 export function SearchField(props) {
-    return <TextField sx={{ flex: 1, minWidth: 200 }} {...props} />;
+    return <TextField fullWidth {...props} />;
 }
 
 /** A flat list of hairline-separated rows, not a stack of 30px-padded boxes. */

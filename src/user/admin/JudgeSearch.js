@@ -3,10 +3,10 @@ import { database } from "../../firebase";
 
 import React, { useEffect, useMemo, useState } from "react";
 
-import { Alert, Button, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Button, Chip, Snackbar, Stack, Typography } from "@mui/material";
 import Layout from "../Layout";
 import { assignmentList } from "../judge/assignmentList";
-import { PageHeader, FilterBar, SearchField, RowList, Row, StateToggle } from "./adminUi";
+import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
 import JudgeEditDrawer from "./records/JudgeEditDrawer";
 
 function JudgeSearch() {
@@ -112,29 +112,29 @@ function JudgeSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <TextField
-          select
-          label="Check-in"
-          value={checkedInFilter}
-          onChange={(e) => setCheckedInFilter(e.target.value)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">Everyone</MenuItem>
-          <MenuItem value="true">Checked in</MenuItem>
-          <MenuItem value="false">Not checked in</MenuItem>
-        </TextField>
-        <TextField
-          select
-          label="Round"
-          value={roundOneFilter}
-          onChange={(e) => setRoundOneFilter(e.target.value)}
-          sx={{ minWidth: 175 }}
-        >
-          <MenuItem value="">Any</MenuItem>
-          <MenuItem value="round1">First round</MenuItem>
-          <MenuItem value="final">Final round</MenuItem>
-          <MenuItem value="none">Marked for neither</MenuItem>
-        </TextField>
+        <FilterGroups>
+          <FilterChips
+            label="Check-in"
+            value={checkedInFilter}
+            onChange={setCheckedInFilter}
+            options={[
+              { value: "", label: "Everyone" },
+              { value: "true", label: "Checked in" },
+              { value: "false", label: "Not checked in" },
+            ]}
+          />
+          <FilterChips
+            label="Round"
+            value={roundOneFilter}
+            onChange={setRoundOneFilter}
+            options={[
+              { value: "", label: "Any" },
+              { value: "round1", label: "First round" },
+              { value: "final", label: "Final round" },
+              { value: "none", label: "Neither" },
+            ]}
+          />
+        </FilterGroups>
       </FilterBar>
 
       <RowList empty="No judges match those filters.">
@@ -186,7 +186,7 @@ function JudgeSearch() {
                   )}
                 </Stack>
 
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>
                   <Button size="small" variant="outlined" onClick={() => setEditing(judge)}>
                     Edit
                   </Button>

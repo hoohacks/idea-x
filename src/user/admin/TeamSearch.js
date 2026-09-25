@@ -24,17 +24,15 @@ import {
   DialogContent,
   DialogTitle,
   Link,
-  MenuItem,
   Snackbar,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import { PiCaretDown } from "react-icons/pi";
 import Layout from "../Layout";
 import { memberIds } from "../team/teamMembers";
 import { personName } from "../../roles";
-import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
+import { PageHeader, FilterBar, FilterChips, SearchField, RowList, Row } from "./adminUi";
 import { deleteScore } from "./danger/dangerZone";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
 import PaperScoreDialog from "./scores/PaperScoreDialog";
@@ -259,17 +257,16 @@ function TeamSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <TextField
-          select
+        <FilterChips
           label="Sort by"
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          sx={{ minWidth: 200 }}
-        >
-          <MenuItem value="name">Name</MenuItem>
-          <MenuItem value="score">First round score</MenuItem>
-          <MenuItem value="finalScore">Final round score</MenuItem>
-        </TextField>
+          onChange={setSortBy}
+          options={[
+            { value: "name", label: "Name" },
+            { value: "score", label: "First round score" },
+            { value: "finalScore", label: "Final round score" },
+          ]}
+        />
       </FilterBar>
 
       <RowList empty="No teams match those filters.">

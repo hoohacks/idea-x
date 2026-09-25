@@ -8,14 +8,12 @@ import {
   Button,
   Chip,
   Link,
-  MenuItem,
   Snackbar,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import Layout from "../Layout";
-import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
+import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
 import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
 
 // dietary values are meant to be the small fixed lowercase set Registration.js
@@ -122,31 +120,30 @@ function Search() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <TextField
-          select
-          label="Check-in"
-          value={checkedInFilter}
-          onChange={(e) => setCheckedInFilter(e.target.value)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">Everyone</MenuItem>
-          <MenuItem value="true">Checked in</MenuItem>
-          <MenuItem value="false">Not checked in</MenuItem>
-        </TextField>
-        <TextField
-          select
-          label="Dietary"
-          value={dietaryFilter}
-          onChange={(e) => setDietaryFilter(e.target.value)}
-          sx={{ minWidth: 170 }}
-        >
-          <MenuItem value="">Any</MenuItem>
-          {dietaryOptions.map((option) => (
-            <MenuItem key={option} value={option} sx={{ textTransform: "capitalize" }}>
-              {option}
-            </MenuItem>
-          ))}
-        </TextField>
+        <FilterGroups>
+          <FilterChips
+            label="Check-in"
+            value={checkedInFilter}
+            onChange={setCheckedInFilter}
+            options={[
+              { value: "", label: "Everyone" },
+              { value: "true", label: "Checked in" },
+              { value: "false", label: "Not checked in" },
+            ]}
+          />
+          <FilterChips
+            label="Dietary"
+            value={dietaryFilter}
+            onChange={setDietaryFilter}
+            options={[
+              { value: "", label: "Any" },
+              ...dietaryOptions.map((option) => ({
+                value: option,
+                label: option.charAt(0).toUpperCase() + option.slice(1),
+              })),
+            ]}
+          />
+        </FilterGroups>
       </FilterBar>
 
       <RowList empty="No competitors match those filters.">
@@ -200,18 +197,17 @@ function Search() {
                   </Stack>
                 </Stack>
 
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>
                   <Button size="small" variant="outlined" onClick={() => setEditing(person)}>
                     Edit
                   </Button>
-                  <Button
-                    size="small"
-                    variant={isCheckedIn ? "contained" : "outlined"}
+                  <StateToggle
+                    on={isCheckedIn}
+                    onLabel="Checked in"
+                    offLabel="Check in"
                     onClick={() => handleCheckIn(person)}
-                    sx={{ minWidth: 116 }}
-                  >
-                    {isCheckedIn ? "Checked in" : "Check in"}
-                  </Button>
+                    minWidth={124}
+                  />
                 </Stack>
               </Stack>
             </Row>
