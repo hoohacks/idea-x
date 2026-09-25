@@ -350,6 +350,7 @@ const RegistrationForm = () => {
           eyebrow="Student registration"
           title={`${EVENT.name} ${EVENT.year}`}
           facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
+          summary="Build an idea with a team in one day, then pitch it to judges for funding."
         >
           A one-day event for UVA students from technical and business backgrounds, working
           in teams on a single idea. You must be a currently enrolled UVA student and 18 or

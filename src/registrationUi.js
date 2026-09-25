@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Container,
   Dialog,
   DialogActions,
@@ -15,6 +16,7 @@ import {
 import Nav from "./siteNav";
 import PageFooter from "./siteFooter";
 import { pageMinHeight } from "./theme";
+import { PiCalendarBlank, PiCheckCircle, PiClock, PiMapPin } from "react-icons/pi";
 
 /**
  * The frame both public registration pages sit in.
@@ -25,72 +27,122 @@ import { pageMinHeight } from "./theme";
  * readable column beside a rail that answers exactly that question.
  */
 
-/**
- * Date, hours and venue, separated by hairlines rather than middots.
- *
- * The hairline is a left border on every fact but the first, which is correct
- * only while they are all on one line. On a phone they are not: the strip wraps,
- * and whichever fact starts the second line carried its border with it -- a
- * divider hanging at the start of a line with nothing before it, on the first
- * page every attendee sees.
- *
- * A border cannot know it is at the start of a line, so below `sm` the facts
- * stack instead and the hairlines go away entirely. From `sm` up there is room
- * for one line and the strip reads as designed.
- */
-export function FactStrip({ facts }) {
+const FACT_ICONS = [<PiCalendarBlank />, <PiClock />, <PiMapPin />];
+
+/** Date, hours and venue as pills, each with its icon. */
+function FactPills({ facts }) {
   return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      sx={{ flexWrap: "wrap", rowGap: { xs: 0.75, sm: 1 }, mt: 2.5 }}
-    >
+    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, mt: 2.5 }}>
       {facts.map((fact, index) => (
-        <Typography
+        <Chip
           key={fact}
-          variant="body2"
+          icon={FACT_ICONS[index] ?? undefined}
+          label={fact}
           sx={{
-            pl: { xs: 0, sm: index === 0 ? 0 : 1.75 },
-            pr: { xs: 0, sm: 1.75 },
-            borderLeft: { xs: 0, sm: index === 0 ? 0 : 1 },
-            borderColor: "divider",
-            fontVariantNumeric: "tabular-nums",
-            color: "text.primary",
-            fontWeight: 500,
+            height: 36,
+            pl: 0.75,
+            fontSize: "0.875rem",
+            "& .MuiChip-icon": { fontSize: 18, color: "text.primary" },
           }}
-        >
-          {fact}
-        </Typography>
+        />
       ))}
     </Stack>
   );
 }
 
-export function Hero({ eyebrow, title, facts, children }) {
+/**
+ * Event photos, tiled in two columns at their own heights with tight gutters,
+ * the way a board of pins sits. Only drawn when there are real photos: a page
+ * padded out with stand-in imagery would show an event that did not happen.
+ */
+function PhotoBoard({ photos }) {
   return (
-    <Box sx={{ pt: { xs: 5, md: 7 }, pb: { xs: 3, md: 4 } }}>
-      <Typography variant="overline" component="p">
-        {eyebrow}
-      </Typography>
-      <Typography
-        variant="h1"
+    <Box sx={{ columnCount: 2, columnGap: "8px" }}>
+      {photos.map((photo) => (
+        <Box
+          key={photo.src}
+          component="img"
+          src={photo.src}
+          alt={photo.alt}
+          loading="lazy"
+          sx={{
+            display: "block",
+            width: "100%",
+            mb: "8px",
+            borderRadius: 2,
+            breakInside: "avoid",
+            bgcolor: "action.hover",
+          }}
+        />
+      ))}
+    </Box>
+  );
+}
+
+/**
+ * The top of a public page: what it is, when and where, and one sentence on
+ * why you would come. `summary` is that sentence; the longer explanation, when
+ * there is one, is `children` and sits in its own block under the hero rather
+ * than inside it, so the hero reads in a glance.
+ */
+export function Hero({ eyebrow, title, facts, summary, photos, children }) {
+  const hasPhotos = Array.isArray(photos) && photos.length > 0;
+  const details = children && (
+    <Typography variant="body1" sx={{ maxWidth: "62ch" }}>
+      {children}
+    </Typography>
+  );
+
+  return (
+    <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 4 } }}>
+      <Box
         sx={{
-          mt: 0.5,
-          maxWidth: "18ch",
-          fontSize: { xs: "2.25rem", sm: "3rem", md: "3.5rem" },
-          letterSpacing: "-0.035em",
-          lineHeight: 1.02,
+          display: "grid",
+          gap: { xs: 3, md: 6 },
+          alignItems: "center",
+          gridTemplateColumns: { xs: "1fr", md: hasPhotos ? "7fr 5fr" : "1fr" },
         }}
       >
-        {title}
-      </Typography>
-      {facts && <FactStrip facts={facts} />}
-      {children && (
-        <Typography
-          variant="body1"
-          sx={{ mt: 2.5, maxWidth: "62ch", color: "text.secondary" }}
-        >
-          {children}
-        </Typography>
+        <Box>
+          {eyebrow && (
+            <Typography variant="body2" component="p" sx={{ fontWeight: 600, color: "text.primary" }}>
+              {eyebrow}
+            </Typography>
+          )}
+          <Typography
+            variant="h1"
+            sx={{
+              mt: 0.5,
+              maxWidth: "16ch",
+              fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4.375rem" },
+              letterSpacing: "-0.03em",
+              lineHeight: 1.05,
+            }}
+          >
+            {title}
+          </Typography>
+          {summary && (
+            <Typography
+              sx={{ mt: 2, maxWidth: "36ch", fontSize: { xs: "1.125rem", sm: "1.25rem" }, lineHeight: 1.4, color: "text.primary" }}
+            >
+              {summary}
+            </Typography>
+          )}
+          {facts && <FactPills facts={facts} />}
+          {/* without a summary the paragraph is the hero's own copy, as on
+              the closed page; with one, it moves below */}
+          {!summary && details && <Box sx={{ mt: 2.5 }}>{details}</Box>}
+        </Box>
+        {hasPhotos && <PhotoBoard photos={photos} />}
+      </Box>
+
+      {summary && details && (
+        <Box sx={{ mt: { xs: 4, md: 5 }, p: { xs: 2.5, sm: 3 }, bgcolor: "action.hover", borderRadius: 2 }}>
+          <Typography variant="h3" component="h2" sx={{ mb: 1 }}>
+            About the day
+          </Typography>
+          {details}
+        </Box>
       )}
     </Box>
   );
@@ -191,16 +243,20 @@ function RailChecklist({ sections }) {
           >
             {section.label}
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontVariantNumeric: "tabular-nums",
-              color: section.remaining ? "primary.main" : "success.main",
-              fontWeight: 550,
-            }}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            sx={{ color: section.remaining ? "primary.main" : "success.main" }}
           >
-            {section.remaining ? `${section.remaining} left` : "Done"}
-          </Typography>
+            {!section.remaining && <PiCheckCircle aria-hidden size={18} />}
+            <Typography
+              variant="body2"
+              sx={{ fontVariantNumeric: "tabular-nums", color: "inherit", fontWeight: 600 }}
+            >
+              {section.remaining ? `${section.remaining} left` : "Done"}
+            </Typography>
+          </Stack>
         </Stack>
       ))}
     </Stack>

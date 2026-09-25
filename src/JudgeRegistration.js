@@ -413,6 +413,7 @@ const JudgeRegistrationForm = () => {
           eyebrow="Judge and mentor sign-up"
           title={`${EVENT.name} ${EVENT.year}`}
           facts={[EVENT.dateLabel, `Judging ${EVENT.judgingHours}`, EVENT.venue]}
+          summary="Help UVA student teams shape an idea into a pitch, then score the pitches that win funding."
         >
           Student teams spend the day developing an idea into a pitch. Mentors take one-hour
           shifts helping teams shape their work; judges score the pitches in the evening and
