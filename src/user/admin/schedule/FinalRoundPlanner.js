@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LinesSkeleton } from "../../../loadingUi";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
@@ -147,7 +148,7 @@ export default function FinalRoundPlanner() {
   // ---- render ----
 
   if (plan === undefined) {
-    return <Typography variant="body2">Loading the final round plan…</Typography>;
+    return <LinesSkeleton label="Loading the final round plan" lines={4} />;
   }
 
   if (published) {

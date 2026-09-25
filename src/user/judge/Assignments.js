@@ -13,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 import Layout from "../Layout";
 import ScheduleCard from "./ScheduleCard";
+import { CardGridSkeleton } from "../../loadingUi";
 import { readScheduleMeta } from "./scheduleConfig";
 import { subscribeToPersonalSchedule, subscribeToFinalRoundSchedule } from "./getPersonalSchedule";
 import ScoreSubmission from "./ScoreSubmission";
@@ -453,7 +454,7 @@ function Assignments() {
           <>
             <Section title="First round">
               {loadingAssignments ? (
-                <Typography variant="body2">Loading your assignments…</Typography>
+                <CardGridSkeleton label="Loading your assignments" />
               ) : personalAssignments.length === 0 ? (
                 <Card sx={{ p: 3 }}>
                   <Typography variant="body2" align="center">

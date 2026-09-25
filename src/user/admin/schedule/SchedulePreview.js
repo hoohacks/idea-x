@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LinesSkeleton } from "../../../loadingUi";
 import { useNavigate } from "react-router-dom";
 import { ref, get } from "firebase/database";
 import {
@@ -301,7 +302,7 @@ export default function SchedulePreview({ header = null }) {
     return (
       <Layout maxWidth="lg">
         {header}
-        <Typography variant="body2">Loading the schedule preview…</Typography>
+        <LinesSkeleton label="Loading the schedule preview" lines={4} />
       </Layout>
     );
   }

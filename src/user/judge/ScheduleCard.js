@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { PiCaretDown, PiCaretUp } from "react-icons/pi";
 import { getTeamSubmission } from "./getTeamInfo";
+import { LinesSkeleton } from "../../loadingUi";
 
 /**
  * One judging assignment.
@@ -119,7 +120,7 @@ function ScheduleCard({
             <Collapse in={open} unmountOnExit>
               <Stack spacing={0.75} sx={{ pt: 1 }}>
                 {loadState === "loading" && (
-                  <Typography variant="body2">Loading…</Typography>
+                  <LinesSkeleton label="Loading the submission" lines={3} />
                 )}
                 {loadState === "error" && (
                   <Typography variant="body2">

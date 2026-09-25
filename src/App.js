@@ -21,6 +21,7 @@ import { ref, get } from "firebase/database"
 import { database } from "./firebase"
 import { onAuthStateChanged } from "firebase/auth"
 import Layout from "./user/Layout.js"
+import { PageSkeleton } from "./loadingUi";
 import TeamDashboard from "./user/admin/TeamSearch.js"
 import JudgingProgress from "./user/admin/JudgingProgress.js"
 import Control from "./user/admin/Control.js"
@@ -35,7 +36,7 @@ const AuthContext = createContext(null);
  * Whether the phone drawer is open, held above the route rather than inside the
  * nav.
  *
- * `ProtectedRoute` renders `<Layout>Loading...</Layout>` while it waits for a
+ * `ProtectedRoute` renders `<Layout>` with a placeholder while it waits for a
  * role, and the page it then renders brings its own `Layout`. React sees a
  * different element in that position, so it throws the first one away -- nav
  * included. Anyone who tapped the menu in that window watched it open and
@@ -63,9 +64,7 @@ function ProtectedRoute({ children, requiredRoles }) {
   if (loadingAuth || loadingUserData) {
     return (
       <Layout>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-          Loading...
-        </div>
+        <PageSkeleton label="Loading" />
       </Layout>
     );
   }

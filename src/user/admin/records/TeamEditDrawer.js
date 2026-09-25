@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LinesSkeleton } from "../../../loadingUi";
 import { Alert, Button, Divider, MenuItem, TextField, Typography } from "@mui/material";
 import EditDrawer from "./EditDrawer";
 import { renameTeam } from "./recordEdits";
@@ -212,7 +213,7 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
 
   const chosen = slots.find((slot) => String(slot.batch) === String(batch));
 
-  if (loading) return <Alert severity="info">Loading the batches…</Alert>;
+  if (loading) return <LinesSkeleton label="Loading the batches" lines={2} />;
 
   if (!slots.length) {
     return (

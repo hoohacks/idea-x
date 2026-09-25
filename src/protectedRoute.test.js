@@ -71,7 +71,7 @@ describe("while the session is still resolving", () => {
   ])("waits for %s rather than redirecting", (_label, flags) => {
     renderGuard({ auth: { userCredential: null, ...flags } });
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: /loading/i })).toBeInTheDocument();
     expect(screen.queryByText("login page")).not.toBeInTheDocument();
     expect(screen.queryByText("secret content")).not.toBeInTheDocument();
   });
@@ -264,7 +264,7 @@ describe("the phone drawer across the loading swap", () => {
     const { rerender } = render(renderChrome(true));
 
     // the frame is up but the page is not: exactly when a first tap lands
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
     expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
 

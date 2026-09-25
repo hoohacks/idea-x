@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { memberIds } from "./teamMembers";
 import { personName } from "../../roles.js";
 import { leaveTeam } from "./teamMembership.js";
+import { PageSkeleton } from "../../loadingUi";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 import {
@@ -311,7 +312,7 @@ function Team() {
 
             <Layout maxWidth="sm">
                 {!teamData ? (
-                    <Typography variant="body2">Loading team…</Typography>
+                    <PageSkeleton label="Loading your team" cards={3} />
                 ) : (
                     <Stack spacing={2}>
                         <Box>
