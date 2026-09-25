@@ -14,8 +14,7 @@ import {
 } from "@mui/material";
 import Nav from "./siteNav";
 import PageFooter from "./siteFooter";
-import { pageMinHeight, tokens } from "./theme";
-import { EVENT } from "./eventInfo";
+import { pageMinHeight } from "./theme";
 
 /**
  * The frame both public registration pages sit in.
@@ -43,19 +42,20 @@ export function FactStrip({ facts }) {
   return (
     <Stack
       direction={{ xs: "column", sm: "row" }}
-      sx={{ flexWrap: "wrap", rowGap: { xs: 0.75, sm: 1 }, mt: 3 }}
+      sx={{ flexWrap: "wrap", rowGap: { xs: 0.75, sm: 1 }, mt: 2.5 }}
     >
       {facts.map((fact, index) => (
         <Typography
           key={fact}
-          variant="data"
+          variant="body2"
           sx={{
-            display: "block",
-            fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-            pl: { xs: 0, sm: index === 0 ? 0 : 2 },
-            pr: { xs: 0, sm: 2 },
-            borderLeft: { xs: 0, sm: index === 0 ? 0 : `1px solid ${tokens.NIGHT_LINE}` },
-            color: tokens.ON_NIGHT,
+            pl: { xs: 0, sm: index === 0 ? 0 : 1.75 },
+            pr: { xs: 0, sm: 1.75 },
+            borderLeft: { xs: 0, sm: index === 0 ? 0 : 1 },
+            borderColor: "divider",
+            fontVariantNumeric: "tabular-nums",
+            color: "text.primary",
+            fontWeight: 500,
           }}
         >
           {fact}
@@ -65,60 +65,33 @@ export function FactStrip({ facts }) {
   );
 }
 
-/**
- * The top of every signed-out page, set on the same night blue as the bar.
- *
- * It used to sit on the light canvas under a dark bar, so the first thing a
- * student saw was the chrome of an admin tool -- the logo in a strip, then a
- * form. Running the bar's colour on down through the title makes the bar and
- * the hero one piece, gives the crimson-and-white wordmark the only kind of
- * ground it works on, and leaves the form below it as plainly the next step.
- *
- * Full bleed, so it is passed to `PublicShell` as `hero` rather than rendered
- * inside the page's container. `compact` is the short band the sign-in card
- * sits across.
- */
-export function Hero({ eyebrow, title, facts, children, maxWidth = "lg", compact = false }) {
+export function Hero({ eyebrow, title, facts, children }) {
   return (
-    <Box sx={{ bgcolor: tokens.NIGHT, color: tokens.ON_NIGHT }}>
-      <Container
-        maxWidth={maxWidth}
+    <Box sx={{ pt: { xs: 5, md: 7 }, pb: { xs: 3, md: 4 } }}>
+      <Typography variant="overline" component="p">
+        {eyebrow}
+      </Typography>
+      <Typography
+        variant="h1"
         sx={{
-          pt: compact ? { xs: 4, sm: 5 } : { xs: 4, md: 6 },
-          // the compact band leaves room for the card that overlaps it
-          pb: compact ? { xs: 10, sm: 11 } : { xs: 5, md: 7 },
+          mt: 0.5,
+          maxWidth: "18ch",
+          fontSize: { xs: "2.25rem", sm: "3rem", md: "3.5rem" },
+          letterSpacing: "-0.035em",
+          lineHeight: 1.02,
         }}
       >
-        {eyebrow && (
-          <Typography variant="body2" component="p" sx={{ color: tokens.ON_NIGHT_MUTED, fontWeight: 500 }}>
-            {eyebrow}
-          </Typography>
-        )}
+        {title}
+      </Typography>
+      {facts && <FactStrip facts={facts} />}
+      {children && (
         <Typography
-          variant="h1"
-          sx={{
-            mt: eyebrow ? 0.75 : 0,
-            maxWidth: "18ch",
-            color: "#fff",
-            fontSize: compact
-              ? { xs: "1.75rem", sm: "2rem" }
-              : { xs: "2.5rem", sm: "3.25rem", md: "4rem" },
-            letterSpacing: "-0.035em",
-            lineHeight: 1.02,
-          }}
+          variant="body1"
+          sx={{ mt: 2.5, maxWidth: "62ch", color: "text.secondary" }}
         >
-          {title}
+          {children}
         </Typography>
-        {facts && <FactStrip facts={facts} />}
-        {children && (
-          <Typography
-            variant="body1"
-            sx={{ mt: 3, maxWidth: "62ch", color: tokens.ON_NIGHT_MUTED }}
-          >
-            {children}
-          </Typography>
-        )}
-      </Container>
+      )}
     </Box>
   );
 }
@@ -340,7 +313,7 @@ export function ResultDialog({ open, title, children, actions, onClose }) {
  * reset. They share the bar and the footer so that arriving from the marketing
  * site looks the same whichever one you land on.
  */
-export function PublicShell({ children, hero = null, maxWidth = "lg", pad = false }) {
+export function PublicShell({ children, maxWidth = "lg", pad = false }) {
   return (
     <Box
       sx={{
@@ -351,7 +324,6 @@ export function PublicShell({ children, hero = null, maxWidth = "lg", pad = fals
       }}
     >
       <Nav variant="public" />
-      {hero}
       <Container
         maxWidth={maxWidth}
         component="main"
@@ -378,33 +350,11 @@ export function PublicShell({ children, hero = null, maxWidth = "lg", pad = fals
   );
 }
 
-/**
- * Sign in and password reset: the event's name and date on a short night band,
- * and the form's card set across its lower edge. On its own the card floated
- * in an empty canvas with nothing to say which event it was the door to.
- */
-export function AuthFrame({ children }) {
-  return (
-    <PublicShell
-      maxWidth="xs"
-      hero={
-        <Hero
-          compact
-          maxWidth="xs"
-          title={`${EVENT.name} ${EVENT.year}`}
-          facts={[EVENT.dateLabel, EVENT.venue]}
-        />
-      }
-    >
-      <Box sx={{ mt: { xs: -7, sm: -8 }, mb: { xs: 5, sm: 8 } }}>{children}</Box>
-    </PublicShell>
-  );
-}
-
 export function RegistrationShell({ hero, children }) {
   return (
-    <PublicShell hero={hero}>
-      <Box sx={{ pt: { xs: 4, md: 6 } }}>{children}</Box>
+    <PublicShell>
+      {hero}
+      {children}
     </PublicShell>
   );
 }
