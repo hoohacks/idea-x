@@ -20,7 +20,8 @@ test("a competitor lands on a dashboard, not an empty page", async ({ page }) =>
   await goto(page, "/user/home");
 
   await expectPagePainted(page);
-  await expect(page.getByText(/Welcome/)).toBeVisible();
+  // the greeting is by name once the record has loaded
+  await expect(page.getByRole("heading", { level: 1, name: /^(Hi, .+|Welcome)$/ })).toBeVisible();
 });
 
 test("joining a team by id actually works", async ({ page, request }) => {

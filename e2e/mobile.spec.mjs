@@ -204,3 +204,58 @@ test("the menu still opens if it is tapped before the page has resolved", async 
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("button", { name: "Log out" })).toBeVisible({ timeout: 20_000 });
 });
+
+/**
+ * Every page, for every role, at phone width.
+ *
+ * The test above covers the four densest organizer pages. This sweeps the rest,
+ * because each of them has shipped a phone-only layout bug at some point: filter
+ * pills that widened the page, a two-by-two of buttons running off the edge, a
+ * settings row whose Save button floated free.
+ */
+const PHONE_SWEEP = {
+  competitor: ["/user/home", "/user/team", "/user/checkin", "/user/profile"],
+  judge: ["/user/home", "/user/judging", "/user/checkin", "/user/profile"],
+  admin: [
+    "/user/admin/schedule",
+    "/user/admin/teams",
+    "/user/admin/judges",
+    "/user/admin/search",
+    "/user/admin/metrics",
+    "/user/admin/control?tab=people",
+    "/user/admin/control?tab=data",
+    "/user/admin/control?tab=recovery",
+  ],
+};
+
+for (const [who, paths] of Object.entries(PHONE_SWEEP)) {
+  test(`every ${who} page fits a phone`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page, who);
+    for (const path of paths) {
+      await goto(page, path);
+      await expectPagePainted(page);
+      await expect(page.getByRole("heading", { level: 1 }), path).toBeVisible();
+      await expectNoSidewaysScroll(page);
+      await expectNoZoomOnFocus(page);
+    }
+  });
+}
+
+test("the tab bar is the phone's navigation, and Menu holds the rest", async ({ page }) => {
+  await signIn(page, "admin");
+  await goto(page, "/user/home");
+
+  const tabs = page.getByRole("navigation", { name: "Tabs" });
+  await expect(tabs).toBeVisible();
+  // the desktop rail gives way to it entirely
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
+  await expect(tabs.getByRole("link", { name: "Scan" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Open menu" }).click();
+  for (const name of ["Competitors", "Judging progress", "Control panel", "Log out"]) {
+    await expect(page.getByRole("button", { name })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Judging progress" }).click();
+  await expect(page).toHaveURL(/#\/user\/admin\/judging/);
+});
