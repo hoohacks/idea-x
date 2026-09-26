@@ -78,7 +78,7 @@ export function StatStrip({ stats = [], sx }) {
     );
 }
 
-export function PageHeader({ title, stats = [], progress, children }) {
+export function PageHeader({ title, stats = [], progress, progressLabel, children }) {
     return (
         <Box sx={{ mb: 3 }}>
             <Stack
@@ -96,6 +96,8 @@ export function PageHeader({ title, stats = [], progress, children }) {
             {typeof progress === "number" && progress > 0 && (
                 <LinearProgress
                     variant="determinate"
+                    // a bar with no name is announced as just "progress bar"
+                    aria-label={progressLabel ?? `${title} progress`}
                     value={Math.min(100, Math.max(0, progress))}
                     sx={{
                         mt: 1.5,

@@ -570,6 +570,7 @@ const RegistrationForm = () => {
                   {progress !== null && progress < 100 && (
                     <LinearProgress
                       variant="determinate"
+                      aria-label="Résumé upload"
                       value={progress}
                       sx={{ mt: 1.5, height: 4, borderRadius: 2 }}
                     />

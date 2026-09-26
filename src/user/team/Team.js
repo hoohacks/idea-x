@@ -427,6 +427,7 @@ function Team() {
                                             {uploadProgress !== null && uploadProgress < 100 && (
                                                 <LinearProgress
                                                     variant="determinate"
+                                                    aria-label="Pitch deck upload"
                                                     value={uploadProgress}
                                                     sx={{ mt: 1, height: 4, borderRadius: 2 }}
                                                 />

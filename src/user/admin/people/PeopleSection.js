@@ -475,7 +475,7 @@ function PersonRow({ person, busy, selected, onToggle, onRole, onAdmin, onReset,
           <MenuItem value="none">No role</MenuItem>
         </TextField>
 
-        <Tooltip title="Admin access. Sits on top of the role, so an admin can judge.">
+        <Tooltip describeChild title="Admin access. Sits on top of the role, so an admin can judge.">
           <FormControlLabel
             label="Admin"
             disabled={busy}
@@ -497,6 +497,9 @@ function PersonRow({ person, busy, selected, onToggle, onRole, onAdmin, onReset,
                 size="small"
                 checked={isAdmin}
                 onChange={(event) => onAdmin(event.target.checked)}
+                // named directly: inside a tooltip the label's own text is not
+                // reliably what assistive technology announces
+                inputProps={{ "aria-label": "Admin" }}
               />
             }
           />
@@ -519,14 +522,14 @@ function PersonRow({ person, busy, selected, onToggle, onRole, onAdmin, onReset,
         spacing={0.25}
         sx={{ gridArea: "more", display: { xs: "none", md: "flex" } }}
       >
-        <Tooltip title={person.email ? "Email them a password reset link" : "No email on file"}>
+        <Tooltip describeChild title={person.email ? "Email them a password reset link" : "No email on file"}>
           <span>
             <Button size="small" variant="text" disabled={busy || !person.email} onClick={onReset}>
               Reset
             </Button>
           </span>
         </Tooltip>
-        <Tooltip title="Records deleted by a role change">
+        <Tooltip describeChild title="Records deleted by a role change">
           <Button size="small" variant="text" disabled={busy} onClick={onHistory}>
             History
           </Button>

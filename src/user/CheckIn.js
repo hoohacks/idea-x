@@ -29,7 +29,13 @@ function CheckIn() {
             }}
           >
             {uid ? (
-              <QRCodeCanvas value={uid} size={220} />
+              <QRCodeCanvas
+                value={uid}
+                size={220}
+                // a canvas is an image to assistive technology; this is what it shows
+                role="img"
+                aria-label={`Check-in code${userData?.firstName ? ` for ${userData.firstName} ${userData.lastName ?? ""}`.trimEnd() : ""}`}
+              />
             ) : (
               <Typography variant="body2">No account found.</Typography>
             )}
