@@ -5,9 +5,9 @@ import { EVENT } from "./eventInfo";
  * One footer for the portal and the public forms. They used to be two near
  * copies that disagreed about whether the event name was a link.
  */
-function PageFooter({ maxWidth = "lg", flush = false }) {
+function PageFooter({ maxWidth = "lg" }) {
     return (
-        <Box component="footer" sx={{ borderTop: 1, borderColor: "divider", py: 2.5, mt: flush ? 0 : 6 }}>
+        <Box component="footer" sx={{ borderTop: 1, borderColor: "divider", py: 2.5, mt: 6 }}>
             <Container maxWidth={maxWidth}>
                 <Typography variant="body2" align="center">
                     {"© "}

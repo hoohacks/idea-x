@@ -72,7 +72,6 @@ function SignInForm() {
     <PublicShell maxWidth="xs" pad backdrop={PAST_WINNERS}>
       <AuthCard
         title="Welcome back"
-        subtitle="Sign in for your team, your judging list or the organizer dashboard."
         footer={
           <>
             New to {EVENT.name}?{" "}

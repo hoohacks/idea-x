@@ -42,6 +42,9 @@ import { hasRole } from "./roles";
 // The bar is white, so this is the ink cut of the logo: the original is crimson
 // and white on transparency, and on white its bulb and "thon" disappear.
 export const LOGO_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo-ink.png`;
+// the original cut, crimson and white, for the one place the bar sits on a
+// dark photo rather than on white
+const LOGO_ON_DARK_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo.png`;
 const LOGO_RATIO = 768 / 227;
 
 const PRIMARY = [
@@ -100,11 +103,11 @@ function initialsOf(userData) {
     return (first + last || email?.[0] || "?").toUpperCase();
 }
 
-export function Wordmark({ height = 30, to = "/user/home", href }) {
+export function Wordmark({ height = 30, to = "/user/home", href, onDark = false }) {
     const image = (
         <Box
             component="img"
-            src={LOGO_SRC}
+            src={onDark ? LOGO_ON_DARK_SRC : LOGO_SRC}
             alt="Ideathon"
             sx={{ display: "block", height, width: height * LOGO_RATIO }}
         />
@@ -162,7 +165,7 @@ function TopLink({ to, label, active }) {
 // which is why the menus had no outline and the drawer no width.
 const menuPaper = { sx: { minWidth: 220, mt: 0.75, py: 0.5 } };
 
-function Nav({ variant = "app" }) {
+function Nav({ variant = "app", overlay = false }) {
     const isPublic = variant === "public";
     const { pathname } = useLocation();
     const navigate = useNavigate();
@@ -218,10 +221,15 @@ function Nav({ variant = "app" }) {
 
     if (isPublic) {
         return (
-            <AppBar position="sticky">
+            <AppBar
+                position={overlay ? "absolute" : "sticky"}
+                // over the sign-in photos the bar has no ground of its own:
+                // the photos run up behind it rather than stopping at a white strip
+                sx={overlay ? { bgcolor: "transparent", borderBottom: "none" } : undefined}
+            >
                 <Container maxWidth="lg">
                     <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1 }}>
-                        <Wordmark height={30} href="https://ideathon.hoohacks.io" />
+                        <Wordmark height={30} href="https://ideathon.hoohacks.io" onDark={overlay} />
                         <Box sx={{ flexGrow: 1 }} />
                         {/* both doors, the red one for signing up -- leaving out
                             whichever one the person is already standing in */}

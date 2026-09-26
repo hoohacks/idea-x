@@ -366,7 +366,7 @@ export function ResultDialog({ open, title, children, actions, onClose }) {
  */
 function PhotoBackdrop({ photos }) {
   return (
-    <Box aria-hidden sx={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+    <Box aria-hidden sx={{ position: "fixed", inset: 0, overflow: "hidden" }}>
       <Box
         sx={{
           position: "absolute",
@@ -393,6 +393,35 @@ function PhotoBackdrop({ photos }) {
 }
 
 export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop = null }) {
+  // With photos behind it the page is one full-screen scene: the photos fill
+  // the whole window, the bar floats over them, and the card sits in the
+  // middle. The white footer strip is left off there; it read as a bar
+  // cutting the photos short.
+  if (backdrop) {
+    return (
+      <Box sx={{ ...pageMinHeight, position: "relative", display: "flex", flexDirection: "column" }}>
+        <PhotoBackdrop photos={backdrop} />
+        <Nav variant="public" overlay />
+        <Container
+          maxWidth={maxWidth}
+          component="main"
+          sx={{
+            flex: 1,
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            // clear of the floating bar above, with room below to match
+            pt: { xs: 10, sm: 12 },
+            pb: { xs: 5, sm: 8 },
+          }}
+        >
+          {children}
+        </Container>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -403,35 +432,28 @@ export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop =
       }}
     >
       <Nav variant="public" />
-      <Box sx={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
-        {backdrop && <PhotoBackdrop photos={backdrop} />}
-        <Container
-          maxWidth={maxWidth}
-          component="main"
-          sx={{
-            flex: 1,
-            position: "relative",
-            /*
-             * Room for the submit bar, which is pinned to the bottom of the
-             * viewport on a phone.
-             *
-             * Focusing a field makes the browser scroll it just barely into view,
-             * and "just barely" means underneath a bar that is sitting over the
-             * last 86 pixels of the screen -- so tapping Password put the cursor
-             * somewhere the person could not see, right as the keyboard opened.
-             * scroll-margin is what that scroll is told to leave clear.
-             */
-            "& input, & textarea": { scrollMarginBottom: 120 },
-            ...(pad ? { py: { xs: 5, sm: 8 } } : null),
-            // over photos the card is the only thing on the page, so it sits in
-            // the middle of them rather than at the top with space below
-            ...(backdrop ? { display: "flex", flexDirection: "column", justifyContent: "center" } : null),
-          }}
-        >
-          {children}
-        </Container>
-      </Box>
-      <PageFooter maxWidth={maxWidth} flush={Boolean(backdrop)} />
+      <Container
+        maxWidth={maxWidth}
+        component="main"
+        sx={{
+          flex: 1,
+          /*
+           * Room for the submit bar, which is pinned to the bottom of the
+           * viewport on a phone.
+           *
+           * Focusing a field makes the browser scroll it just barely into view,
+           * and "just barely" means underneath a bar that is sitting over the
+           * last 86 pixels of the screen -- so tapping Password put the cursor
+           * somewhere the person could not see, right as the keyboard opened.
+           * scroll-margin is what that scroll is told to leave clear.
+           */
+          "& input, & textarea": { scrollMarginBottom: 120 },
+          ...(pad ? { py: { xs: 5, sm: 8 } } : null),
+        }}
+      >
+        {children}
+      </Container>
+      <PageFooter maxWidth={maxWidth} />
     </Box>
   );
 }
