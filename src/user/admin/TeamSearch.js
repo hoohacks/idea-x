@@ -113,6 +113,8 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
 function TeamSearch() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
+  // "missing" is the list to chase as the deadline nears: who, and their members
+  const [show, setShow] = useState("all");
   const [teams, setTeams] = useState({});
   const [submittedCount, setSubmittedCount] = useState(0);
   const [judgeNames, setJudgeNames] = useState({});
@@ -223,6 +225,8 @@ function TeamSearch() {
     const needle = query.toLowerCase();
     const keys = Object.keys(teams).filter((key) => {
       const team = teams[key];
+      if (show === "missing" && team?.submitted) return false;
+      if (show === "submitted" && !team?.submitted) return false;
       return (
         (team?.name ?? "").toLowerCase().includes(needle) ||
         (team?.submission?.ideaName ?? "").toLowerCase().includes(needle)
@@ -237,7 +241,7 @@ function TeamSearch() {
       if (sortBy === "finalScore") return final(b) - final(a);
       return (teams[a]?.name ?? "").localeCompare(teams[b]?.name ?? "");
     });
-  }, [teams, query, sortBy, scoresFor, finalScoresFor]);
+  }, [teams, query, show, sortBy, scoresFor, finalScoresFor]);
 
   return (
     <Layout maxWidth="lg">
@@ -256,6 +260,16 @@ function TeamSearch() {
           placeholder="Search team or idea name"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+        />
+        <FilterChips
+          label="Show"
+          value={show}
+          onChange={setShow}
+          options={[
+            { value: "all", label: `All ${teamCount}` },
+            { value: "missing", label: `Not submitted ${teamCount - submittedCount}` },
+            { value: "submitted", label: `Submitted ${submittedCount}` },
+          ]}
         />
         <FilterChips
           label="Sort by"

@@ -265,3 +265,52 @@ describe("before organizers open submissions", () => {
     expect(screen.queryByText(/Submissions open on the day/)).not.toBeInTheDocument();
   });
 });
+
+describe("the submission deadline", () => {
+  const openTeam = async () => {
+    store["teams/t1"] = { name: "Lumen", members: { me: true } };
+    renderTeam();
+    await waitFor(() => expect(teamSnapshotCallback).not.toBeNull());
+    await act(async () => {
+      await emitTeamSnapshot();
+    });
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  test("with time to spare, the form says when it closes and how long is left", async () => {
+    store["config/submissionsCloseAt"] = Date.now() + (2 * 60 + 5) * 60_000 + 30_000;
+    await openTeam();
+    expect(screen.getByText(/Submissions close at .+, in 2 hours 5 minutes\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Save what you have/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/idea name/i)).toBeInTheDocument();
+  });
+
+  test("in the last half hour it becomes a warning", async () => {
+    store["config/submissionsCloseAt"] = Date.now() + 20 * 60_000 + 30_000;
+    await openTeam();
+    expect(screen.getByRole("alert")).toHaveTextContent(/in 20 minutes\. Save what you have\./);
+  });
+
+  test("after the deadline the form is gone, even though submissions are open", async () => {
+    store["config/submissionsCloseAt"] = Date.now() - 60_000;
+    await openTeam();
+    expect(screen.getByText(/Submissions closed at .+ find an organizer/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+  });
+
+  test("the form closes by itself when the deadline passes, without a reload", async () => {
+    // this Jest takes the timer flavour, not options, so the clock is set apart
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(new Date("2026-10-25T14:59:50-04:00"));
+    store["config/submissionsCloseAt"] = new Date("2026-10-25T15:00:00-04:00").getTime();
+    await openTeam();
+    expect(screen.getByLabelText(/idea name/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(16_000);
+    });
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Submissions closed at 3:00 PM\./)).toBeInTheDocument();
+  });
+});

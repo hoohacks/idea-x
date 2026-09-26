@@ -11,10 +11,11 @@ import { describeSupply, BATCH_COUNT } from "../judge/schedulePlan.js";
  *
  * It matters more than a version mismatch usually does: before version 5,
  * restoring a restore point that contains scores fails and changes nothing, and
- * before version 9 the database takes a team's submission whether or not
- * organizers have opened submissions -- only the page hides the form.
+ * before version 10 the database takes a team's submission whether or not
+ * organizers have opened submissions or the deadline has passed -- only the
+ * page hides the form -- and announcements cannot be posted at all.
  */
-export const REQUIRED_RULES_VERSION = 9;
+export const REQUIRED_RULES_VERSION = 10;
 
 /**
  * Where the event has got to, and what an organizer should do next.
@@ -195,8 +196,8 @@ function blockersFor({ config, legacyScoreTeams }) {
       id: "rules",
       title: `Publish database rules version ${REQUIRED_RULES_VERSION}`,
       detail: Number.isFinite(published)
-        ? `Version ${published} is recorded as published. Until ${REQUIRED_RULES_VERSION} is, the database does not enforce the submissions switch${published < 5 ? ", and restoring a restore point that contains scores fails and changes nothing" : ""}.`
-        : `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores may fail, and the database does not enforce the submissions switch.`,
+        ? `Version ${published} is recorded as published. Until ${REQUIRED_RULES_VERSION} is, the database does not enforce the submissions switch or deadline, and announcements cannot be posted${published < 5 ? ", and restoring a restore point that contains scores fails and changes nothing" : ""}.`
+        : `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores may fail, the database does not enforce the submissions switch or deadline, and announcements cannot be posted.`,
       how: "Paste database.rules.json into Realtime Database → Rules, then set config/rulesVersion to match.",
       to: "/user/admin/control?tab=setup",
     });

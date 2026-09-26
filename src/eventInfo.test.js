@@ -19,6 +19,8 @@ import {
   eventPhase,
   eventLocalToInstant,
   instantToEventLocal,
+  formatEventTime,
+  describeRemaining,
 } from "./eventInfo";
 
 describe("the start is an instant, not a set of digits", () => {
@@ -114,5 +116,35 @@ describe("which part of the day it is", () => {
   test("an unreadable start reads as before, not as happening now", () => {
     expect(eventPhase("not a date", start)).toBe("before");
     expect(eventPhase(null, start)).toBe("before");
+  });
+});
+
+describe("deadlines, said the way people at the event would say them", () => {
+  // 3:00 PM Eastern on the day, and 10:00 AM that morning
+  const threePm = new Date("2026-10-25T15:00:00-04:00");
+  const morning = new Date("2026-10-25T10:00:00-04:00");
+
+  test("a time later the same day is just the time", () => {
+    expect(formatEventTime(threePm, morning)).toBe("3:00 PM");
+  });
+
+  test("a time on another day names the day, so it is not read as today", () => {
+    expect(formatEventTime(threePm, new Date("2026-10-24T12:00:00-04:00"))).toBe("October 25 at 3:00 PM");
+  });
+
+  test("same day is judged in the event's zone, not UTC", () => {
+    // 11:30 PM Eastern is already the 26th in UTC
+    const late = new Date("2026-10-25T23:30:00-04:00");
+    expect(formatEventTime(late, morning)).toBe("11:30 PM");
+  });
+
+  test("time left, in words", () => {
+    expect(describeRemaining(20_000)).toBe("under a minute");
+    expect(describeRemaining(60_000)).toBe("1 minute");
+    expect(describeRemaining(42 * 60_000)).toBe("42 minutes");
+    expect(describeRemaining(60 * 60_000)).toBe("1 hour");
+    expect(describeRemaining(125 * 60_000)).toBe("2 hours 5 minutes");
+    expect(describeRemaining(5 * 24 * 60 * 60_000)).toBe("5 days");
+    expect(describeRemaining(-5)).toBe("under a minute");
   });
 });

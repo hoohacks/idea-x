@@ -291,6 +291,46 @@ describe("while submissions are closed", () => {
   });
 });
 
+/**
+ * The deadline, checked against the server's clock: a phone set an hour slow
+ * cannot buy a team extra time.
+ */
+describe("the submission deadline", () => {
+  const withDeadline = async (closeAt) => {
+    const world = baseWorld();
+    world.config.submissionsCloseAt = closeAt;
+    world.teams.team3 = { name: "Gamma", createdBy: "carol", submitted: false, members: { carol: true } };
+    await testEnv.clearDatabase();
+    await seed(testEnv, world);
+  };
+
+  test("before it, a member can still write", async () => {
+    await withDeadline(Date.now() + 60 * 60_000);
+    await assertSucceeds(set(ref(db("alice"), "teams/team1/submission/ideaName"), "Revised"));
+    await assertSucceeds(set(ref(db("carol"), "teams/team3/submitted"), true));
+  });
+
+  test("after it, the submission and the submitted flag are refused", async () => {
+    await withDeadline(Date.now() - 60_000);
+    await assertFails(set(ref(db("alice"), "teams/team1/submission/ideaName"), "Too late"));
+    await assertFails(set(ref(db("carol"), "teams/team3/submitted"), true));
+  });
+
+  test("an organizer can still enter one by hand after it", async () => {
+    await withDeadline(Date.now() - 60_000);
+    await assertSucceeds(set(ref(db("admin"), "teams/team3/submission"), { ideaName: "Paper form" }));
+  });
+
+  test("the deadline has to be a number the rules can compare", async () => {
+    await assertFails(set(ref(db("admin"), "config/submissionsCloseAt"), "3:00 PM"));
+    await assertSucceeds(set(ref(db("admin"), "config/submissionsCloseAt"), Date.now()));
+  });
+
+  test("a competitor cannot move it", async () => {
+    await assertFails(set(ref(db("alice"), "config/submissionsCloseAt"), Date.now() + 1e9));
+  });
+});
+
 describe("a judge reads the submissions they are assigned", () => {
   test("an assigned judge can read the submission", async () => {
     await assertSucceeds(get(ref(db("judge1"), "teams/team1/submission")));

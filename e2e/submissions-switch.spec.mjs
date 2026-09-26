@@ -64,3 +64,44 @@ test("closing submissions takes the form away from a team, and opening brings it
     await adminContext.close();
   }
 });
+
+test("a deadline in the past closes the form by itself, and removing it reopens it", async ({ browser, request }) => {
+  const person = await createTeamlessCompetitor(request);
+  const teamId = await createTeam(request, { name: "E2E Deadline Team" });
+  for (const [path, value] of [
+    [`teams/${teamId}/members/${person.uid}`, true],
+    [`competitors/${person.uid}/teamId`, JSON.stringify(teamId)],
+  ]) {
+    const res = await request.put(`${DB}/${path}.json?ns=${NS}`, { headers: ADMIN, data: value });
+    if (!res.ok()) throw new Error(`${path}: ${res.status()} ${await res.text()}`);
+  }
+
+  const competitorContext = await browser.newContext();
+  const adminContext = await browser.newContext();
+  try {
+    const competitor = await competitorContext.newPage();
+    await signIn(competitor, person);
+    await goto(competitor, "/user/team");
+    await expect(competitor.getByLabel("Idea name")).toBeVisible({ timeout: 20_000 });
+
+    const admin = await adminContext.newPage();
+    await signIn(admin, "admin");
+    await goto(admin, "/user/admin/control?tab=setup");
+    const deadline = admin.getByLabel("Submissions close");
+    const row = admin.locator("div").filter({ has: deadline }).filter({ has: admin.getByRole("button", { name: "Save" }) }).last();
+
+    // ten in the morning, a year ago: long gone
+    await deadline.fill(`${new Date().getFullYear() - 1}-10-25T10:00`);
+    await row.getByRole("button", { name: "Save" }).click();
+
+    await expect(competitor.getByText(/Submissions closed at/)).toBeVisible({ timeout: 15_000 });
+    await expect(competitor.getByLabel("Idea name")).toHaveCount(0);
+
+    await row.getByRole("button", { name: "Remove" }).click();
+    await expect(competitor.getByLabel("Idea name")).toBeVisible({ timeout: 15_000 });
+  } finally {
+    await request.delete(`${DB}/config/submissionsCloseAt.json?ns=${NS}`, { headers: ADMIN });
+    await competitorContext.close();
+    await adminContext.close();
+  }
+});

@@ -91,6 +91,21 @@ test("teams are listed by name, and by score on request", async () => {
   expect(teamNames()).toEqual(["Beacon", "Almanac", "Compass"]);
 });
 
+test("the teams still to submit can be pulled out, to chase before the deadline", async () => {
+  renderPage(<TeamSearch />);
+  await screen.findByText("Maya Okafor, Theo Brandt");
+  const show = within(screen.getByRole("group", { name: "Show" }));
+
+  fireEvent.click(show.getByRole("button", { name: "Not submitted 1" }));
+  expect(teamNames()).toEqual(["Compass"]);
+
+  fireEvent.click(show.getByRole("button", { name: "Submitted 2" }));
+  expect(teamNames()).toEqual(["Almanac", "Beacon"]);
+
+  fireEvent.click(show.getByRole("button", { name: "All 3" }));
+  expect(teamNames()).toEqual(["Almanac", "Beacon", "Compass"]);
+});
+
 test("search matches the idea name as well as the team name", async () => {
   renderPage(<TeamSearch />);
   await screen.findByText("Maya Okafor, Theo Brandt");

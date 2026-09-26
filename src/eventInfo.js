@@ -112,6 +112,37 @@ export function instantToEventLocal(value) {
   return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
 }
 
+/**
+ * A moment on the day, as people at the event would say it: "3:00 PM" when it
+ * falls on the same day (in the event's zone) as `now`, and "October 25 at
+ * 3:00 PM" otherwise, so a deadline set a day early is not mistaken for today's.
+ */
+export function formatEventTime(instant, now = new Date()) {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return "";
+  const time = date.toLocaleTimeString("en-US", {
+    timeZone: EVENT_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const sameDay = instantToEventLocal(date).slice(0, 10) === instantToEventLocal(new Date(now)).slice(0, 10);
+  if (sameDay) return time;
+  const day = date.toLocaleDateString("en-US", { timeZone: EVENT_TIME_ZONE, month: "long", day: "numeric" });
+  return `${day} at ${time}`;
+}
+
+/** How long until a moment, in words: "under a minute", "42 minutes", "2 hours 5 minutes". */
+export function describeRemaining(ms) {
+  const minutes = Math.floor(Math.max(0, ms) / 60000);
+  if (minutes < 1) return "under a minute";
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  if (!hours) return plural(rest, "minute");
+  if (hours >= 48) return plural(Math.floor(hours / 24), "day");
+  return rest ? `${plural(hours, "hour")} ${plural(rest, "minute")}` : plural(hours, "hour");
+}
+
 export const EVENT = {
   name: "Ideathon",
   edition: "sixth annual",

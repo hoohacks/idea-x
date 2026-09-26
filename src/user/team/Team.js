@@ -8,7 +8,7 @@ import { memberIds } from "./teamMembers";
 import { personName } from "../../roles.js";
 import { leaveTeam } from "./teamMembership.js";
 import { PageSkeleton } from "../../loadingUi";
-import { EVENT } from "../../eventInfo";
+import { EVENT, describeRemaining, formatEventTime } from "../../eventInfo";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 import {
@@ -59,6 +59,27 @@ function Team() {
             () => setSubmissionsOpen(false)
         );
     }, []);
+
+    // The optional deadline, as epoch ms. The rules check it against the
+    // server's clock; the page checks it against this one, ticking so the form
+    // closes and the countdown moves without a reload.
+    const [closeAt, setCloseAt] = useState(null);
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        return onValue(
+            ref(database, "config/submissionsCloseAt"),
+            (snapshot) => setCloseAt(typeof snapshot.val() === "number" ? snapshot.val() : null),
+            () => setCloseAt(null)
+        );
+    }, []);
+    useEffect(() => {
+        if (closeAt === null) return undefined;
+        const timer = setInterval(() => setNow(Date.now()), 15_000);
+        return () => clearInterval(timer);
+    }, [closeAt]);
+
+    const pastDeadline = closeAt !== null && now >= closeAt;
+    const accepting = submissionsOpen === true && !pastDeadline;
 
 
     // Get team ID from userData if available
@@ -367,7 +388,7 @@ function Team() {
                             </Card>
                         )}
 
-                        {schedule || submissionsOpen !== true ? (
+                        {schedule || !accepting ? (
                             teamData.submission ? (
                                 <Card>
                                     <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
@@ -405,7 +426,9 @@ function Team() {
                                     </CardContent>
                                 </Card>
                             ) : (
-                                !schedule && submissionsOpen === false && <SubmissionsClosed />
+                                !schedule && submissionsOpen !== null && (
+                                    <SubmissionsClosed closedAt={pastDeadline ? closeAt : null} now={now} />
+                                )
                             )
                         ) : (
                             <Card>
@@ -414,6 +437,7 @@ function Team() {
                                     <Typography variant="body2" sx={{ mb: 2 }}>
                                         Judges read this before you pitch.
                                     </Typography>
+                                    {closeAt !== null && <DeadlineNote closeAt={closeAt} now={now} />}
 
                                     <Stack spacing={2}>
                                         <TextField
@@ -547,21 +571,40 @@ function PitchLine({ label, time, room }) {
 }
 
 /**
- * Before organizers open submissions. The team itself is ready to go -- the ID
- * and members are on this page -- so this says when the form arrives and what
- * to do in the meantime, rather than showing a form the database would refuse.
+ * When the form is not taking submissions. Before organizers open it, this says
+ * when it arrives and that the team can keep growing; after the deadline, it
+ * says when it closed and who can still help. Either way it replaces a form the
+ * database would refuse.
  */
-function SubmissionsClosed() {
+function SubmissionsClosed({ closedAt, now }) {
     return (
         <Card>
             <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
                 <Typography variant="h5">Project submission</Typography>
                 <Typography variant="body1" sx={{ mt: 1, maxWidth: "65ch" }}>
-                    Submissions open on the day of the event, {EVENT.dayLabel}. Anyone can still join
-                    before then with your Team ID, and people keep finding teammates on the day, too.
+                    {closedAt !== null
+                        ? `Submissions closed at ${formatEventTime(closedAt, now)}. If your team still needs to hand something in, find an organizer.`
+                        : `Submissions open on the day of the event, ${EVENT.dayLabel}. Anyone can still join before then with your Team ID, and people keep finding teammates on the day, too.`}
                 </Typography>
             </CardContent>
         </Card>
+    );
+}
+
+/**
+ * The deadline above the form. A quiet line while there is time, and a warning
+ * in the last half hour, when a team that has not saved needs to hear it.
+ */
+function DeadlineNote({ closeAt, now }) {
+    const left = closeAt - now;
+    const text = `Submissions close at ${formatEventTime(closeAt, now)}, in ${describeRemaining(left)}.`;
+    if (left <= 30 * 60_000) {
+        return <Alert severity="warning" sx={{ mb: 2 }}>{text} Save what you have.</Alert>;
+    }
+    return (
+        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: "text.primary" }}>
+            {text}
+        </Typography>
     );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, TextField } from "@mui/material";
 import { FIELD, Section, SettingList, SettingRow, StateToggle } from "../adminUi";
-import { setEventStart, setSubmissionsOpen } from "./eventConfig";
+import { setEventStart, setSubmissionsCloseAt, setSubmissionsOpen } from "./eventConfig";
 import { EVENT_START, eventLocalToInstant, instantToEventLocal } from "../../../eventInfo";
 
 /**
@@ -23,6 +23,24 @@ export default function EventSection({ config, onResult }) {
   const [busy, setBusy] = useState(false);
   const [toggling, setToggling] = useState(false);
   const submissionsOpen = config.submissionsOpen === true;
+
+  // the deadline is stored as epoch ms; the field speaks event wall clock
+  const storedClose = typeof config.submissionsCloseAt === "number" ? instantToEventLocal(new Date(config.submissionsCloseAt)) : "";
+  const [closeValue, setCloseValue] = useState(storedClose);
+  const [savingClose, setSavingClose] = useState(false);
+  useEffect(() => { setCloseValue(storedClose); }, [storedClose]);
+
+  const saveClose = async (next) => {
+    setSavingClose(true);
+    try {
+      onResult(
+        await setSubmissionsCloseAt(next ? eventLocalToInstant(next).getTime() : null),
+        next ? "Submission deadline saved" : "Submission deadline removed"
+      );
+    } finally {
+      setSavingClose(false);
+    }
+  };
 
   useEffect(() => { setValue(instantToEventLocal(stored)); }, [stored]);
 
@@ -82,6 +100,31 @@ export default function EventSection({ config, onResult }) {
                 }
               }}
             />
+          </SettingRow>
+          <SettingRow
+            label="Submissions close"
+            hint="Optional. At this time the form closes by itself, even while submissions are open, and teams see a countdown to it. Leave it empty to close by hand."
+          >
+            <TextField
+              type="datetime-local"
+              inputProps={{ "aria-label": "Submissions close" }}
+              value={closeValue}
+              onChange={(event) => setCloseValue(event.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: FIELD.datetime }}
+            />
+            <Button
+              variant="outlined"
+              disabled={savingClose || !closeValue || closeValue === storedClose}
+              onClick={() => saveClose(closeValue)}
+            >
+              Save
+            </Button>
+            {storedClose && (
+              <Button variant="text" disabled={savingClose} onClick={() => saveClose(null)}>
+                Remove
+              </Button>
+            )}
           </SettingRow>
         </SettingList>
       </Card>
