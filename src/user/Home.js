@@ -159,7 +159,7 @@ function Home() {
                       key: "team",
                       icon: <PiUsers />,
                       title: "Find a team",
-                      body: "Nobody pitches alone. Start a team and share the ID, or join one a friend has already made.",
+                      body: "Start a team and share the ID, or join one a friend has already made. No team yet? That is fine: you can find teammates on the day of the event.",
                       actions: (
                           <>
                               <Button variant="contained" component={RouterLink} to="/user/team/create">
