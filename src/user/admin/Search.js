@@ -5,15 +5,19 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import {
   Alert,
+  Avatar,
+  Box,
   Button,
+  Card,
   Chip,
-  Link,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
+import { PiArrowSquareOut, PiGraduationCap, PiUsersThree } from "react-icons/pi";
 import Layout from "../Layout";
-import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
+import { schoolLabel } from "../../eventInfo";
+import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, StateToggle } from "./adminUi";
 import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
 
 // dietary values are meant to be the small fixed lowercase set Registration.js
@@ -24,6 +28,113 @@ import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
 // exactly like "none" instead of showing catering a bogus dietary flag and
 // splitting the filter into two buckets for what is really one.
 const isNoDietaryRestriction = (value) => !value || String(value).trim().toLowerCase() === "none";
+
+function initialsOf(person) {
+  return `${person.firstName?.[0] ?? ""}${person.lastName?.[0] ?? ""}`.toUpperCase() || "?";
+}
+
+function CompetitorCard({ person, teamName, onEdit, onCheckIn }) {
+  const fullName = `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim() || "Unnamed competitor";
+  const isCheckedIn = Boolean(person.checkedIn);
+  const school = schoolLabel(person.uvaSchool);
+  // the form stores a graduation year; older records hold "Fourth Year" and
+  // the like, which read wrong after "Class of"
+  const year = person.schoolYear
+    ? /^\d{4}$/.test(String(person.schoolYear)) ? `Class of ${person.schoolYear}` : String(person.schoolYear)
+    : null;
+  const studies = [person.major, year]
+    .filter(Boolean)
+    .join(", ");
+  const hasResume = person.resume && person.resume !== "none";
+
+  return (
+    <Card sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5, minWidth: 0 }}>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+        <Avatar sx={{ width: 44, height: 44, fontSize: "0.9375rem", bgcolor: "background.paper", color: "text.primary" }}>
+          {initialsOf(person)}
+        </Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700, color: "text.primary" }} noWrap>
+            {fullName}
+          </Typography>
+          <Typography variant="body2" noWrap title={person.email}>
+            {person.email}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Stack spacing={0.75}>
+        <Detail icon={<PiUsersThree />}>
+          {teamName ? (
+            <Box component="span" sx={{ fontWeight: 600, color: "text.primary" }}>{teamName}</Box>
+          ) : (
+            "No team yet"
+          )}
+        </Detail>
+        {(school || studies) && (
+          <Detail icon={<PiGraduationCap />}>
+            {[studies, school].filter(Boolean).join(" \u00b7 ")}
+          </Detail>
+        )}
+      </Stack>
+
+      {(!isNoDietaryRestriction(person.dietaryRestriction) || person.foodCheckIn) && (
+        <Stack direction="row" sx={{ gap: 0.75, flexWrap: "wrap" }}>
+          {!isNoDietaryRestriction(person.dietaryRestriction) && (
+            <Chip
+              label={person.dietaryRestriction}
+              size="small"
+              color="warning"
+              sx={{ textTransform: "capitalize" }}
+            />
+          )}
+          {person.foodCheckIn && <Chip label="Got food" size="small" color="success" />}
+        </Stack>
+      )}
+
+      <Stack direction="row" alignItems="center" sx={{ gap: 1, mt: "auto", pt: 0.5 }}>
+        {hasResume && (
+          <Button
+            size="small"
+            variant="text"
+            href={person.resume}
+            target="_blank"
+            rel="noopener noreferrer"
+            endIcon={<PiArrowSquareOut />}
+            sx={{ px: 1 }}
+          >
+            Resume
+          </Button>
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Button size="small" variant="outlined" onClick={onEdit} sx={{ bgcolor: "background.paper" }}>
+          Edit
+        </Button>
+        <StateToggle
+          on={isCheckedIn}
+          onLabel="Checked in"
+          offLabel="Check in"
+          onClick={onCheckIn}
+          minWidth={118}
+        />
+      </Stack>
+    </Card>
+  );
+}
+
+/** One line of a card: a small icon and what it labels. */
+function Detail({ icon, children }) {
+  return (
+    <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ minWidth: 0 }}>
+      <Box aria-hidden sx={{ fontSize: 18, lineHeight: 0, mt: "1px", color: "text.secondary", flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Typography variant="body2" sx={{ minWidth: 0 }}>
+        {children}
+      </Typography>
+    </Stack>
+  );
+}
 
 function Search() {
   const [query, setQuery] = useState("");
@@ -146,74 +257,35 @@ function Search() {
         </FilterGroups>
       </FilterBar>
 
-      <RowList empty="No competitors match those filters.">
-        {results.map((person) => {
-          const fullName =
-            `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim() ||
-            "Unnamed competitor";
-          const isCheckedIn = Boolean(person.checkedIn);
-
-          return (
-            // the accent marks the row that still needs something doing to
-            // it, the same as it does on the judging page -- see the note on
-            // Row in adminUi. Flagging the settled rows instead put a bar on
-            // every line of a well-run event, which is the state nobody has to
-            // go looking for.
-            <Row key={person.id} accent={!isCheckedIn}>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                spacing={1}
-              >
-                <Stack sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
-                    <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
-                    {!isNoDietaryRestriction(person.dietaryRestriction) && (
-                      <Chip
-                        label={person.dietaryRestriction}
-                        size="small"
-                        variant="outlined"
-                        sx={{ textTransform: "capitalize" }}
-                      />
-                    )}
-                    {person.foodCheckIn && (
-                      <Chip label="got food" size="small" variant="outlined" />
-                    )}
-                  </Stack>
-                  <Stack sx={{ gap: 1.5 }} direction="row" alignItems="baseline" flexWrap="wrap">
-                    <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
-                      {person.email}
-                    </Typography>
-                    {person.resume && person.resume !== "none" && (
-                      <Link
-                        href={person.resume}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="body2"
-                      >
-                        Resume
-                      </Link>
-                    )}
-                  </Stack>
-                </Stack>
-
-                <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>
-                  <Button size="small" variant="outlined" onClick={() => setEditing(person)}>
-                    Edit
-                  </Button>
-                  <StateToggle
-                    on={isCheckedIn}
-                    onLabel="Checked in"
-                    offLabel="Check in"
-                    onClick={() => handleCheckIn(person)}
-                    minWidth={124}
-                  />
-                </Stack>
-              </Stack>
-            </Row>
-          );
-        })}
-      </RowList>
+      {results.length === 0 ? (
+        <Card sx={{ p: 4 }}>
+          <Typography variant="body2" align="center">
+            No competitors match those filters.
+          </Typography>
+        </Card>
+      ) : (
+        // A card each, in a grid: the page is a roster of people, and a card
+        // keeps who someone is, their team, what they study and where they are
+        // on the day together. The old rows had a name and an email and two
+        // buttons, with the rest of the record only reachable through Edit.
+        <Box
+          sx={{
+            display: "grid",
+            gap: 1.5,
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" },
+          }}
+        >
+          {results.map((person) => (
+            <CompetitorCard
+              key={person.id}
+              person={person}
+              teamName={person.teamId ? teams[person.teamId]?.name : null}
+              onEdit={() => setEditing(person)}
+              onCheckIn={() => handleCheckIn(person)}
+            />
+          ))}
+        </Box>
+      )}
 
       {editing && (
         <CompetitorEditDrawer
