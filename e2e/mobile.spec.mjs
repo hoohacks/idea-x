@@ -55,17 +55,15 @@ async function expectNoZoomOnFocus(page) {
   expect(small, "fields this small make iOS zoom the page and never zoom back").toEqual([]);
 }
 
-test("a judge can reach their cards through the drawer", async ({ page }) => {
+test("a judge can reach their cards from the tab bar", async ({ page }) => {
   await signIn(page, judge(6));
   await goto(page, "/user/home");
   await expectPagePainted(page);
   await expectNoSidewaysScroll(page);
 
-  // The desktop nav collapses to a drawer at this width. Its entries are
-  // ListItemButtons, so they are buttons rather than links.
-  await page.getByRole("button", { name: "Open menu" }).click();
-
-  const judging = page.getByRole("button", { name: "Judging", exact: true });
+  // At this width the desktop rail gives way to a tab bar along the bottom,
+  // and a judge's cards are one of its tabs.
+  const judging = page.getByRole("navigation", { name: "Tabs" }).getByRole("link", { name: "Judging" });
   await expect(judging).toBeVisible({ timeout: 15_000 });
   await judging.click();
 

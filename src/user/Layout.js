@@ -1,5 +1,5 @@
 import { Box, Container } from "@mui/material";
-import Nav from "../siteNav";
+import Nav, { RAIL_WIDTH, TAB_BAR_HEIGHT } from "../siteNav";
 import PageFooter from "../siteFooter";
 import { pageMinHeight } from "../theme";
 
@@ -19,6 +19,12 @@ function Layout({ children, maxWidth = "md", bleed = false }) {
                 display: "flex",
                 flexDirection: "column",
                 bgcolor: "background.default",
+                // clear of the rail on a laptop, and of the tab bar on a phone
+                pl: { md: `${RAIL_WIDTH}px` },
+                pb: {
+                    xs: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
+                    md: 0,
+                },
             }}
         >
             <Nav />
