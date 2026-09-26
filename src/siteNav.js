@@ -261,16 +261,24 @@ function Nav({ variant = "app", overlay = false }) {
             >
                 <Container maxWidth="lg">
                     <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1 }}>
-                        <Wordmark height={30} href="https://ideathon.hoohacks.io" onDark={overlay} />
+                        {/* Over the sign-in photos the bar is only the way back
+                            to the event site: the card below already carries
+                            the mark and its own link to the other door, and a
+                            second red button up here pulled against Sign in. */}
+                        <Wordmark
+                            height={overlay ? 24 : 30}
+                            href="https://ideathon.hoohacks.io"
+                            onDark={overlay}
+                        />
                         <Box sx={{ flexGrow: 1 }} />
                         {/* both doors, the red one for signing up -- leaving out
                             whichever one the person is already standing in */}
-                        {!pathname.startsWith("/login") && (
+                        {!overlay && !pathname.startsWith("/login") && (
                             <Button component={Link} to="/login" variant="outlined">
                                 Sign in
                             </Button>
                         )}
-                        {!onRegistrationPage && (
+                        {!overlay && !onRegistrationPage && (
                             <Button component={Link} to="/ideathon-registration" variant="contained">
                                 Register
                             </Button>
