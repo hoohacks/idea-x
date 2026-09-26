@@ -191,3 +191,32 @@ describe("a legacy array survives being joined before it is migrated", () => {
     expect(memberIds({ a: true, b: null, c: false })).toEqual(["a"]);
   });
 });
+
+test("an ID typed without its leading dash still finds the team", async () => {
+  // push keys start with a dash, and people read it as punctuation and drop it
+  mockGet.mockImplementation(async ({ path }) => {
+    if (path === "competitors/me/teamId") return snap(null);
+    if (path === "teams/-Abc123/name") return snap("Lumen");
+    return snap(null);
+  });
+
+  const result = await joinTeam("Abc123");
+
+  expect(result).toMatchObject({ ok: true, teamId: "-Abc123", teamName: "Lumen" });
+  expect(mockUpdate).toHaveBeenCalledWith(expect.anything(), {
+    "teams/-Abc123/members/me": true,
+    "competitors/me/teamId": "-Abc123",
+  });
+});
+
+test("an ID that matches neither with nor without the dash is still not found", async () => {
+  mockGet.mockImplementation(async ({ path }) => {
+    if (path === "competitors/me/teamId") return snap(null);
+    return snap(null);
+  });
+
+  const result = await joinTeam("nope");
+
+  expect(result).toEqual({ ok: false, error: 'No team found with the ID "nope".' });
+  expect(mockUpdate).not.toHaveBeenCalled();
+});

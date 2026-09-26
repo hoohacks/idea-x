@@ -1,75 +1,77 @@
 import { createTheme } from "@mui/material/styles";
+import { PiCaretDown, PiCheckCircle, PiInfo, PiWarning, PiWarningCircle } from "react-icons/pi";
 
 /**
  * One theme for the whole app.
  *
- * This is an operations tool before it is anything else. Two of its thirty
- * screens are public sign-up forms; the rest are people running a live event
- * against a clock -- building a judging schedule, watching which team has no
- * scores with forty minutes left, deciding who is in the final round. It is
- * designed for that: legible under pressure, dense where density helps, and
- * quiet everywhere else.
+ * White chrome, warm-cream surfaces that recede, one saturated red for the
+ * action to take, and a shape vocabulary of exactly three radii -- 16px for
+ * buttons, fields and cards, 32px for dialogs, and a full pill for chips and
+ * avatars.
  *
- * Three rules hold it together.
+ * **The red is the logo's crimson.** It sits above every button on the site,
+ * so any other red beside it reads as a mistake.
  *
- * **The accent is the brand, and the alert is not.** Crimson carries the
- * interface: primary actions, the progress meter, focus rings. What it must not
- * do is double as the alert colour -- "Publish schedule" and "3 teams have no
- * scores at all" cannot read at the same volume on a page whose entire job is
- * telling you which is which. So the error red is a deliberately darker
- * oxblood, in the same family but plainly not the same colour.
+ * **State keeps its colours.** This is an operations tool whose whole job on
+ * the day is telling an organizer which team has no scores: error is an
+ * oxblood, success a deep green on pale green, caution an amber.
  *
- * **The numbers are the content.** Times, rooms, slots, scores, batches and
- * counts are set in IBM Plex Mono with tabular figures, so a schedule grid or a
- * progress list scans like a departure board rather than a paragraph. Use the
- * `data` typography variant for anything an organizer reads off the screen and
- * acts on.
- *
- * **Hierarchy comes from weight and size, not from a second voice.** One family
- * for everything spoken. The old pairing put a signage face on the headings,
- * which reads as a poster for the event rather than the tool that runs it.
- *
- * The chrome is dark because the logo decides it: ideathon-logo.png is two inks
- * on transparency, crimson and white, and the white half is half the wordmark.
- * There is no light surface it can sit on.
+ * **Figures are tabular.** No monospace -- one family everywhere -- but Inter's
+ * tabular figures keep a column of times or scores lined up. That is the
+ * `data` variant.
  */
 
-// Brand. Sampled from the logo: every crimson pixel in it is exactly this, and
-// it carries the interface -- primary actions, the progress meter, focus rings.
+// Brand. Sampled from the logo: every crimson pixel in it is exactly this.
+// Reserved for the primary action, the active tab, and the wordmark.
 const BRAND = "#d62749";
 const BRAND_DARK = "#b41f3c";
 const BRAND_WASH = "#fdf0f3";
 
-// The interface itself.
-const INK = "#14171f";
-const INK_HOVER = "#000208";
-const MUTED = "#5b6472";
-const LINE = "#e3e6eb";
-const LINE_STRONG = "#c8ccd4";
+// Text, darkest to lightest.
+// near-black rather than #000: pure black on white is harsher than the rest
+// of the palette, and flattens the step between a heading and its body text
+const INK = "#111110";
+const INK_HOVER = "#262622";
+const BODY_TEXT = "#33332e";
+const MUTED = "#62625b";
+const ASH = "#91918c";
+
+// Surfaces and rules.
 const SURFACE = "#ffffff";
-const CANVAS = "#f7f8fa";
+const CANVAS = "#ffffff";
+const SURFACE_SOFT = "#fbfbf9";
+const SURFACE_CARD = "#f6f6f3";
+const SECONDARY_BG = "#e5e5e0";
+const SECONDARY_PRESSED = "#c8c8c1";
+const LINE = "#e5e5e0";
+const LINE_STRONG = "#dadad3";
 
-// State. Deliberately not the brand crimson: an alert and a brand mark that
-// look alike is the problem this palette exists to fix. Same red family, so it
-// still reads as an error without being taught -- but 2.5x darker than the
-// brand, which is what actually separates them on screen. A first pass used
-// #b3261e and it was only 15 degrees of hue and 9% lightness away: close
-// enough that an alert beside the wordmark read as more branding.
-const DANGER = "#8c1d18";
-const CAUTION = "#a15c07";
-const GOOD = "#146c43";
+// State.
+const DANGER = "#9e0a0a";
+const DANGER_PALE = "#fbe9e9";
+const CAUTION = "#8a4f06";
+const CAUTION_PALE = "#fdf0dc";
+const GOOD = "#103c25";
+const GOOD_PALE = "#c7f0da";
 
-// Chrome. A blue-black rather than a grey-black -- it comes off the original
-// event artwork, and it is what makes the crimson read warm rather than pink.
-const NIGHT = "#0c0a20";
-const NIGHT_RAISED = "#1b1840";
-const NIGHT_LINE = "#2e2a55";
-const ON_NIGHT = "#edecf5";
-const ON_NIGHT_MUTED = "#9c98bd";
+const FOCUS = "#435ee5";
+
+// Dark. Only the camera scanner still sits on a dark ground, where a light page
+// around a live viewfinder would glare.
+const NIGHT = "#262622";
+const NIGHT_RAISED = "#33332e";
+const NIGHT_LINE = "#4a4a44";
+const ON_NIGHT = "#ffffff";
+const ON_NIGHT_MUTED = "rgba(255,255,255,0.7)";
 
 const BODY =
-  '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-const MONO = '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+// kept as a name for anything that asked for "the data face"; it is the same
+// family now, and `data` switches on tabular figures instead
+const MONO = BODY;
+
+const RADIUS = 16;
+const RADIUS_LG = 32;
 
 // kept so anything that referenced the old roles still resolves
 const DISPLAY = BODY;
@@ -77,80 +79,77 @@ const ACCENT = BRAND;
 const ACCENT_DARK = BRAND_DARK;
 const ACCENT_WASH = BRAND_WASH;
 
+// MUI positions its select arrow by class name, so the icon has to accept one
+function SelectCaret(props) {
+  return <PiCaretDown {...props} style={{ width: 18, height: 18, right: 12, color: INK }} />;
+}
+
 const theme = createTheme({
   palette: {
     primary: { main: BRAND, dark: BRAND_DARK, contrastText: "#fff" },
     secondary: { main: INK, dark: INK_HOVER, contrastText: "#fff" },
-    error: { main: DANGER },
-    warning: { main: CAUTION },
-    success: { main: GOOD },
-    info: { main: INK },
+    error: { main: DANGER, light: DANGER_PALE },
+    warning: { main: CAUTION, light: CAUTION_PALE },
+    success: { main: GOOD, light: GOOD_PALE },
+    info: { main: INK, light: SURFACE_CARD },
     background: { default: CANVAS, paper: SURFACE },
-    text: { primary: INK, secondary: MUTED },
+    text: { primary: INK, secondary: MUTED, disabled: ASH },
     divider: LINE,
+    action: { hover: SURFACE_CARD, selected: SECONDARY_BG, disabledBackground: SURFACE_CARD, disabled: ASH },
   },
 
-  shape: { borderRadius: 6 },
+  // MUI multiplies this; 8 keeps `borderRadius: 2` meaning 16px in an sx
+  shape: { borderRadius: 8 },
 
   typography: {
     fontFamily: BODY,
 
-    // Page and section titles. One family, so the steps are weight and size.
-    h1: { fontSize: "1.75rem", fontWeight: 600, letterSpacing: "-0.021em", lineHeight: 1.2 },
-    h2: { fontSize: "1.375rem", fontWeight: 600, letterSpacing: "-0.016em", lineHeight: 1.25 },
-    h3: { fontSize: "1.0625rem", fontWeight: 600, letterSpacing: "-0.008em" },
-    h4: { fontSize: "0.9375rem", fontWeight: 600 },
-    h5: { fontSize: "0.9375rem", fontWeight: 600 },
-    h6: { fontSize: "0.875rem", fontWeight: 600 },
+    // Tight tracking on the large sizes is part of the voice.
+    h1: { color: INK, fontSize: "1.75rem", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.2 },
+    h2: { color: INK, fontSize: "1.375rem", fontWeight: 600, letterSpacing: "-0.01em", lineHeight: 1.25 },
+    h3: { color: INK, fontSize: "1.125rem", fontWeight: 600, lineHeight: 1.3 },
+    h4: { color: INK, fontSize: "1rem", fontWeight: 600, lineHeight: 1.4 },
+    h5: { color: INK, fontSize: "1rem", fontWeight: 600, lineHeight: 1.4 },
+    h6: { color: INK, fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.4 },
 
-    body1: { fontSize: "0.9375rem", lineHeight: 1.55 },
-    body2: { fontSize: "0.875rem", lineHeight: 1.5, color: MUTED },
-    caption: { fontSize: "0.8125rem", lineHeight: 1.45, color: MUTED },
-    button: { textTransform: "none", fontWeight: 500, letterSpacing: 0, fontSize: "0.875rem" },
+    body1: { fontSize: "1rem", lineHeight: 1.4, color: BODY_TEXT },
+    body2: { fontSize: "0.875rem", lineHeight: 1.4, color: MUTED },
+    caption: { fontSize: "0.75rem", lineHeight: 1.5, fontWeight: 500, color: MUTED },
+    button: { textTransform: "none", fontWeight: 700, letterSpacing: 0, fontSize: "0.875rem" },
 
-    // Structural label above a section or a stat.
+    // A small section label. Sentence case, in the body face.
     overline: {
-      fontSize: "0.6875rem",
-      fontWeight: 600,
-      letterSpacing: "0.07em",
-      textTransform: "uppercase",
-      lineHeight: 1.6,
-      color: MUTED,
+      fontSize: "0.875rem",
+      fontWeight: 700,
+      letterSpacing: 0,
+      textTransform: "none",
+      lineHeight: 1.4,
+      color: INK,
     },
 
     /**
-     * The heading on a block of settings.
-     *
-     * Nine sections of the control panel each wrote `variant="h2"` with an
-     * inline `fontSize: "1.1rem"` -- a tenth size, 0.6px away from h3, that
-     * existed only because the scale appeared to have no slot for "smaller than
-     * a page title, larger than a label". It has one. This is that slot, named,
-     * so a section heading is a decision made once rather than a number copied
-     * eight times and drifted on the ninth.
-     *
-     * Sized as h3 and mapped to `<h2>`: these are the top-level divisions of a
-     * page whose title is the h1, so the outline has to say so even though the
-     * type does not need a step of its own.
+     * The heading on a block of settings: smaller than a page title, larger
+     * than a label. Mapped to `<h2>`, because these are the top-level divisions
+     * of a page whose title is the h1.
      */
     sectionTitle: {
-      fontSize: "1.0625rem",
+      color: INK,
+      fontSize: "1.125rem",
       fontWeight: 600,
-      letterSpacing: "-0.008em",
       lineHeight: 1.3,
     },
 
     /**
      * Operational data: a time, a room, a slot, a score, a count.
      *
-     * Mono with tabular figures so a column of them lines up and a changed
-     * digit does not shift the ones beside it. `<Typography variant="data">`,
-     * or `theme.typography.data` spread into an sx.
+     * Tabular figures so a column of them lines up and a changed digit does
+     * not shift the ones beside it. `<Typography variant="data">`, or
+     * `theme.typography.data` spread into an sx.
      */
     data: {
-      fontFamily: MONO,
-      fontSize: "0.8125rem",
-      fontWeight: 500,
-      letterSpacing: "-0.01em",
+      fontFamily: BODY,
+      fontSize: "0.875rem",
+      fontWeight: 600,
       fontVariantNumeric: "tabular-nums",
       fontFeatureSettings: '"tnum" 1',
     },
@@ -159,10 +158,10 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        body: { backgroundColor: CANVAS, color: INK },
-        // Every interactive element gets the same ring. Browsers disagree on
-        // the default and MUI removes several of them.
-        ":focus-visible": { outline: `2px solid ${BRAND}`, outlineOffset: 2 },
+        body: { backgroundColor: CANVAS, color: BODY_TEXT },
+        // The system's focus signal: a blue ring with a white gap, the same on
+        // every interactive element whatever the browser's default.
+        ":focus-visible": { outline: `2px solid ${FOCUS}`, outlineOffset: 2 },
       },
     },
 
@@ -171,140 +170,315 @@ const theme = createTheme({
     },
 
     MuiButton: {
-      defaultProps: { disableElevation: true },
+      defaultProps: { disableElevation: true, disableRipple: true },
       styleOverrides: {
-        root: { paddingInline: 14, minHeight: 36, borderRadius: 6 },
-        // colour change only -- no scaling, no shadow bloom
-        containedPrimary: { "&:hover": { backgroundColor: BRAND_DARK } },
-        outlined: {
-          borderColor: LINE_STRONG,
-          color: INK,
-          "&:hover": { borderColor: INK, backgroundColor: CANVAS },
+        root: {
+          paddingInline: 16,
+          minHeight: 40,
+          borderRadius: RADIUS,
+          // a slight press, so a tap on a phone visibly lands; reduced motion
+          // collapses the transition to nothing (index.css)
+          transition: "background-color 150ms ease, transform 120ms ease",
+          "&:active:not(.Mui-disabled)": { transform: "scale(0.98)" },
+          "&.Mui-disabled": { backgroundColor: SURFACE_CARD, color: ASH, borderColor: "transparent" },
         },
-        text: { "&:hover": { backgroundColor: CANVAS } },
-        sizeSmall: { minHeight: 30, paddingInline: 10, fontSize: "0.8125rem" },
-        sizeLarge: { minHeight: 44, fontSize: "0.9375rem" },
+        containedPrimary: {
+          "&:hover": { backgroundColor: BRAND_DARK },
+          "&:active": { backgroundColor: BRAND_DARK },
+        },
+        containedSecondary: {
+          "&:hover": { backgroundColor: INK_HOVER },
+        },
+        // No outlined buttons in this system: "outlined" is the grey-cream
+        // secondary button, so every existing call site gets it for free.
+        outlined: {
+          backgroundColor: SECONDARY_BG,
+          border: "1px solid transparent",
+          color: INK,
+          "&:hover": { backgroundColor: SECONDARY_PRESSED, border: "1px solid transparent" },
+        },
+        outlinedPrimary: { color: INK },
+        text: {
+          color: INK,
+          "&:hover": { backgroundColor: SURFACE_CARD },
+        },
+        textPrimary: { color: INK },
+        sizeSmall: { minHeight: 32, paddingInline: 12, fontSize: "0.8125rem", borderRadius: RADIUS },
+        sizeLarge: { minHeight: 48, fontSize: "1rem", paddingInline: 20 },
+      },
+    },
+
+    MuiIconButton: {
+      styleOverrides: {
+        root: { "&:hover": { backgroundColor: SURFACE_CARD } },
       },
     },
 
     MuiPaper: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: { backgroundImage: "none" }, outlined: { borderColor: LINE } },
+      styleOverrides: {
+        root: { backgroundImage: "none" },
+        rounded: { borderRadius: RADIUS },
+        outlined: { borderColor: LINE },
+      },
     },
+    // Cards sit flat on a warm-cream fill: no border, no shadow.
     MuiCard: {
-      defaultProps: { elevation: 0, variant: "outlined" },
-      styleOverrides: { root: { borderColor: LINE } },
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: { backgroundColor: SURFACE_CARD, border: "none", borderRadius: RADIUS },
+      },
     },
 
     MuiTextField: {
-      // Labels sit above the field rather than floating into it. Besides
-      // reading more cleanly, it sidesteps Chrome autofilling a value before
-      // React sees a change event, which left the label sitting on top of it.
+      // Labels sit above the field. Besides reading more cleanly, it sidesteps
+      // Chrome autofilling a value before React sees a change event, which left
+      // a floating label sitting on top of it.
       defaultProps: { size: "small", InputLabelProps: { shrink: true } },
     },
-    MuiSelect: { defaultProps: { size: "small" } },
+    // displayEmpty so a filter whose "Any" option has the value "" shows that
+    // label; without it MUI renders "" as a blank box that looks broken.
+    MuiSelect: { defaultProps: { size: "small", displayEmpty: true, IconComponent: SelectCaret } },
     MuiFormControl: { defaultProps: { size: "small" } },
     MuiInputLabel: {
       defaultProps: { shrink: true },
-      styleOverrides: { root: { fontWeight: 500, color: MUTED } },
+      styleOverrides: {
+        root: { fontWeight: 600, color: INK, "&.Mui-focused": { color: INK } },
+        // Out of the field's border and onto its own line above it.
+        outlined: {
+          "&.MuiInputLabel-shrink": {
+            position: "relative",
+            transform: "none",
+            marginBottom: 6,
+            fontSize: "0.875rem",
+            lineHeight: 1.4,
+            maxWidth: "100%",
+          },
+        },
+      },
     },
     MuiOutlinedInput: {
       styleOverrides: {
-        notchedOutline: { borderColor: LINE_STRONG },
         root: {
           backgroundColor: SURFACE,
+          borderRadius: RADIUS,
           "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: MUTED },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: INK, borderWidth: 2 },
+          "&.Mui-focused": { boxShadow: `0 0 0 3px ${SURFACE}, 0 0 0 5px ${FOCUS}` },
+          "&.Mui-error .MuiOutlinedInput-notchedOutline": { borderColor: DANGER },
+        },
+        input: { paddingBlock: 11, paddingInline: 15 },
+        inputSizeSmall: { paddingBlock: 10, paddingInline: 14 },
+        // the label lives above the field, so the border has no gap to leave
+        notchedOutline: {
+          borderColor: ASH,
+          top: 0,
+          "& legend": { display: "none" },
         },
       },
     },
     /**
-     * 16px fields on a phone, whatever the density is elsewhere.
-     *
-     * iOS Safari zooms the page in whenever you focus a field whose text is
-     * under 16px, and it does not zoom back out. Every field here was 15px, so
-     * tapping "First name" left the site magnified and sliding sideways under
-     * the thumb for the rest of the session -- which reads as a broken page
-     * rather than as a zoom.
-     *
-     * The fix is the font size, not `maximum-scale=1`: switching pinch-zoom off
-     * would hide the symptom by taking zoom away from people who rely on it.
-     *
-     * Keyed on a coarse pointer as well as on width, because an iPad is a touch
-     * device at desktop width and zooms in exactly the same way.
+     * 16px fields on a phone, whatever the density is elsewhere. iOS Safari
+     * zooms in on any field under 16px and does not zoom back out.
      */
     MuiInputBase: {
       styleOverrides: {
+        root: { fontSize: "1rem", color: INK },
+        input: { "&::placeholder": { color: ASH, opacity: 1 } },
+      },
+    },
+
+    MuiFormHelperText: { styleOverrides: { root: { marginLeft: 2, color: MUTED } } },
+
+    MuiCheckbox: {
+      styleOverrides: { root: { color: ASH, "&.Mui-checked": { color: INK } } },
+    },
+    MuiRadio: {
+      styleOverrides: { root: { color: ASH, "&.Mui-checked": { color: INK } } },
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        switchBase: { "&.Mui-checked": { color: SURFACE }, "&.Mui-checked + .MuiSwitch-track": { backgroundColor: INK, opacity: 1 } },
+      },
+    },
+
+    // White, with a hairline under it. See siteNav for the bar's contents.
+    MuiAppBar: {
+      defaultProps: { elevation: 0, color: "inherit" },
+      styleOverrides: {
+        root: { backgroundColor: SURFACE, color: INK, borderBottom: `1px solid ${LINE}` },
+      },
+    },
+
+    MuiLink: {
+      defaultProps: { underline: "hover" },
+      styleOverrides: { root: { color: INK, fontWeight: 600 } },
+    },
+
+    // The one place with depth: a card over a 50% scrim.
+    MuiDialog: {
+      defaultProps: { maxWidth: "xs", fullWidth: true },
+      styleOverrides: {
+        paper: {
+          borderRadius: RADIUS_LG,
+          padding: 8,
+          boxShadow: "0 0 16px rgba(0,0,0,0.12)",
+        },
+      },
+    },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: { "&:not(.MuiBackdrop-invisible)": { backgroundColor: "rgba(0,0,0,0.5)" } },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: { fontSize: "1.375rem", fontWeight: 600, lineHeight: 1.25, color: INK },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: { paper: { borderRadius: 0 } },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: { borderRadius: RADIUS, boxShadow: "0 0 16px rgba(0,0,0,0.12)", border: "none" },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
         root: {
-          "@media (pointer: coarse), (max-width: 599.95px)": { fontSize: "1rem" },
+          borderRadius: 8,
+          marginInline: 6,
+          fontSize: "0.9375rem",
+          "&.Mui-selected": { backgroundColor: SURFACE_CARD, fontWeight: 600 },
+          "&.Mui-selected:hover": { backgroundColor: SECONDARY_BG },
         },
       },
     },
 
-    MuiFormHelperText: { styleOverrides: { root: { marginLeft: 2 } } },
-
-    MuiAppBar: {
-      defaultProps: { elevation: 0, color: "inherit" },
-      styleOverrides: { root: { backgroundColor: NIGHT, color: ON_NIGHT } },
-    },
-
-    MuiLink: { defaultProps: { underline: "hover" }, styleOverrides: { root: { color: INK } } },
-
-    MuiDialog: {
-      defaultProps: { maxWidth: "xs", fullWidth: true },
-      styleOverrides: { paper: { border: `1px solid ${LINE}`, borderRadius: 8 } },
-    },
-    MuiDialogTitle: {
-      styleOverrides: {
-        root: { fontSize: "1.0625rem", fontWeight: 600, letterSpacing: "-0.008em" },
-      },
-    },
-
+    // Filled and soft rather than outlined: the state colour is in the tint.
     MuiAlert: {
-      defaultProps: { variant: "outlined" },
+      defaultProps: {
+        variant: "standard",
+        iconMapping: {
+          success: <PiCheckCircle size={20} />,
+          info: <PiInfo size={20} />,
+          warning: <PiWarning size={20} />,
+          error: <PiWarningCircle size={20} />,
+        },
+      },
       styleOverrides: {
-        root: { alignItems: "center", borderRadius: 6 },
+        root: {
+          alignItems: "center",
+          borderRadius: RADIUS,
+          fontSize: "0.875rem",
+          // on a phone an action beside the message squeezed the message into
+          // a column a few words wide; it goes underneath instead
+          "@media (max-width: 599.95px)": {
+            flexWrap: "wrap",
+            "& .MuiAlert-message": { flex: "1 1 0", minWidth: 0 },
+            "& .MuiAlert-action": { flexBasis: "100%", ml: 0, pl: "34px", pt: 0, mt: -0.5 },
+          },
+        },
+        standardError: { backgroundColor: DANGER_PALE, color: DANGER, "& .MuiAlert-icon": { color: DANGER } },
+        standardWarning: { backgroundColor: CAUTION_PALE, color: CAUTION, "& .MuiAlert-icon": { color: CAUTION } },
+        standardSuccess: { backgroundColor: GOOD_PALE, color: GOOD, "& .MuiAlert-icon": { color: GOOD } },
+        standardInfo: { backgroundColor: SURFACE_CARD, color: INK, "& .MuiAlert-icon": { color: INK } },
+        // outlined alerts still exist at a few call sites; they get the same look
+        outlinedError: { backgroundColor: DANGER_PALE, color: DANGER, border: "none" },
+        outlinedWarning: { backgroundColor: CAUTION_PALE, color: CAUTION, border: "none" },
+        outlinedSuccess: { backgroundColor: GOOD_PALE, color: GOOD, border: "none" },
+        outlinedInfo: { backgroundColor: SURFACE_CARD, color: INK, border: "none" },
         message: { fontSize: "0.875rem" },
       },
     },
 
+    // Pills. Outlined chips are drawn as the filled secondary tint too; a
+    // state colour becomes a pale fill with dark text.
     MuiChip: {
       styleOverrides: {
-        root: { fontWeight: 500 },
-        outlined: { borderColor: LINE_STRONG },
-        sizeSmall: { height: 22, fontSize: "0.75rem" },
+        root: {
+          fontWeight: 700,
+          borderRadius: 999,
+          "&.MuiChip-outlined": { border: "none" },
+          "&.MuiChip-colorDefault": { backgroundColor: SECONDARY_BG, color: INK },
+          "&.MuiChip-colorPrimary.MuiChip-filled": { backgroundColor: BRAND, color: "#fff" },
+          "&.MuiChip-colorPrimary.MuiChip-outlined": { backgroundColor: BRAND_WASH, color: BRAND_DARK },
+          "&.MuiChip-colorSecondary": { backgroundColor: INK, color: "#fff" },
+          "&.MuiChip-colorSuccess": { backgroundColor: GOOD_PALE, color: GOOD },
+          "&.MuiChip-colorError": { backgroundColor: DANGER_PALE, color: DANGER },
+          "&.MuiChip-colorWarning": { backgroundColor: CAUTION_PALE, color: CAUTION },
+        },
+        sizeSmall: { height: 24, fontSize: "0.75rem" },
+        labelSmall: { paddingInline: 10 },
       },
     },
 
     MuiTab: {
+      defaultProps: { disableRipple: true },
       styleOverrides: {
-        root: { textTransform: "none", fontWeight: 500, minHeight: 42, fontSize: "0.875rem" },
+        root: {
+          textTransform: "none",
+          fontWeight: 600,
+          minHeight: 44,
+          fontSize: "0.9375rem",
+          color: MUTED,
+          "&.Mui-selected": { color: INK },
+        },
       },
     },
-    MuiTabs: { styleOverrides: { root: { minHeight: 42 } } },
+    // Scrollable everywhere: on a phone the control panel's four tabs ran off
+    // the right edge and "Recovery" could not be reached at all.
+    MuiTabs: {
+      defaultProps: { variant: "scrollable", scrollButtons: "auto", allowScrollButtonsMobile: true },
+      styleOverrides: {
+        root: { minHeight: 44 },
+        indicator: { height: 3, borderRadius: 3 },
+        // the arrow at an end with nothing past it folds away, rather than
+        // holding an empty gap that indents the first tab
+        scrollButtons: { width: 32, "&.Mui-disabled": { width: 0, opacity: 0 } },
+      },
+    },
+
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: { borderRadius: 999, backgroundColor: SECONDARY_BG },
+        bar: { borderRadius: 999 },
+      },
+    },
+
+    MuiAccordion: {
+      defaultProps: { elevation: 0, disableGutters: true },
+      styleOverrides: {
+        root: {
+          backgroundColor: "transparent",
+          "&::before": { display: "none" },
+        },
+      },
+    },
 
     MuiTableCell: {
       styleOverrides: {
         root: { borderColor: LINE, fontSize: "0.875rem" },
-        head: { fontWeight: 600, color: MUTED, fontSize: "0.8125rem" },
+        head: { fontWeight: 700, color: INK, fontSize: "0.875rem" },
       },
     },
 
     MuiTooltip: {
       styleOverrides: {
-        tooltip: { backgroundColor: INK, fontSize: "0.75rem", fontWeight: 400, padding: "6px 8px" },
+        tooltip: { backgroundColor: INK, fontSize: "0.75rem", fontWeight: 500, padding: "6px 10px", borderRadius: 8 },
       },
+    },
+
+    MuiAvatar: {
+      styleOverrides: { root: { fontWeight: 700 } },
     },
   },
 });
 
 /**
- * The judge and mentor form once carried its own accent, to tell it apart from
- * the competitor form at a glance. Under a palette where colour means state,
- * a second brand colour for one form is exactly the kind of decoration this
- * theme removes -- so the two forms are now told apart by their titles and
- * their content, and this is the same theme.
- *
- * Kept as an export so the form does not have to change shape to lose it.
+ * The judge and mentor form once carried its own accent. Under one brand red it
+ * is the same theme; kept as an export so the form does not have to change.
  */
 export const judgeTheme = theme;
 
@@ -313,14 +487,24 @@ export const tokens = {
   BRAND_DARK,
   BRAND_WASH,
   DANGER,
+  DANGER_PALE,
   CAUTION,
+  CAUTION_PALE,
   GOOD,
+  GOOD_PALE,
+  FOCUS,
   INK,
   INK_HOVER,
+  BODY_TEXT,
   MUTED,
+  ASH,
   LINE,
   LINE_STRONG,
   SURFACE,
+  SURFACE_SOFT,
+  SURFACE_CARD,
+  SECONDARY_BG,
+  SECONDARY_PRESSED,
   CANVAS,
   NIGHT,
   NIGHT_RAISED,
@@ -329,6 +513,8 @@ export const tokens = {
   ON_NIGHT_MUTED,
   BODY,
   MONO,
+  RADIUS,
+  RADIUS_LG,
   // previous names, so anything that referenced them still resolves
   ACCENT,
   ACCENT_DARK,
@@ -341,12 +527,7 @@ export const tokens = {
  *
  * `100vh` on iOS is the height the viewport would have if the address bar were
  * hidden, so a frame set to it is always taller than the screen actually shows.
- * Every page then had a stripe of dead scroll at the bottom, and dragging into
- * it collapsed and re-expanded the address bar -- the page appearing to jump
- * while you read it.
- *
- * `dvh` is the height that is really visible and tracks the bar as it moves.
- * The `vh` line stays as the fallback for browsers without it.
+ * `dvh` is the height that is really visible; `vh` stays as the fallback.
  */
 export const pageMinHeight = {
   minHeight: "100vh",

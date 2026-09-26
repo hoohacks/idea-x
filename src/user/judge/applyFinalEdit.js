@@ -6,10 +6,20 @@
  * publish can list what was changed by hand and `undoFinalEdit` can walk back.
  *
  * The refusals are different, because the round is. There is one room, so no
- * edit can put a judge in two places at once and no op refuses on a clash. What
- * it does refuse is a judge scoring the same team twice: whoever marked a team
- * in round one is excluded from its final panel, and adding them back is a
- * mistake rather than an override.
+ * edit can put a judge in two places at once and no op refuses on a clash.
+ * Nor does scoring a team in round one bar anybody from it -- the finalists
+ * present in sequence to one room, so everyone there scores everyone.
+ *
+ * Nor is `pool` a gate. It is who the BUILD seated -- the marked, checked-in
+ * judges -- and an organizer may put any registered judge on a panel by hand.
+ * That is the only way to seat somebody who registered, or was marked, after
+ * the plan was built, and refusing it was a dead end with nothing on screen to
+ * explain it. A caller adding somebody from outside the pool passes their
+ * record as `op.judge`, and they join `pool` so the stats, the publish and the
+ * drift check all agree about who is in this final round.
+ *
+ * What is left to refuse is bookkeeping: a judge nobody can name, or one
+ * already sitting on that team.
  */
 
 import { slotLabel, slotsOf } from "./finalRoundPlan.js";
@@ -53,6 +63,19 @@ function judgeIn(pool, judgeId) {
   return (pool ?? []).find((judge) => judge.judgeId === judgeId) ?? null;
 }
 
+/**
+ * The judge record a caller passed for somebody outside the pool.
+ *
+ * Both halves have to be there: an id with no name would be published to the
+ * team's card and every other judge's copy as "Unnamed Judge", which is how a
+ * hand edit turns into a roster nobody can read.
+ */
+function named(judge, judgeId) {
+  if (!judge || judge.judgeId !== judgeId) return null;
+  const judgeName = String(judge.judgeName ?? "").trim();
+  return judgeName ? { judgeId, judgeName } : null;
+}
+
 export function applyFinalEdit(plan, op) {
   const next = clone(plan);
   const current = next.assignments[op.teamId];
@@ -65,20 +88,20 @@ export function applyFinalEdit(plan, op) {
     case "addJudge": {
       if (!current) return fail(`${teamName} is not in the final round.`);
 
-      const judge = judgeIn(next.pool, op.judgeId);
+      // from the pool if they are in it, otherwise from the record the caller
+      // supplies -- which is what lets a hand edit reach the whole roster
+      const judge = judgeIn(next.pool, op.judgeId) ?? named(op.judge, op.judgeId);
       if (!judge) {
-        return fail("That judge is not in the eligible pool for the final round.");
+        return fail("That judge is not a registered judge in this event.");
       }
       if (current.judges.some((entry) => entry.judgeId === op.judgeId)) {
         return fail(`${judge.judgeName} is already judging ${teamName}.`);
       }
-      // the one refusal that is about fairness rather than bookkeeping
-      if (next.excluded?.[op.teamId]?.[op.judgeId]) {
-        return fail(
-          `${judge.judgeName} already scored ${teamName} in round one, so they cannot judge it ` +
-            `again. Pick someone who did not.`
-        );
-      }
+
+      // into the pool as well as onto the panel, so `finalStats`, the publish
+      // and `checkFinalDrift` do not each reach a different conclusion about
+      // whether this judge belongs here
+      if (!judgeIn(next.pool, judge.judgeId)) next.pool = [...(next.pool ?? []), judge];
 
       current.judges.push({ judgeId: judge.judgeId, judgeName: judge.judgeName });
       return commit(next, op, before, `Added ${judge.judgeName} to ${teamName}`, orderBefore);
@@ -147,14 +170,11 @@ export function applyFinalEdit(plan, op) {
       if (current) return fail(`${teamName} is already in the final round.`);
       if (!ranked) return fail("That team is not in the ranking, so it cannot be a finalist.");
 
-      const eligible = (next.pool ?? []).filter(
-        (judge) => !next.excluded?.[op.teamId]?.[judge.judgeId]
-      );
       next.assignments[op.teamId] = {
         teamId: op.teamId,
         teamName: ranked.name,
         order: slotsOf(next).length,
-        judges: eligible,
+        judges: [...(next.pool ?? [])],
       };
       reseat(next);
       return commit(next, op, before, `Added ${ranked.name} to the final round`, orderBefore);

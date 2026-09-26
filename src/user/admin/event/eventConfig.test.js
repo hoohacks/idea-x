@@ -20,7 +20,7 @@ jest.mock("firebase/database", () => ({
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
 
-const { readEventConfig, setBatchCount, setBatchTimes, setEventStart, setFinalRoundRoom } =
+const { readEventConfig, setBatchCount, setBatchTimes, setEventStart, setFinalRoundRoom, setSubmissionsOpen, setSubmissionsCloseAt } =
   require("./eventConfig");
 const { BATCH_COUNT, BATCH_TIMES } = require("../../judge/schedulePlan");
 const { requireAdmin } = require("../../../roles.js");
@@ -103,5 +103,44 @@ describe("writing config", () => {
 
   test("an empty final round room is refused", async () => {
     expect((await setFinalRoundRoom("   ")).ok).toBe(false);
+  });
+});
+
+describe("project submissions", () => {
+  test("opening writes true and logs who opened them", async () => {
+    expect((await setSubmissionsOpen(true)).ok).toBe(true);
+    expect(mockUpdate.mock.calls[0][1]["config/submissionsOpen"]).toBe(true);
+    expect(mockUpdate.mock.calls[0][1]["adminLog/entry-1"].action).toBe("config.submissionsOpen");
+  });
+
+  test("an untouched database counts as closed, so closing it again writes nothing", async () => {
+    expect((await setSubmissionsOpen(false)).ok).toBe(true);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("closing writes false", async () => {
+    mockGet.mockResolvedValue({ exists: () => true, val: () => true });
+    await setSubmissionsOpen(false);
+    expect(mockUpdate.mock.calls[0][1]["config/submissionsOpen"]).toBe(false);
+  });
+});
+
+describe("the submission deadline", () => {
+  test("is stored as a number, so the rules can compare it with now", async () => {
+    const closeAt = new Date("2026-10-25T15:00:00-04:00").getTime();
+    expect((await setSubmissionsCloseAt(closeAt)).ok).toBe(true);
+    expect(mockUpdate.mock.calls[0][1]["config/submissionsCloseAt"]).toBe(closeAt);
+    expect(mockUpdate.mock.calls[0][1]["adminLog/entry-1"].action).toBe("config.submissionsCloseAt");
+  });
+
+  test("removing it writes null", async () => {
+    mockGet.mockResolvedValue({ exists: () => true, val: () => 123 });
+    await setSubmissionsCloseAt(null);
+    expect(mockUpdate.mock.calls[0][1]["config/submissionsCloseAt"]).toBe(null);
+  });
+
+  test("a time that is not a time is refused before anything is written", async () => {
+    expect((await setSubmissionsCloseAt(NaN)).ok).toBe(false);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

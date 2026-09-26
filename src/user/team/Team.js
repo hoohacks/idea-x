@@ -7,10 +7,13 @@ import { useNavigate } from "react-router-dom";
 import { memberIds } from "./teamMembers";
 import { personName } from "../../roles.js";
 import { leaveTeam } from "./teamMembership.js";
+import { PageSkeleton } from "../../loadingUi";
+import { EVENT, describeRemaining, formatEventTime } from "../../eventInfo";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 import {
     Alert,
+    Avatar,
     Box,
     Button,
     Card,
@@ -22,12 +25,12 @@ import {
     DialogTitle,
     Divider,
     LinearProgress,
-    Link as MuiLink,
     Stack,
     TextField,
     Typography,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { PiArrowSquareOut, PiPresentationChart } from "react-icons/pi";
 
 function Team() {
     const navigate = useNavigate();
@@ -44,6 +47,39 @@ function Team() {
     const [problemStatement, setProblemStatement] = useState(userData ? userData.problemStatement : "");
     const [targetIndustry, setTargetIndustry] = useState(userData ? userData.targetIndustry : "");
     const [showModal, setShowModal] = useState(false);
+    // null until the flag arrives, so the form does not flash up and vanish
+    const [submissionsOpen, setSubmissionsOpen] = useState(null);
+
+    // Live, so the form appears the moment organizers open submissions on the
+    // day, without anybody reloading. An absent flag means closed.
+    useEffect(() => {
+        return onValue(
+            ref(database, "config/submissionsOpen"),
+            (snapshot) => setSubmissionsOpen(snapshot.val() === true),
+            () => setSubmissionsOpen(false)
+        );
+    }, []);
+
+    // The optional deadline, as epoch ms. The rules check it against the
+    // server's clock; the page checks it against this one, ticking so the form
+    // closes and the countdown moves without a reload.
+    const [closeAt, setCloseAt] = useState(null);
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        return onValue(
+            ref(database, "config/submissionsCloseAt"),
+            (snapshot) => setCloseAt(typeof snapshot.val() === "number" ? snapshot.val() : null),
+            () => setCloseAt(null)
+        );
+    }, []);
+    useEffect(() => {
+        if (closeAt === null) return undefined;
+        const timer = setInterval(() => setNow(Date.now()), 15_000);
+        return () => clearInterval(timer);
+    }, [closeAt]);
+
+    const pastDeadline = closeAt !== null && now >= closeAt;
+    const accepting = submissionsOpen === true && !pastDeadline;
 
 
     // Get team ID from userData if available
@@ -179,7 +215,11 @@ function Team() {
             setShowModal(true);
         } catch (error) {
             console.error("Could not save the submission:", error);
-            setUploadError("Your submission could not be saved. Please try again.");
+            setUploadError(
+                String(error?.message ?? error).includes("PERMISSION_DENIED")
+                    ? "Submissions are closed right now, so this was not saved."
+                    : "Your submission could not be saved. Please try again."
+            );
         } finally {
             setSubmitting(false);
         }
@@ -231,7 +271,8 @@ function Team() {
                 }
                 return "Unknown User";
             }));
-            const teamData = { ...snapshot.val(), memberNames };
+            // the ids ride along in the same order, so the page can mark "you"
+            const teamData = { ...snapshot.val(), memberNames, memberUids: members };
 
             // Seed the form from the database ONCE per team, not on every
             // snapshot.
@@ -272,6 +313,12 @@ function Team() {
                         <Typography variant="body1" gutterBottom>
                             You are not on a team yet.
                         </Typography>
+                        {/* Said outright, so nobody thinks they must arrive with a
+                            team: plenty of people only meet theirs on the day. */}
+                        <Typography variant="body2">
+                            That is fine. You can find teammates on the day of the event, too. If you
+                            already have people in mind, start a team and share the ID, or join theirs.
+                        </Typography>
                         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                             <Button variant="contained" component={RouterLink} to="/user/team/create">
                                 Create a team
@@ -311,62 +358,77 @@ function Team() {
 
             <Layout maxWidth="sm">
                 {!teamData ? (
-                    <Typography variant="body2">Loading team…</Typography>
+                    <PageSkeleton label="Loading your team" cards={3} />
                 ) : (
                     <Stack spacing={2}>
                         <Box>
                             <Typography variant="h1">{teamData.name}</Typography>
-                            <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                Team ID {teamId} — share this so teammates can join
-                            </Typography>
                         </Box>
 
+                        <TeamIdCard teamId={teamId} />
+
+                        {/* When and where, as the sentence a team repeats to itself
+                            on the day, not two chips to decode. */}
                         {(schedule || finalSlot) && (
-                            <Card>
-                                <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                    <Typography variant="h5" gutterBottom>Your pitch</Typography>
-                                    {schedule && (
-                                        <Stack direction="row" spacing={0.75} sx={{ mb: finalSlot ? 1.5 : 0 }}>
-                                            <Chip label={schedule.time} size="small" color="primary" />
-                                            <Chip label={schedule.room} size="small" variant="outlined" />
-                                        </Stack>
-                                    )}
-                                    {finalSlot && (
-                                        <>
-                                            <Typography variant="body2" sx={{ mb: 0.75 }}>Final round</Typography>
-                                            <Stack direction="row" spacing={0.75}>
-                                                <Chip label={finalSlot.timeslot} size="small" color="primary" />
-                                                <Chip label={finalSlot.room} size="small" variant="outlined" />
-                                            </Stack>
-                                        </>
-                                    )}
+                            <Card sx={{ borderRadius: 4 }}>
+                                <CardContent sx={{ p: { xs: 2.5, sm: 3 }, "&:last-child": { pb: { xs: 2.5, sm: 3 } } }}>
+                                    <Stack spacing={1.25}>
+                                        {schedule && (
+                                            <PitchLine time={schedule.time} room={schedule.room} />
+                                        )}
+                                        {finalSlot && (
+                                            <PitchLine
+                                                label="Final round"
+                                                time={finalSlot.timeslot}
+                                                room={finalSlot.room}
+                                            />
+                                        )}
+                                    </Stack>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {schedule ? (
-                            teamData.submission && (
+                        {schedule || !accepting ? (
+                            teamData.submission ? (
                                 <Card>
-                                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                        <Typography variant="h5" gutterBottom>
+                                    <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            Your submission
+                                        </Typography>
+                                        {/* the idea's own name: the team's is already the page title */}
+                                        <Typography variant="h3" component="h2" sx={{ mt: 0.5 }}>
                                             {teamData.submission.ideaName}
                                         </Typography>
-                                        <Typography variant="body2">
+                                        <Typography variant="body1" sx={{ mt: 1, maxWidth: "65ch" }}>
                                             {teamData.submission.problemStatement}
                                         </Typography>
+                                        {teamData.submission.targetIndustry && (
+                                            <Chip
+                                                label={teamData.submission.targetIndustry}
+                                                size="small"
+                                                sx={{ mt: 1.5, textTransform: "capitalize" }}
+                                            />
+                                        )}
                                         {teamData.submission.pitchDeckURL && (
-                                            <MuiLink
-                                                href={teamData.submission.pitchDeckURL}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                variant="body2"
-                                                sx={{ display: "inline-block", mt: 1 }}
-                                            >
-                                                Pitch deck
-                                            </MuiLink>
+                                            <Box sx={{ mt: 2 }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    href={teamData.submission.pitchDeckURL}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    endIcon={<PiArrowSquareOut />}
+                                                >
+                                                    Open pitch deck
+                                                </Button>
+                                            </Box>
                                         )}
                                     </CardContent>
                                 </Card>
+                            ) : (
+                                !schedule && submissionsOpen !== null && (
+                                    <SubmissionsClosed closedAt={pastDeadline ? closeAt : null} now={now} />
+                                )
                             )
                         ) : (
                             <Card>
@@ -375,6 +437,7 @@ function Team() {
                                     <Typography variant="body2" sx={{ mb: 2 }}>
                                         Judges read this before you pitch.
                                     </Typography>
+                                    {closeAt !== null && <DeadlineNote closeAt={closeAt} now={now} />}
 
                                     <Stack spacing={2}>
                                         <TextField
@@ -413,6 +476,7 @@ function Team() {
                                             {uploadProgress !== null && uploadProgress < 100 && (
                                                 <LinearProgress
                                                     variant="determinate"
+                                                    aria-label="Pitch deck upload"
                                                     value={uploadProgress}
                                                     sx={{ mt: 1, height: 4, borderRadius: 2 }}
                                                 />
@@ -434,17 +498,39 @@ function Team() {
                         )}
 
                         <Card>
-                            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                                <Typography variant="h5" gutterBottom>Members</Typography>
-                                <Stack spacing={0.5}>
-                                    {teamData.memberNames?.length ? (
-                                        teamData.memberNames.map((name, index) => (
-                                            <Typography key={index} variant="body1">{name}</Typography>
-                                        ))
-                                    ) : (
-                                        <Typography variant="body2">No members yet.</Typography>
-                                    )}
-                                </Stack>
+                            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                                <Typography variant="h5" sx={{ mb: 1.5 }}>Members</Typography>
+                                {teamData.memberNames?.length ? (
+                                    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+                                        {teamData.memberNames.map((name, index) => {
+                                            const isYou = teamData.memberUids?.[index] === auth.currentUser?.uid;
+                                            return (
+                                                <Chip
+                                                    key={teamData.memberUids?.[index] ?? index}
+                                                    avatar={<Avatar>{initialsOfName(name)}</Avatar>}
+                                                    label={isYou ? `${name} (you)` : name}
+                                                    sx={{
+                                                        height: 40,
+                                                        pr: 0.5,
+                                                        bgcolor: "background.paper",
+                                                        fontWeight: isYou ? 700 : 500,
+                                                        "& .MuiChip-avatar": {
+                                                            width: 30,
+                                                            height: 30,
+                                                            fontSize: "0.75rem",
+                                                            bgcolor: isYou ? "primary.main" : "action.selected",
+                                                            color: isYou ? "#fff" : "text.primary",
+                                                        },
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2">
+                                        No members yet. Share the team ID above to bring people in.
+                                    </Typography>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -459,6 +545,130 @@ function Team() {
                 )}
             </Layout>
         </>
+    );
+}
+
+/** "You pitch at 5:00 PM in Rice 340." with the time and room in bold. */
+function PitchLine({ label, time, room }) {
+    return (
+        <Stack direction="row" alignItems="flex-start" sx={{ gap: 1.5 }}>
+            <Box aria-hidden sx={{ fontSize: 24, lineHeight: 0, mt: 0.25, color: "primary.main" }}>
+                <PiPresentationChart />
+            </Box>
+            <Box>
+                {label && (
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {label}
+                    </Typography>
+                )}
+                <Typography sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, fontWeight: 600, lineHeight: 1.3, color: "text.primary" }}>
+                    You pitch at <Box component="span" sx={{ fontWeight: 800 }}>{time}</Box> in{" "}
+                    <Box component="span" sx={{ fontWeight: 800 }}>{room}</Box>.
+                </Typography>
+            </Box>
+        </Stack>
+    );
+}
+
+/**
+ * When the form is not taking submissions. Before organizers open it, this says
+ * when it arrives and that the team can keep growing; after the deadline, it
+ * says when it closed and who can still help. Either way it replaces a form the
+ * database would refuse.
+ */
+function SubmissionsClosed({ closedAt, now }) {
+    return (
+        <Card>
+            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                <Typography variant="h5">Project submission</Typography>
+                <Typography variant="body1" sx={{ mt: 1, maxWidth: "65ch" }}>
+                    {closedAt !== null
+                        ? `Submissions closed at ${formatEventTime(closedAt, now)}. If your team still needs to hand something in, find an organizer.`
+                        : `Submissions open on the day of the event, ${EVENT.dayLabel}. Anyone can still join before then with your Team ID, and people keep finding teammates on the day, too.`}
+                </Typography>
+            </CardContent>
+        </Card>
+    );
+}
+
+/**
+ * The deadline above the form. A quiet line while there is time, and a warning
+ * in the last half hour, when a team that has not saved needs to hear it.
+ */
+function DeadlineNote({ closeAt, now }) {
+    const left = closeAt - now;
+    const text = `Submissions close at ${formatEventTime(closeAt, now)}, in ${describeRemaining(left)}.`;
+    if (left <= 30 * 60_000) {
+        return <Alert severity="warning" sx={{ mb: 2 }}>{text} Save what you have.</Alert>;
+    }
+    return (
+        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: "text.primary" }}>
+            {text}
+        </Typography>
+    );
+}
+
+function initialsOfName(name) {
+    return String(name ?? "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join("");
+}
+
+/**
+ * The ID teammates type to join. It is a database push key, and those start
+ * with a dash -- which, set inline after "Team ID", read as punctuation and got
+ * left off. So it sits on its own, in mono, with a copy button and a line
+ * saying the dash belongs to it.
+ */
+function TeamIdCard({ teamId }) {
+    const [copied, setCopied] = useState(false);
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(teamId);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // no clipboard access (an insecure origin, a refused permission):
+            // the ID is still on screen to select by hand
+        }
+    };
+
+    return (
+        <Card>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                <Typography variant="h5" gutterBottom>Team ID</Typography>
+                <Stack direction="row" sx={{ gap: 1 }} alignItems="center" flexWrap="wrap">
+                    <Typography
+                        variant="data"
+                        component="code"
+                        sx={{
+                            fontSize: "1rem",
+                            px: 1.25,
+                            py: 0.75,
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            bgcolor: "background.default",
+                            userSelect: "all",
+                            wordBreak: "break-all",
+                        }}
+                    >
+                        {teamId}
+                    </Typography>
+                    <Button size="small" variant="outlined" onClick={copy}>
+                        {copied ? "Copied" : "Copy"}
+                    </Button>
+                </Stack>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                    Share this so teammates can join.
+                    {teamId?.startsWith("-") && " The dash at the start is part of the ID."}
+                </Typography>
+            </CardContent>
+        </Card>
     );
 }
 

@@ -91,8 +91,8 @@ function teamJudgeCards(value) {
  * collected here and re-keyed by round+team+judge before merging.
  *
  * The round has to be part of the key: a team+judge pair can appear in more
- * than one round -- a first-round judge who is not excluded from that team
- * in the final is the ordinary case, not an edge case. Keying by team+judge
+ * than one round, and now always does where a team reaches the final -- the
+ * organizers judge both rounds. Keying by team+judge
  * alone (fine for a round-scoped path, which only ever has one round) would
  * let the second round processed silently overwrite the first round's entry
  * for that same pair, independently in both the snapshot map and the live

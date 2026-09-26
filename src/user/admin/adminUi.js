@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import {
     Accordion, AccordionDetails, AccordionSummary,
-    Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogContentText,
+    Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogContentText,
     DialogTitle, Divider, LinearProgress, Stack, TextField, Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { PiCheck, PiCaretDown } from "react-icons/pi";
 
 /**
  * Shared furniture for the three admin dashboards. They used to each carry
@@ -43,25 +43,42 @@ export const FIELD = {
 export function StatStrip({ stats = [], sx }) {
     if (stats.length === 0) return null;
 
+    // Tiles rather than a run of "8 teams 8 submitted" words: the number is
+    // what an organizer reads off the screen, so it is set large on its own
+    // line with the label under it.
     return (
-        <Stack direction="row" sx={{ gap: 2.5, flexWrap: "wrap", rowGap: 1, ...sx }}>
+        <Box
+            sx={{
+                display: "grid",
+                gap: 1,
+                // three or fewer sit in one row on a phone; four make two
+                // rows of two, rather than a lone tile under the rest
+                gridTemplateColumns: {
+                    xs: stats.length === 4 ? "repeat(2, 1fr)" : `repeat(${Math.min(stats.length, 3)}, 1fr)`,
+                    sm: "repeat(auto-fill, minmax(128px, 1fr))",
+                },
+                ...sx,
+            }}
+        >
             {stats.map(({ label, singular, value }) => (
-                <Stack key={label} direction="row" spacing={0.75} alignItems="baseline">
-                    {/* the numbers an organizer reads off the screen and acts on,
-                        so they are set as data rather than as prose */}
-                    <Typography variant="data" sx={{ fontSize: "1rem", fontWeight: 600 }}>
+                <Box key={label} sx={{ bgcolor: "action.hover", borderRadius: 2, px: { xs: 1.5, sm: 2 }, py: 1.5, minWidth: 0 }}>
+                    <Typography
+                        variant="data"
+                        component="p"
+                        sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}
+                    >
                         {value}
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ mt: 0.25 }}>
                         {singular && value === 1 ? singular : label}
                     </Typography>
-                </Stack>
+                </Box>
             ))}
-        </Stack>
+        </Box>
     );
 }
 
-export function PageHeader({ title, stats = [], progress, children }) {
+export function PageHeader({ title, stats = [], progress, progressLabel, children }) {
     return (
         <Box sx={{ mb: 3 }}>
             <Stack
@@ -74,11 +91,13 @@ export function PageHeader({ title, stats = [], progress, children }) {
                 {children}
             </Stack>
 
-            <StatStrip stats={stats} sx={{ mt: 1.5 }} />
+            <StatStrip stats={stats} sx={{ mt: 2 }} />
 
             {typeof progress === "number" && progress > 0 && (
                 <LinearProgress
                     variant="determinate"
+                    // a bar with no name is announced as just "progress bar"
+                    aria-label={progressLabel ?? `${title} progress`}
                     value={Math.min(100, Math.max(0, progress))}
                     sx={{
                         mt: 1.5,
@@ -149,7 +168,7 @@ export function Section({
                     sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}
                 >
                     <AccordionSummary
-                        expandIcon={<IoChevronDown />}
+                        expandIcon={<PiCaretDown />}
                         sx={{
                             px: 0,
                             minHeight: 0,
@@ -246,6 +265,13 @@ export function SettingRow({ label, hint, children }) {
                     // reads as one block however many lines it takes
                     justifyContent: { sm: "flex-end" },
                     gap: 1,
+                    // On a phone the fields' desktop widths left ragged gaps and
+                    // stranded Save buttons; there they grow to share the row.
+                    "@media (max-width: 599.95px)": {
+                        width: "100%",
+                        "& > .MuiFormControl-root": { flex: "1 1 88px", width: "auto", minWidth: 0 },
+                        "& > .MuiButton-root": { flexShrink: 0, alignSelf: "flex-end" },
+                    },
                 }}
             >
                 {children}
@@ -256,18 +282,75 @@ export function SettingRow({ label, hint, children }) {
 
 export function FilterBar({ children }) {
     return (
+        <Stack spacing={1.5} sx={{ mb: 2 }}>
+            {children}
+        </Stack>
+    );
+}
+
+/** Several `FilterChips` groups on one wrapping line. */
+export function FilterGroups({ children }) {
+    return (
+        // no wrapping on a phone: a wrapping column is as wide as its widest
+        // row, which stopped each row of pills scrolling and widened the page
         <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            sx={{ mb: 2 }}
+            sx={{ flexWrap: { xs: "nowrap", sm: "wrap" }, columnGap: 3, rowGap: 1.25, minWidth: 0, "& > *": { minWidth: 0 } }}
         >
             {children}
         </Stack>
     );
 }
 
+/**
+ * A single-choice filter as a row of pills, the selected one filled in ink.
+ *
+ * These were dropdowns: every change was open, read, pick, close, and the
+ * current choice was a word inside a box. As pills every option is on screen
+ * and one tap away, which on a phone at the check-in desk is most of the point.
+ */
+export function FilterChips({ label, value, onChange, options }) {
+    return (
+        <Stack
+            direction="row"
+            alignItems="center"
+            role="group"
+            aria-label={label}
+            sx={{
+                gap: 0.75,
+                flexWrap: { xs: "nowrap", sm: "wrap" },
+                // on a phone the pills run in one line that scrolls sideways,
+                // rather than wrapping so one option sits alone on a line
+                overflowX: { xs: "auto", sm: "visible" },
+                mx: { xs: -2, sm: 0 },
+                px: { xs: 2, sm: 0 },
+                scrollbarWidth: "none",
+                "&::-webkit-scrollbar": { display: "none" },
+                "& > *": { flexShrink: 0 },
+            }}
+        >
+            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", mr: 0.5 }}>
+                {label}
+            </Typography>
+            {options.map((option) => {
+                const selected = option.value === value;
+                return (
+                    <Chip
+                        key={option.value}
+                        label={option.label}
+                        onClick={() => onChange(option.value)}
+                        color={selected ? "secondary" : "default"}
+                        aria-pressed={selected}
+                        sx={{ height: 34, px: 0.5, fontSize: "0.875rem" }}
+                    />
+                );
+            })}
+        </Stack>
+    );
+}
+
 export function SearchField(props) {
-    return <TextField sx={{ flex: 1, minWidth: 200 }} {...props} />;
+    return <TextField fullWidth {...props} />;
 }
 
 /** A flat list of hairline-separated rows, not a stack of 30px-padded boxes. */
@@ -325,17 +408,58 @@ export function Row({ children, accent = false }) {
     return (
         <Box
             sx={{
-                // the accent replaces padding rather than adding to it, so a
-                // flagged row's content stays on the same left edge as the rest
-                pl: accent ? "14px" : 2,
-                pr: 2,
+                position: "relative",
+                px: 2,
                 py: 1.5,
-                borderLeft: accent ? "2px solid" : 0,
-                borderLeftColor: "primary.main",
+                // a rounded bar inset from the edge: a full-height border ran
+                // square into the list's 16px corners and read as a glitch
+                "&::before": accent
+                    ? {
+                          content: '""',
+                          position: "absolute",
+                          left: 5,
+                          top: 14,
+                          bottom: 14,
+                          width: 3,
+                          borderRadius: 3,
+                          bgcolor: "primary.main",
+                      }
+                    : undefined,
             }}
         >
             {children}
         </Box>
+    );
+}
+
+/**
+ * A yes/no flag on a row: first round, final round, checked in.
+ *
+ * These were filled crimson buttons when on, so a judges list where most people
+ * were checked in and marked became a wall of the brand colour -- the one
+ * colour the theme reserves for the action to take next. On reads as a check
+ * on the pale success green instead, and off stays the plain secondary button,
+ * so the rows that still need something are the ones that stand out.
+ */
+export function StateToggle({ on, onLabel, offLabel, onClick, minWidth }) {
+    return (
+        <Button
+            size="small"
+            variant="outlined"
+            aria-pressed={on}
+            onClick={onClick}
+            startIcon={on ? <PiCheck aria-hidden /> : undefined}
+            sx={{
+                minWidth,
+                ...(on && {
+                    color: "success.main",
+                    bgcolor: "success.light",
+                    "&:hover": { bgcolor: "success.light", filter: "brightness(0.96)" },
+                }),
+            }}
+        >
+            {on ? onLabel : offLabel}
+        </Button>
     );
 }
 

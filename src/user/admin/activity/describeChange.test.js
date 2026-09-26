@@ -19,12 +19,12 @@ describe("describing one change", () => {
 
   test("a created value shows it came from nothing", () => {
     expect(describeChange({ path: "admins/u9", before: null, after: true }))
-      .toBe("u9: — → yes");
+      .toBe("u9: - → yes");
   });
 
   test("a deleted value shows it went to nothing", () => {
     expect(describeChange({ path: "teams/t1/schedule", before: { room: "A" }, after: null }))
-      .toBe("schedule: 1 field → —");
+      .toBe("schedule: 1 field → -");
   });
 
   test("an array is summarised by length, not dumped", () => {

@@ -82,6 +82,41 @@ export async function setEventStart(iso) {
   });
 }
 
+/**
+ * Whether teams can hand in their project. Closed until an organizer opens it,
+ * so an absent node means closed: a database nobody has touched should not
+ * start taking pitches weeks before the event. The rules enforce the same flag.
+ */
+export async function setSubmissionsOpen(open) {
+  const before = (await readOne("config/submissionsOpen", false)) === true;
+  const after = open === true;
+  if (before === after) return { ok: true };
+  return applyAdminAction({
+    action: "config.submissionsOpen",
+    summary: after ? "Opened project submissions" : "Closed project submissions",
+    changes: [{ path: "config/submissionsOpen", before, after }],
+  });
+}
+
+/**
+ * When the form closes by itself, as epoch milliseconds, or null for no
+ * deadline (organizers close by hand). A number because the rules compare it
+ * with the server's `now`; the page shows it in the event's zone.
+ */
+export async function setSubmissionsCloseAt(closeAt) {
+  const after = closeAt === null || closeAt === undefined ? null : Number(closeAt);
+  if (after !== null && !Number.isFinite(after)) {
+    return { ok: false, error: "That is not a time the browser can read." };
+  }
+  const before = await readOne("config/submissionsCloseAt", null);
+  if (before === after) return { ok: true };
+  return applyAdminAction({
+    action: "config.submissionsCloseAt",
+    summary: after === null ? "Removed the submission deadline" : `Submission deadline set to ${new Date(after).toISOString()}`,
+    changes: [{ path: "config/submissionsCloseAt", before, after }],
+  });
+}
+
 export async function setFinalRoundRoom(room) {
   const next = String(room ?? "").trim();
   if (!next) return { ok: false, error: "Give the final round a room." };

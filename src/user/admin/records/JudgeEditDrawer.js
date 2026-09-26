@@ -6,9 +6,9 @@ import { editJudge } from "./recordEdits";
 /**
  * Fixing a judge record.
  *
- * isRound1Judge is here as well as on the row button, because this is where you
- * end up when you are correcting several fields at once. Both routes write the
- * same path; only this one records a before-value.
+ * Both round marks are here as well as on the row buttons, because this is
+ * where you end up when you are correcting several fields at once. Both routes
+ * write the same paths; only this one records a before-value.
  */
 export default function JudgeEditDrawer({ judge, onClose, onResult }) {
   const [fields, setFields] = useState({
@@ -21,6 +21,7 @@ export default function JudgeEditDrawer({ judge, onClose, onResult }) {
     checkedIn: Boolean(judge.checkedIn),
     foodCheckIn: Boolean(judge.foodCheckIn),
     isRound1Judge: judge.isRound1Judge === true,
+    isFinalRoundJudge: judge.isFinalRoundJudge === true,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -28,8 +29,11 @@ export default function JudgeEditDrawer({ judge, onClose, onResult }) {
   const set = (key) => (event) => setFields({ ...fields, [key]: event.target.value });
   const setBool = (key) => (event) => setFields({ ...fields, [key]: event.target.value === "true" });
 
+  // an absent mark is false, not undefined -- otherwise every judge registered
+  // before the field existed reads as dirty the moment the drawer opens
+  const ROUND_MARKS = ["isRound1Judge", "isFinalRoundJudge"];
   const original = (key) =>
-    key === "isRound1Judge" ? judge.isRound1Judge === true : Boolean(judge[key]);
+    ROUND_MARKS.includes(key) ? judge[key] === true : Boolean(judge[key]);
 
   const dirty = Object.entries(fields).some(([key, value]) =>
     typeof value === "boolean" ? value !== original(key) : value !== (judge[key] ?? "")
@@ -87,11 +91,16 @@ export default function JudgeEditDrawer({ judge, onClose, onResult }) {
         "isRound1Judge",
         "Only judges marked here are given team assignments"
       )}
+      {yesNo(
+        "Final round judge",
+        "isFinalRoundJudge",
+        "In the room for the final round, and never auto-assigned a first round team"
+      )}
 
-      {fields.isRound1Judge !== (judge.isRound1Judge === true) && (
+      {ROUND_MARKS.some((key) => fields[key] !== original(key)) && (
         <Alert severity="info">
-          This takes effect the next time a schedule is generated. It does not add or
-          remove assignments they already hold.
+          This takes effect the next time a schedule or final round plan is built. It does
+          not add or remove assignments they already hold.
         </Alert>
       )}
     </EditDrawer>

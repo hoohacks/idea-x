@@ -4,6 +4,7 @@ import { Alert, Box, Button, Card, CardContent, Divider, Stack, Typography } fro
 import { onValue, ref } from "firebase/database";
 import { database } from "../../firebase";
 import { readEventState } from "./eventReadiness";
+import AnnouncementsCard from "./announcements/AnnouncementsCard";
 
 /**
  * How many teams still have score cards sitting under the team node.
@@ -118,7 +119,9 @@ export default function AdminHome() {
 
             <Stack direction="row" sx={{ gap: 2.5, flexWrap: "wrap", rowGap: 1 }}>
               <Figure value={counts.teams.submitted} of={counts.teams.total} label="submitted" />
-              <Figure value={counts.judges.checkedIn} of={counts.judges.roundOne} label="judges in" />
+              {/* every judge in the building out of every judge, the same pair the judges
+                  page shows; over the round-one count it read 16/12 */}
+              <Figure value={counts.judges.checkedIn} of={counts.judges.total} label="judges in" />
               <Figure value={counts.people.checkedIn} of={counts.people.competitors} label="checked in" />
               {counts.scoredTeams > 0 && (
                 <Figure value={counts.scoredTeams} of={counts.teams.submitted} label="scored" />
@@ -157,6 +160,9 @@ export default function AdminHome() {
           )}
         </CardContent>
       </Card>
+
+      {/* the day-of channel to everyone in the building */}
+      <AnnouncementsCard />
 
       <Card>
         <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>

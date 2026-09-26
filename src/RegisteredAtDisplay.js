@@ -146,6 +146,8 @@ function RegisteredAtDisplay() {
         <>
           <Chart title="Sign-ups per day" caption="How many people registered on each day.">
             <Bar
+              // Chart.js marks its canvas as an image; this is the image in words
+              aria-label={`Sign-ups per day: ${labels.map((day, i) => `${perDay[i]} on ${day}`).join(", ")}`}
               options={baseOptions}
               data={{
                 labels,
@@ -164,6 +166,7 @@ function RegisteredAtDisplay() {
 
           <Chart title="Running total" caption="Everyone registered up to that day.">
             <Line
+              aria-label={`Running total: ${cumulative[cumulative.length - 1] ?? 0} registered by ${labels[labels.length - 1] ?? "today"}`}
               options={{
                 ...baseOptions,
                 elements: { point: { radius: 3, hoverRadius: 6 } },

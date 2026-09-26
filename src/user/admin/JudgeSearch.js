@@ -3,10 +3,10 @@ import { database } from "../../firebase";
 
 import React, { useEffect, useMemo, useState } from "react";
 
-import { Alert, Button, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Snackbar, Stack, Typography } from "@mui/material";
 import Layout from "../Layout";
 import { assignmentList } from "../judge/assignmentList";
-import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
+import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
 import JudgeEditDrawer from "./records/JudgeEditDrawer";
 
 function JudgeSearch() {
@@ -32,6 +32,7 @@ function JudgeSearch() {
   // the scheduler only assigns judges carrying this flag, so the count belongs
   // where an admin will see it before building a plan
   const roundOneCount = judges.filter((judge) => judge.isRound1Judge === true).length;
+  const finalRoundCount = judges.filter((judge) => judge.isFinalRoundJudge === true).length;
   const percentCheckedIn = judges.length ? (checkedInCount / judges.length) * 100 : 0;
 
   const handleCheckIn = (judge) => {
@@ -43,6 +44,15 @@ function JudgeSearch() {
   const handleToggleRoundOne = (judge) => {
     update(ref(database, `/judges/${judge.id}`), {
       isRound1Judge: judge.isRound1Judge !== true,
+    });
+  };
+
+  // Deliberately independent of the round-one mark rather than exclusive with
+  // it. The two roles answer different questions -- who the generator may
+  // assign, and who is in the room for the final -- and somebody can be both.
+  const handleToggleFinalRound = (judge) => {
+    update(ref(database, `/judges/${judge.id}`), {
+      isFinalRoundJudge: judge.isFinalRoundJudge !== true,
     });
   };
 
@@ -59,11 +69,15 @@ function JudgeSearch() {
           checkedInFilter === "" ||
           String(Boolean(judge.checkedIn)) === checkedInFilter;
 
-        const matchesRoundOne =
+        const roundOne = judge.isRound1Judge === true;
+        const finalRound = judge.isFinalRoundJudge === true;
+        const matchesRole =
           roundOneFilter === "" ||
-          String(judge.isRound1Judge === true) === roundOneFilter;
+          (roundOneFilter === "round1" && roundOne) ||
+          (roundOneFilter === "final" && finalRound) ||
+          (roundOneFilter === "none" && !roundOne && !finalRound);
 
-        return matchesQuery && matchesCheckedIn && matchesRoundOne;
+        return matchesQuery && matchesCheckedIn && matchesRole;
       })
       .sort((a, b) =>
         `${a.firstName ?? ""} ${a.lastName ?? ""}`.localeCompare(
@@ -81,6 +95,7 @@ function JudgeSearch() {
           { label: "signed up", value: judges.length },
           { label: "checked in", value: checkedInCount },
           { label: "first round", value: roundOneCount },
+          { label: "final round", value: finalRoundCount },
         ]}
       />
 
@@ -97,28 +112,29 @@ function JudgeSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <TextField
-          select
-          label="Check-in"
-          value={checkedInFilter}
-          onChange={(e) => setCheckedInFilter(e.target.value)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">Everyone</MenuItem>
-          <MenuItem value="true">Checked in</MenuItem>
-          <MenuItem value="false">Not checked in</MenuItem>
-        </TextField>
-        <TextField
-          select
-          label="Round"
-          value={roundOneFilter}
-          onChange={(e) => setRoundOneFilter(e.target.value)}
-          sx={{ minWidth: 175 }}
-        >
-          <MenuItem value="">Any</MenuItem>
-          <MenuItem value="true">First round</MenuItem>
-          <MenuItem value="false">Not first round</MenuItem>
-        </TextField>
+        <FilterGroups>
+          <FilterChips
+            label="Check-in"
+            value={checkedInFilter}
+            onChange={setCheckedInFilter}
+            options={[
+              { value: "", label: "Everyone" },
+              { value: "true", label: "Checked in" },
+              { value: "false", label: "Not checked in" },
+            ]}
+          />
+          <FilterChips
+            label="Round"
+            value={roundOneFilter}
+            onChange={setRoundOneFilter}
+            options={[
+              { value: "", label: "Any" },
+              { value: "round1", label: "First round" },
+              { value: "final", label: "Final round" },
+              { value: "none", label: "Neither" },
+            ]}
+          />
+        </FilterGroups>
       </FilterBar>
 
       <RowList empty="No judges match those filters.">
@@ -127,6 +143,7 @@ function JudgeSearch() {
             `${judge.firstName ?? ""} ${judge.lastName ?? ""}`.trim() || "Unnamed judge";
           const isCheckedIn = Boolean(judge.checkedIn);
           const isRoundOne = judge.isRound1Judge === true;
+          const isFinalRound = judge.isFinalRoundJudge === true;
           const assignments = assignmentList(judge.teamAssignments);
 
           return (
@@ -144,7 +161,6 @@ function JudgeSearch() {
                 <Stack sx={{ flex: 1, minWidth: 0 }}>
                   <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
                     <Typography sx={{ fontWeight: 600 }}>{fullName}</Typography>
-                    {isRoundOne && <Chip label="first round" size="small" color="primary" />}
                     {judge.wantsToMentor && (
                       <Chip label="mentor" size="small" variant="outlined" />
                     )}
@@ -170,27 +186,42 @@ function JudgeSearch() {
                   )}
                 </Stack>
 
-                <Stack direction="row" spacing={1}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1,
+                    width: { xs: "100%", md: "auto" },
+                    gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, auto)" },
+                    "& > .MuiButton-root": { minWidth: 0 },
+                  }}
+                >
                   <Button size="small" variant="outlined" onClick={() => setEditing(judge)}>
                     Edit
                   </Button>
-                  <Button
-                    size="small"
-                    variant={isRoundOne ? "contained" : "outlined"}
+                  {/* the buttons carry the round and check-in state, so the row
+                      does not also repeat it as chips beside the name */}
+                  <StateToggle
+                    on={isRoundOne}
+                    onLabel="First round"
+                    offLabel="Mark first round"
                     onClick={() => handleToggleRoundOne(judge)}
-                    sx={{ minWidth: 130 }}
-                  >
-                    {isRoundOne ? "First round" : "Mark first round"}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant={isCheckedIn ? "contained" : "outlined"}
+                    minWidth={140}
+                  />
+                  <StateToggle
+                    on={isFinalRound}
+                    onLabel="Final round"
+                    offLabel="Mark final round"
+                    onClick={() => handleToggleFinalRound(judge)}
+                    minWidth={140}
+                  />
+                  <StateToggle
+                    on={isCheckedIn}
+                    onLabel="Checked in"
+                    offLabel="Check in"
                     onClick={() => handleCheckIn(judge)}
-                    sx={{ minWidth: 116 }}
-                  >
-                    {isCheckedIn ? "Checked in" : "Check in"}
-                  </Button>
-                </Stack>
+                    minWidth={124}
+                  />
+                </Box>
               </Stack>
             </Row>
           );

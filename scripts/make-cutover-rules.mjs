@@ -20,7 +20,7 @@
  * Without it, a judge who submits between the migration's read and its write has
  * their card read-missed and then nulled -- silently lost.
  *
- * See "Moving scores off the team node" in the README for the full sequence.
+ * See "Moving scores off the team node" in docs/migrations.md for the full sequence.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

@@ -68,8 +68,8 @@ function pathLine({ path, added, changed, removed }) {
  * "<n> score card(s) will be destroyed: <team> by <judge>, ..." or null.
  *
  * A `round` on an entry means the same team+judge pair lost more than one
- * card -- the bare "scores" path lets that happen (a first-round judge not
- * excluded from that team in the final, scored in both). Without the round
+ * card -- the bare "scores" path lets that happen (an organizer judges both
+ * rounds, so they score a finalist twice). Without the round
  * in the line, two distinct destroyed cards for "Aurora by Judge Smith"
  * would render as the same text twice, reading as a duplicate or a single
  * card rather than the two that are actually going.
@@ -162,7 +162,7 @@ export default function RestorePointsSection({ onResult }) {
     setBusy(true);
     try {
       const result = await captureSnapshot({
-        label: `Manual restore point — ${new Date().toLocaleString()}`,
+        label: `Manual restore point, ${new Date().toLocaleString()}`,
         reason: "taken by hand from the control panel",
         paths: JUDGING_PATHS,
       });
@@ -321,13 +321,13 @@ export default function RestorePointsSection({ onResult }) {
               <Stack spacing={1.5} sx={{ py: 1 }}>
                 <Typography variant="body2">
                   Restoring replaces every path below with the values held in this restore point.
-                  Anything written since then — including scores judges have submitted in the
-                  meantime — is overwritten.
+                  Anything written since then is overwritten, including scores judges have submitted in the
+                  meantime.
                 </Typography>
                 <Stack spacing={0.5}>
                   {diff.byPath.map((p) => (
                     <Typography key={p.path} variant="body2">
-                      <strong>{p.path}</strong> — {p.added} added, {p.changed} changed,{" "}
+                      <strong>{p.path}</strong>: {p.added} added, {p.changed} changed,{" "}
                       {p.removed} removed
                     </Typography>
                   ))}

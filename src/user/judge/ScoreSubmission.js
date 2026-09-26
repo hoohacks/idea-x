@@ -14,10 +14,11 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  IconButton,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { IoInformationCircleOutline } from "react-icons/io5";
+import { PiInfo } from "react-icons/pi";
 import { RUBRIC, SCORE_MAX_TOTAL, NOTES_MAX_LENGTH } from "./scoreRubric";
 import { loadDraft, saveDraft } from "./scoreDraft";
 
@@ -40,13 +41,17 @@ function Criterion({ field, spec, value, onChange }) {
     <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
       <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
         <Typography variant="body1">{spec.label}</Typography>
-        <Tooltip title={spec.desc} enterTouchDelay={0}>
-          <Box
-            component="span"
-            sx={{ display: "flex", color: "text.secondary", cursor: "help", fontSize: "1rem" }}
+        {/* A focusable button, so a keyboard or screen reader can reach the
+            explanation too; it was an aria-label on a bare span, which is not
+            allowed and which some screen readers never read. */}
+        <Tooltip title={spec.desc} enterTouchDelay={0} describeChild>
+          <IconButton
+            size="small"
+            aria-label={`What ${spec.label} means`}
+            sx={{ color: "text.secondary", p: 0.5, "&:hover": { bgcolor: "transparent" } }}
           >
-            <IoInformationCircleOutline />
-          </Box>
+            <PiInfo size={16} />
+          </IconButton>
         </Tooltip>
       </Stack>
 

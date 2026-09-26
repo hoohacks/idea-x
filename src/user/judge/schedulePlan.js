@@ -164,7 +164,7 @@ export function describeSupply({
     return {
       ok: false,
       error:
-        `${judgeCount} judges cannot cover ${largest} teams presenting at once — each judge can only ` +
+        `${judgeCount} judges cannot cover ${largest} teams presenting at once, and each judge can only ` +
         `be in one room. ` +
         (neededBatches
           ? `Either mark ${largest - judgeCount} more first-round judge(s), or raise the batch count to ` +

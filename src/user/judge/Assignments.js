@@ -13,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 import Layout from "../Layout";
 import ScheduleCard from "./ScheduleCard";
+import { CardGridSkeleton } from "../../loadingUi";
 import { readScheduleMeta } from "./scheduleConfig";
 import { subscribeToPersonalSchedule, subscribeToFinalRoundSchedule } from "./getPersonalSchedule";
 import ScoreSubmission from "./ScoreSubmission";
@@ -41,6 +42,33 @@ function Section({ title, caption, children }) {
       </Stack>
       {children}
     </Box>
+  );
+}
+
+/**
+ * How far through their list a judge is: a count, and one segment per team so
+ * the shape of what is left is visible at a glance on a phone.
+ */
+function ScoredProgress({ scored, total }) {
+  return (
+    <Stack spacing={0.75} alignItems={{ xs: "flex-start", sm: "flex-end" }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }} aria-live="polite">
+        {scored === total ? "All teams scored" : `${scored} of ${total} scored`}
+      </Typography>
+      <Stack direction="row" spacing={0.5} aria-hidden>
+        {Array.from({ length: total }, (_, index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 22,
+              height: 6,
+              borderRadius: 3,
+              bgcolor: index < scored ? "success.main" : "action.selected",
+            }}
+          />
+        ))}
+      </Stack>
+    </Stack>
   );
 }
 
@@ -330,6 +358,23 @@ function Assignments() {
     [personalAssignments, scoredTeamIds, pendingTeamIdsByRound]
   );
 
+  // the first card on each list still to score -- the lists are already in
+  // presentation order -- so exactly one card per round reads as "now"
+  const nextFirstRoundId = useMemo(
+    () =>
+      personalAssignments.find(
+        (a) => !scoredTeamIds.has(a.id) && !pendingTeamIdsByRound[FIRST_ROUND].has(a.id)
+      )?.id ?? null,
+    [personalAssignments, scoredTeamIds, pendingTeamIdsByRound]
+  );
+  const nextFinalRoundId = useMemo(
+    () =>
+      finalAssignments.find(
+        (t) => !finalRoundScoredTeamIds.has(t.id) && !pendingTeamIdsByRound[FINAL_ROUND].has(t.id)
+      )?.id ?? null,
+    [finalAssignments, finalRoundScoredTeamIds, pendingTeamIdsByRound]
+  );
+
   const draftTarget = useMemo(() => {
     if (!selected?.teamId || !currentUserId) return null;
     return {
@@ -359,11 +404,10 @@ function Assignments() {
         >
           <Typography variant="h1">Judging</Typography>
           {canViewAssignments && personalAssignments.length > 0 && (
-            <Typography variant="body2">
-              {remaining === 0
-                ? "All teams scored"
-                : `${remaining} of ${personalAssignments.length} left to score`}
-            </Typography>
+            <ScoredProgress
+              scored={personalAssignments.length - remaining}
+              total={personalAssignments.length}
+            />
           )}
         </Stack>
 
@@ -436,7 +480,7 @@ function Assignments() {
           <>
             <Section title="First round">
               {loadingAssignments ? (
-                <Typography variant="body2">Loading your assignments…</Typography>
+                <CardGridSkeleton label="Loading your assignments" />
               ) : personalAssignments.length === 0 ? (
                 <Card sx={{ p: 3 }}>
                   <Typography variant="body2" align="center">
@@ -455,6 +499,7 @@ function Assignments() {
                         onButtonClick={(card) => openFor({ ...card, round: FIRST_ROUND })}
                         disabled={scoredTeamIds.has(assignment.id)}
                         pending={pendingTeamIdsByRound[FIRST_ROUND].has(assignment.id)}
+                        next={assignment.id != null && assignment.id === nextFirstRoundId}
                       />
                     </Grid>
                   ))}
@@ -483,6 +528,7 @@ function Assignments() {
                             time={team.timeslot ?? team.time}
                             disabled={finalRoundScoredTeamIds.has(team.id)}
                             pending={pendingTeamIdsByRound[FINAL_ROUND].has(team.id)}
+                            next={team.id === nextFinalRoundId}
                             onButtonClick={(card) => openFor({ ...card, round: FINAL_ROUND })}
                           />
                         </Grid>

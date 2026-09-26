@@ -24,17 +24,15 @@ import {
   DialogContent,
   DialogTitle,
   Link,
-  MenuItem,
   Snackbar,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
-import { IoChevronDown } from "react-icons/io5";
+import { PiCaretDown } from "react-icons/pi";
 import Layout from "../Layout";
 import { memberIds } from "../team/teamMembers";
 import { personName } from "../../roles";
-import { PageHeader, FilterBar, SearchField, RowList, Row } from "./adminUi";
+import { PageHeader, FilterBar, FilterChips, SearchField, RowList, Row } from "./adminUi";
 import { deleteScore } from "./danger/dangerZone";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
 import PaperScoreDialog from "./scores/PaperScoreDialog";
@@ -49,7 +47,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
 
   return (
     <Accordion disableGutters elevation={0} sx={{ "&:before": { display: "none" }, bgcolor: "transparent" }}>
-      <AccordionSummary expandIcon={<IoChevronDown />} sx={{ px: 0, minHeight: 40 }}>
+      <AccordionSummary expandIcon={<PiCaretDown />} sx={{ px: 0, minHeight: 40 }}>
         <Stack sx={{ gap: 1 }} direction="row" alignItems="baseline" flexWrap="wrap">
           <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
             {label}
@@ -71,7 +69,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
             return (
               <Box key={judgeId} sx={{ pl: 1.5, borderLeft: 2, borderColor: "divider" }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
-                  {card === null ? "—" : `${card.toFixed(1)} / ${SCORE_MAX_TOTAL}`}
+                  {card === null ? "-" : `${card.toFixed(1)} / ${SCORE_MAX_TOTAL}`}
                   <Box component="span" sx={{ fontWeight: 400, color: "text.secondary" }}>
                     {"  "}
                     {judgeNames[judgeId] ?? `judge ${judgeId.slice(0, 8)}`}
@@ -82,7 +80,7 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
                   {Object.entries(SCORE_FIELDS)
                     .map(
                       ([criterion, max]) =>
-                        `${criterion.replace(/_/g, " ")} ${scoreObj?.[criterion] ?? "—"}/${max}`
+                        `${criterion.replace(/_/g, " ")} ${scoreObj?.[criterion] ?? "-"}/${max}`
                     )
                     .join(" · ")}
                   {scoreObj?.fundable ? " · fundable" : ""}
@@ -115,6 +113,8 @@ function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {},
 function TeamSearch() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
+  // "missing" is the list to chase as the deadline nears: who, and their members
+  const [show, setShow] = useState("all");
   const [teams, setTeams] = useState({});
   const [submittedCount, setSubmittedCount] = useState(0);
   const [judgeNames, setJudgeNames] = useState({});
@@ -225,6 +225,8 @@ function TeamSearch() {
     const needle = query.toLowerCase();
     const keys = Object.keys(teams).filter((key) => {
       const team = teams[key];
+      if (show === "missing" && team?.submitted) return false;
+      if (show === "submitted" && !team?.submitted) return false;
       return (
         (team?.name ?? "").toLowerCase().includes(needle) ||
         (team?.submission?.ideaName ?? "").toLowerCase().includes(needle)
@@ -239,7 +241,7 @@ function TeamSearch() {
       if (sortBy === "finalScore") return final(b) - final(a);
       return (teams[a]?.name ?? "").localeCompare(teams[b]?.name ?? "");
     });
-  }, [teams, query, sortBy, scoresFor, finalScoresFor]);
+  }, [teams, query, show, sortBy, scoresFor, finalScoresFor]);
 
   return (
     <Layout maxWidth="lg">
@@ -259,17 +261,26 @@ function TeamSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <TextField
-          select
+        <FilterChips
+          label="Show"
+          value={show}
+          onChange={setShow}
+          options={[
+            { value: "all", label: `All ${teamCount}` },
+            { value: "missing", label: `Not submitted ${teamCount - submittedCount}` },
+            { value: "submitted", label: `Submitted ${submittedCount}` },
+          ]}
+        />
+        <FilterChips
           label="Sort by"
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          sx={{ minWidth: 200 }}
-        >
-          <MenuItem value="name">Name</MenuItem>
-          <MenuItem value="score">First round score</MenuItem>
-          <MenuItem value="finalScore">Final round score</MenuItem>
-        </TextField>
+          onChange={setSortBy}
+          options={[
+            { value: "name", label: "Name" },
+            { value: "score", label: "First round score" },
+            { value: "finalScore", label: "Final round score" },
+          ]}
+        />
       </FilterBar>
 
       <RowList empty="No teams match those filters.">
@@ -285,13 +296,16 @@ function TeamSearch() {
             // go looking for.
             <Row key={key} accent={!team.submitted}>
               <Stack spacing={0.5}>
-                <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
+                <Stack direction="row" alignItems="flex-start" sx={{ gap: 1 }}>
+                <Stack sx={{ gap: 1, flex: 1, minWidth: 0 }} direction="row" alignItems="center" flexWrap="wrap">
                   <Typography sx={{ fontWeight: 600 }}>{team.name || "Unnamed team"}</Typography>
                   <Chip
                     label={team.submitted ? "submitted" : "not submitted"}
                     size="small"
-                    variant={team.submitted ? "filled" : "outlined"}
-                    color={team.submitted ? "primary" : "default"}
+                    variant="outlined"
+                    // green for done, as everywhere state is shown -- crimson is
+                    // the brand and the next action, not a status
+                    color={team.submitted ? "success" : "default"}
                   />
                   {team.schedule && (
                     <Chip
@@ -300,11 +314,12 @@ function TeamSearch() {
                       variant="outlined"
                     />
                   )}
+                </Stack>
                   <Button
                     size="small"
                     variant="outlined"
                     onClick={() => setEditing({ teamId: key, team })}
-                    sx={{ ml: "auto" }}
+                    sx={{ flexShrink: 0 }}
                   >
                     Edit
                   </Button>
@@ -360,7 +375,7 @@ function TeamSearch() {
           <DialogContent dividers>
             <Alert severity="warning">
               {deleting.judgeName ?? "This judge"}'s {deleting.round} round card for{" "}
-              {deleting.teamName}. It cannot be undone — the rules pin a card to the
+              {deleting.teamName}. It cannot be undone: the rules pin a card to the
               person who entered it, so nobody else can write it back. You will be
               offered the values to re-type.
             </Alert>

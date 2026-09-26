@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Container,
   Dialog,
   DialogActions,
@@ -15,6 +16,7 @@ import {
 import Nav from "./siteNav";
 import PageFooter from "./siteFooter";
 import { pageMinHeight } from "./theme";
+import { PiCalendarBlank, PiCheckCircle, PiClock, PiMapPin } from "react-icons/pi";
 
 /**
  * The frame both public registration pages sit in.
@@ -25,73 +27,114 @@ import { pageMinHeight } from "./theme";
  * readable column beside a rail that answers exactly that question.
  */
 
-/**
- * Date, hours and venue, separated by hairlines rather than middots.
- *
- * The hairline is a left border on every fact but the first, which is correct
- * only while they are all on one line. On a phone they are not: the strip wraps,
- * and whichever fact starts the second line carried its border with it -- a
- * divider hanging at the start of a line with nothing before it, on the first
- * page every attendee sees.
- *
- * A border cannot know it is at the start of a line, so below `sm` the facts
- * stack instead and the hairlines go away entirely. From `sm` up there is room
- * for one line and the strip reads as designed.
- */
-export function FactStrip({ facts }) {
+const FACT_ICONS = [<PiCalendarBlank />, <PiClock />, <PiMapPin />];
+
+/** Date, hours and venue as pills, each with its icon. */
+function FactPills({ facts }) {
   return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      sx={{ flexWrap: "wrap", rowGap: { xs: 0.75, sm: 1 }, mt: 2.5 }}
-    >
+    <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, mt: 2.5 }}>
       {facts.map((fact, index) => (
-        <Typography
+        <Chip
           key={fact}
-          variant="body2"
+          icon={FACT_ICONS[index] ?? undefined}
+          label={fact}
           sx={{
-            pl: { xs: 0, sm: index === 0 ? 0 : 1.75 },
-            pr: { xs: 0, sm: 1.75 },
-            borderLeft: { xs: 0, sm: index === 0 ? 0 : 1 },
-            borderColor: "divider",
-            fontVariantNumeric: "tabular-nums",
-            color: "text.primary",
-            fontWeight: 500,
+            height: 36,
+            pl: 0.75,
+            fontSize: "0.875rem",
+            "& .MuiChip-icon": { fontSize: 18, color: "text.primary" },
           }}
-        >
-          {fact}
-        </Typography>
+        />
       ))}
     </Stack>
   );
 }
 
-export function Hero({ eyebrow, title, facts, children }) {
+/**
+ * One photo, large, with what it shows written under it. Four tiles made the
+ * hero taller than the screen and pushed the form out of sight; one picture of
+ * a team holding the cheque says the same thing and leaves the form in view.
+ * Hidden on a phone, where it would sit between the title and the first field.
+ */
+function FeaturedPhoto({ photo, caption }) {
   return (
-    <Box sx={{ pt: { xs: 5, md: 7 }, pb: { xs: 3, md: 4 } }}>
-      <Typography variant="overline" component="p">
-        {eyebrow}
-      </Typography>
-      <Typography
-        variant="h1"
+    <Box
+      component="figure"
+      sx={{ m: 0, display: { xs: "none", md: "block" }, justifySelf: "end", width: "100%", maxWidth: 380 }}
+    >
+      <Box
+        component="img"
+        src={photo.src}
+        alt={photo.alt}
+        width={photo.width}
+        height={photo.height}
         sx={{
-          mt: 0.5,
-          maxWidth: "18ch",
-          fontSize: { xs: "2.25rem", sm: "3rem", md: "3.5rem" },
-          letterSpacing: "-0.035em",
-          lineHeight: 1.02,
+          display: "block",
+          width: "100%",
+          height: "auto",
+          borderRadius: 4,
+          bgcolor: "action.hover",
         }}
-      >
-        {title}
-      </Typography>
-      {facts && <FactStrip facts={facts} />}
-      {children && (
-        <Typography
-          variant="body1"
-          sx={{ mt: 2.5, maxWidth: "62ch", color: "text.secondary" }}
-        >
-          {children}
+      />
+      {caption && (
+        <Typography component="figcaption" variant="body2" sx={{ mt: 1, px: 0.5 }}>
+          {caption}
         </Typography>
       )}
+    </Box>
+  );
+}
+
+/**
+ * The top of a public page: what it is, when and where, and one sentence on
+ * why you would come. `summary` is that sentence; the longer explanation, when
+ * there is one, is `children`, set quieter under the facts.
+ */
+export function Hero({ eyebrow, title, facts, summary, photo, photoCaption, children }) {
+  return (
+    <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 5 } }}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: { xs: 3, md: 6 },
+          alignItems: "center",
+          gridTemplateColumns: { xs: "1fr", md: photo ? "1fr auto" : "1fr" },
+        }}
+      >
+        <Box>
+          {eyebrow && (
+            <Typography variant="body2" component="p" sx={{ fontWeight: 600, color: "text.primary" }}>
+              {eyebrow}
+            </Typography>
+          )}
+          <Typography
+            variant="h1"
+            sx={{
+              mt: 0.5,
+              maxWidth: "16ch",
+              fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4.375rem" },
+              letterSpacing: "-0.03em",
+              lineHeight: 1.05,
+            }}
+          >
+            {title}
+          </Typography>
+          {summary && (
+            <Typography
+              sx={{ mt: 2, maxWidth: "36ch", fontSize: { xs: "1.125rem", sm: "1.25rem" }, lineHeight: 1.4, color: "text.primary" }}
+            >
+              {summary}
+            </Typography>
+          )}
+          {facts && <FactPills facts={facts} />}
+          {children && (
+            <Typography variant="body1" sx={{ mt: 2.5, maxWidth: "58ch", color: "text.secondary" }}>
+              {children}
+            </Typography>
+          )}
+        </Box>
+        {photo && <FeaturedPhoto photo={photo} caption={photoCaption} />}
+      </Box>
     </Box>
   );
 }
@@ -165,7 +208,7 @@ export function ProgressMeter({ answered, total }) {
             width: 12,
             height: 6,
             borderRadius: 3,
-            bgcolor: index < answered ? "primary.main" : "#d3d8e0",
+            bgcolor: index < answered ? "primary.main" : "action.selected",
             transition: "background-color 160ms ease",
           }}
         />
@@ -191,16 +234,20 @@ function RailChecklist({ sections }) {
           >
             {section.label}
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontVariantNumeric: "tabular-nums",
-              color: section.remaining ? "primary.main" : "success.main",
-              fontWeight: 550,
-            }}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            sx={{ color: section.remaining ? "primary.main" : "success.main" }}
           >
-            {section.remaining ? `${section.remaining} left` : "Done"}
-          </Typography>
+            {!section.remaining && <PiCheckCircle aria-hidden size={18} />}
+            <Typography
+              variant="body2"
+              sx={{ fontVariantNumeric: "tabular-nums", color: "inherit", fontWeight: 600 }}
+            >
+              {section.remaining ? `${section.remaining} left` : "Done"}
+            </Typography>
+          </Stack>
         </Stack>
       ))}
     </Stack>
@@ -268,10 +315,8 @@ export function MobileSubmitBar({ answered, total, error, busy, submitLabel, bus
         mt: 4,
         p: 2,
         bgcolor: "background.paper",
-        border: 1,
-        borderColor: "divider",
         borderRadius: 2,
-        boxShadow: "0 -2px 12px rgba(20, 23, 31, 0.06)",
+        boxShadow: "0 0 16px rgba(0, 0, 0, 0.12)",
       }}
     >
       {error && (
@@ -313,7 +358,70 @@ export function ResultDialog({ open, title, children, actions, onClose }) {
  * reset. They share the bar and the footer so that arriving from the marketing
  * site looks the same whichever one you land on.
  */
-export function PublicShell({ children, maxWidth = "lg", pad = false }) {
+/**
+ * Photos behind a page, blurred and dimmed so a card set over them reads as
+ * the one thing to look at: the way a sign-in sheet sits over a board of pins.
+ * Decorative, so hidden from screen readers; the same photos are described
+ * properly on the registration page.
+ */
+function PhotoBackdrop({ photos }) {
+  return (
+    <Box aria-hidden sx={{ position: "fixed", inset: 0, overflow: "hidden" }}>
+      <Box
+        sx={{
+          position: "absolute",
+          inset: -24,
+          display: "grid",
+          gridTemplateColumns: { xs: "repeat(2, 1fr)", md: `repeat(${photos.length}, 1fr)` },
+          gap: "8px",
+          filter: "blur(6px)",
+        }}
+      >
+        {photos.map((photo) => (
+          <Box
+            key={photo.src}
+            component="img"
+            src={photo.src}
+            alt=""
+            sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ))}
+      </Box>
+      <Box sx={{ position: "absolute", inset: 0, bgcolor: "rgba(17, 17, 16, 0.55)" }} />
+    </Box>
+  );
+}
+
+export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop = null }) {
+  // With photos behind it the page is one full-screen scene: the photos fill
+  // the whole window, the bar floats over them, and the card sits in the
+  // middle. The white footer strip is left off there; it read as a bar
+  // cutting the photos short.
+  if (backdrop) {
+    return (
+      <Box sx={{ ...pageMinHeight, position: "relative", display: "flex", flexDirection: "column" }}>
+        <PhotoBackdrop photos={backdrop} />
+        <Nav variant="public" overlay />
+        <Container
+          maxWidth={maxWidth}
+          component="main"
+          sx={{
+            flex: 1,
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            // clear of the floating bar above, with room below to match
+            pt: { xs: 10, sm: 12 },
+            pb: { xs: 5, sm: 8 },
+          }}
+        >
+          {children}
+        </Container>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -346,6 +454,68 @@ export function PublicShell({ children, maxWidth = "lg", pad = false }) {
         {children}
       </Container>
       <PageFooter maxWidth={maxWidth} />
+    </Box>
+  );
+}
+
+/**
+ * The card the sign-in and password pages are built on: the bulb mark, a
+ * greeting, one line on what the page is for, the form, and a footer line
+ * pointing at the other door.
+ *
+ * It is laid out the way a sign-in sheet over a board of pins is: centred,
+ * generously padded, with the mark carrying the brand rather than the heading.
+ * The plain "Sign in" heading over a date line it replaced said nothing the
+ * button did not already say.
+ *
+ * It rises into place once when the page opens, which is what draws the eye
+ * to it over the photos; reduced motion (index.css) stills that.
+ */
+export function AuthCard({ title, subtitle, footer, children }) {
+  return (
+    <Box
+      sx={{
+        bgcolor: "background.paper",
+        borderRadius: 4,
+        boxShadow: "0 24px 48px rgba(17, 17, 16, 0.24), 0 2px 8px rgba(17, 17, 16, 0.12)",
+        px: { xs: 3, sm: 5 },
+        pt: { xs: 4, sm: 5 },
+        pb: { xs: 3, sm: 4 },
+        "@keyframes authRise": {
+          from: { opacity: 0, transform: "translateY(12px)" },
+          to: { opacity: 1, transform: "none" },
+        },
+        animation: "authRise 360ms cubic-bezier(0.16, 1, 0.3, 1) both",
+      }}
+    >
+      <Stack alignItems="center" sx={{ textAlign: "center" }}>
+        <Box
+          component="img"
+          src={`${process.env.PUBLIC_URL ?? ""}/ideathon-bulb.png`}
+          alt=""
+          aria-hidden
+          sx={{ height: 44, width: "auto", display: "block" }}
+        />
+        <Typography
+          variant="h1"
+          sx={{ mt: 2, fontSize: { xs: "1.625rem", sm: "1.75rem" }, letterSpacing: "-0.03em" }}
+        >
+          {title}
+        </Typography>
+        {subtitle && (
+          <Typography variant="body2" sx={{ mt: 1, maxWidth: "30ch", fontSize: "0.9375rem" }}>
+            {subtitle}
+          </Typography>
+        )}
+      </Stack>
+
+      <Box sx={{ mt: 3.5 }}>{children}</Box>
+
+      {footer && (
+        <Box sx={{ mt: 3, pt: 2.5, borderTop: 1, borderColor: "divider", textAlign: "center" }}>
+          <Typography variant="body2">{footer}</Typography>
+        </Box>
+      )}
     </Box>
   );
 }

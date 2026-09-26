@@ -21,6 +21,7 @@ import { ref, get } from "firebase/database"
 import { database } from "./firebase"
 import { onAuthStateChanged } from "firebase/auth"
 import Layout from "./user/Layout.js"
+import { PageSkeleton } from "./loadingUi";
 import TeamDashboard from "./user/admin/TeamSearch.js"
 import JudgingProgress from "./user/admin/JudgingProgress.js"
 import Control from "./user/admin/Control.js"
@@ -35,7 +36,7 @@ const AuthContext = createContext(null);
  * Whether the phone drawer is open, held above the route rather than inside the
  * nav.
  *
- * `ProtectedRoute` renders `<Layout>Loading...</Layout>` while it waits for a
+ * `ProtectedRoute` renders `<Layout>` with a placeholder while it waits for a
  * role, and the page it then renders brings its own `Layout`. React sees a
  * different element in that position, so it throws the first one away -- nav
  * included. Anyone who tapped the menu in that window watched it open and
@@ -63,9 +64,7 @@ function ProtectedRoute({ children, requiredRoles }) {
   if (loadingAuth || loadingUserData) {
     return (
       <Layout>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-          Loading...
-        </div>
+        <PageSkeleton label="Loading" />
       </Layout>
     );
   }
@@ -183,6 +182,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/login" element={<Login />} />
         <Route path="/user">
+          {/* /user and /user/admin are prefixes, not pages. Without these they
+              matched, rendered nothing, and never reached the catch-all below. */}
+          <Route index element={<Navigate to="/user/home" replace />} />
           <Route path="home" element={<ProtectedRoute><UserHome /></ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
           <Route path="judging" element={<ProtectedRoute requiredRoles={["judge", "admin"]}><Assignments /></ProtectedRoute>} />
@@ -193,6 +195,7 @@ function App() {
             <Route path="create" element={<ProtectedRoute requiredRoles={["competitor"]}><CreateTeam /></ProtectedRoute>} />
           </Route>
           <Route path="admin">
+            <Route index element={<Navigate to="/user/home" replace />} />
             <Route path="metrics" element={<ProtectedRoute requiredRoles={["admin"]}><RegisteredAtDisplay /></ProtectedRoute>} />
             <Route path="scan" element={<ProtectedRoute requiredRoles={["admin"]}><AdminScan /></ProtectedRoute>} />
             <Route path="search" element={<ProtectedRoute requiredRoles={["admin"]}><Search /></ProtectedRoute>} />

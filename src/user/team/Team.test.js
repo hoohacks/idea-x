@@ -76,8 +76,11 @@ jest.mock("firebase/database", () => ({
     store[path] = next;
     return { committed: true, snapshot: snap(next) };
   },
-  onValue: (_ref, cb) => {
-    teamSnapshotCallback = cb;
+  // The page subscribes to the team and to config/submissionsOpen; the flag
+  // is answered at once from the store, the team only when a test emits it.
+  onValue: ({ path }, cb) => {
+    if (path.startsWith("config/")) cb(snap(store[path]));
+    else teamSnapshotCallback = cb;
     return () => {};
   },
 }));
@@ -100,6 +103,8 @@ function emitTeamSnapshot() {
 
 beforeEach(() => {
   Object.keys(store).forEach((key) => delete store[key]);
+  // every test but the closed-submissions ones is set on the day
+  store["config/submissionsOpen"] = true;
   teamSnapshotCallback = null;
 });
 
@@ -219,4 +224,93 @@ test("an uncontested save still writes normally", async () => {
   });
   expect(store["teams/t1/submitted"]).toBe(true);
   expect(await screen.findByText(/submission received/i)).toBeInTheDocument();
+});
+
+describe("before organizers open submissions", () => {
+  beforeEach(() => {
+    delete store["config/submissionsOpen"];
+  });
+
+  test("a team sees when submissions open instead of a form", async () => {
+    store["teams/t1"] = { name: "Lumen", members: { me: true } };
+    renderTeam();
+    await waitFor(() => expect(teamSnapshotCallback).not.toBeNull());
+    await act(async () => {
+      await emitTeamSnapshot();
+    });
+
+    expect(screen.getByText(/Submissions open on the day of the event/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /save submission/i })).not.toBeInTheDocument();
+    // the team itself is still all there to share
+    expect(screen.getByText("Team ID")).toBeInTheDocument();
+  });
+
+  test("a submission made before they closed stays readable", async () => {
+    store["config/submissionsOpen"] = false;
+    store["teams/t1"] = {
+      name: "Lumen",
+      members: { me: true },
+      submitted: true,
+      submission: { ideaName: "Wayfinder", problemStatement: "Routes around construction." },
+    };
+    renderTeam();
+    await waitFor(() => expect(teamSnapshotCallback).not.toBeNull());
+    await act(async () => {
+      await emitTeamSnapshot();
+    });
+
+    expect(screen.getByText("Wayfinder")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Submissions open on the day/)).not.toBeInTheDocument();
+  });
+});
+
+describe("the submission deadline", () => {
+  const openTeam = async () => {
+    store["teams/t1"] = { name: "Lumen", members: { me: true } };
+    renderTeam();
+    await waitFor(() => expect(teamSnapshotCallback).not.toBeNull());
+    await act(async () => {
+      await emitTeamSnapshot();
+    });
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  test("with time to spare, the form says when it closes and how long is left", async () => {
+    store["config/submissionsCloseAt"] = Date.now() + (2 * 60 + 5) * 60_000 + 30_000;
+    await openTeam();
+    expect(screen.getByText(/Submissions close at .+, in 2 hours 5 minutes\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Save what you have/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/idea name/i)).toBeInTheDocument();
+  });
+
+  test("in the last half hour it becomes a warning", async () => {
+    store["config/submissionsCloseAt"] = Date.now() + 20 * 60_000 + 30_000;
+    await openTeam();
+    expect(screen.getByRole("alert")).toHaveTextContent(/in 20 minutes\. Save what you have\./);
+  });
+
+  test("after the deadline the form is gone, even though submissions are open", async () => {
+    store["config/submissionsCloseAt"] = Date.now() - 60_000;
+    await openTeam();
+    expect(screen.getByText(/Submissions closed at .+ find an organizer/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+  });
+
+  test("the form closes by itself when the deadline passes, without a reload", async () => {
+    // this Jest takes the timer flavour, not options, so the clock is set apart
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(new Date("2026-10-25T14:59:50-04:00"));
+    store["config/submissionsCloseAt"] = new Date("2026-10-25T15:00:00-04:00").getTime();
+    await openTeam();
+    expect(screen.getByLabelText(/idea name/i)).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(16_000);
+    });
+    expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Submissions closed at 3:00 PM\./)).toBeInTheDocument();
+  });
 });

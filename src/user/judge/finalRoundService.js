@@ -4,9 +4,10 @@ import { requireAdmin } from "../../roles.js";
 import { FIRST_ROUND } from "./getTeamInfo.js";
 import { compareForRanking, rankingEntry, scoredJudgeCount } from "./scoreRubric.js";
 import { guardWith } from "../admin/snapshots.js";
-import { buildFinalPlan, slotsOf, slotLabel, orphanedIn } from "./finalRoundPlan.js";
+import { buildFinalPlan, slotsOf, slotLabel } from "./finalRoundPlan.js";
 import { checkFinalDrift, blockingOnly, BLOCKING } from "./checkFinalDrift.js";
 import { clearFinalDraft } from "./finalDraftStore.js";
+import { judgesEitherRound } from "./judgeRoles.js";
 
 export const FINAL_ROUND_ROOM = "Rice 011";
 
@@ -59,9 +60,14 @@ export function rankTeams(teamsData, scoresByTeam) {
 }
 
 /**
- * Judges eligible to work the final round: checked-in round-one judges, or
- * -- if nobody is checked in -- every round-one judge, so a final round is
+ * Judges eligible to work the final round: everyone marked for either round who
+ * has checked in, or -- if nobody has -- everyone marked, so a final round is
  * never silently assigned to nobody.
+ *
+ * Both marks count because both kinds of judge are in the room. The organizers
+ * carry `isRound1Judge` and work both rounds; the professors and professionals
+ * carry `isFinalRoundJudge` and are deliberately kept out of the first-round
+ * schedule, which is `planSchedule`'s narrower filter, not this one.
  *
  * This used to iterate every registered judge, so somebody who signed up in
  * October and never turned up still received finalAssignments -- and that
@@ -70,13 +76,9 @@ export function rankTeams(teamsData, scoresByTeam) {
  * about who counts.
  */
 function eligibleJudgePool(judgesData) {
-  const workingJudges = Object.entries(judgesData)
-    .filter(([, judge]) => judge?.isRound1Judge === true && judge?.checkedIn === true)
-    .map(([uid]) => uid);
-  if (workingJudges.length) return workingJudges;
-  return Object.entries(judgesData)
-    .filter(([, judge]) => judge?.isRound1Judge === true)
-    .map(([uid]) => uid);
+  const marked = Object.entries(judgesData).filter(([, judge]) => judgesEitherRound(judge));
+  const workingJudges = marked.filter(([, judge]) => judge?.checkedIn === true);
+  return (workingJudges.length ? workingJudges : marked).map(([uid]) => uid);
 }
 
 /**
@@ -111,14 +113,46 @@ async function readFinalWorld() {
   };
 }
 
+function judgeNameOf(judge) {
+  return (
+    [judge?.firstName, judge?.lastName].filter(Boolean).join(" ").trim() || "Unnamed Judge"
+  );
+}
+
 /** The eligible pool with display names, in the shape the plan carries. */
 function poolWithNames(judgesData) {
   return eligibleJudgePool(judgesData).map((uid) => ({
     judgeId: uid,
-    judgeName:
-      [judgesData[uid]?.firstName, judgesData[uid]?.lastName].filter(Boolean).join(" ").trim() ||
-      "Unnamed Judge",
+    judgeName: judgeNameOf(judgesData[uid]),
   }));
+}
+
+/**
+ * Every registered judge, in the same shape, for the per-team picker.
+ *
+ * Wider than the pool on purpose. The pool is who the build seats; this is
+ * everyone an organizer may seat by hand, which has to include the judge who
+ * registered five minutes ago and the one nobody has marked yet -- the two
+ * cases that previously left an organizer clicking a picker that would never
+ * contain the person standing in front of them.
+ *
+ * `marked` and `checkedIn` ride along so the picker can order and label them
+ * rather than presenting a dormant October signup as an ordinary choice.
+ */
+export function allJudgesForPicker(judgesData) {
+  return Object.entries(judgesData ?? {})
+    .map(([uid, judge]) => ({
+      judgeId: uid,
+      judgeName: judgeNameOf(judge),
+      marked: judgesEitherRound(judge),
+      checkedIn: judge?.checkedIn === true,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.marked) - Number(a.marked) ||
+        Number(b.checkedIn) - Number(a.checkedIn) ||
+        a.judgeName.localeCompare(b.judgeName)
+    );
 }
 
 /**
@@ -158,21 +192,12 @@ export function warningsFor(plan) {
 
   if (!(plan?.pool ?? []).length) {
     warnings.push(
-      "No judges are marked as first-round judges, so nobody can be given a final-round assignment."
-    );
-  }
-
-  const orphaned = orphanedIn(plan);
-  if (orphaned.length) {
-    warnings.push(
-      `${orphaned.join(", ")} reached the final round with no eligible judge — every available ` +
-        `judge already scored them in round one. Add a judge who did not, or they present to an ` +
-        `empty room.`
+      "No judges are marked for either round, so nobody can be given a final-round assignment."
     );
   }
 
   const empty = finalists
-    .filter((slot) => !slot.judges.length && !orphaned.includes(slot.teamName))
+    .filter((slot) => !slot.judges.length)
     .map((slot) => slot.teamName);
   if (empty.length) {
     warnings.push(`${empty.join(", ")} has nobody on its panel and will present to an empty room.`);
@@ -220,7 +245,6 @@ export async function planFinalRound({ requireSubmitted = true } = {}) {
 
     const plan = buildFinalPlan({
       ranked,
-      scoresByTeam: world.scoresByTeam,
       pool: poolWithNames(world.judgesData),
       size: world.size,
       room: world.room,
@@ -250,6 +274,12 @@ export async function readLiveFinalBasis() {
     ),
     eligibleJudges: Object.fromEntries(
       poolWithNames(world.judgesData).map((judge) => [judge.judgeId, true])
+    ),
+    // every judge record in the event, which is a wider set than the pool: a
+    // hand edit may seat any of them, so this -- not the pool -- is what
+    // `checkFinalDrift` measures a seated judge against
+    registeredJudges: Object.fromEntries(
+      Object.keys(world.judgesData).map((uid) => [uid, true])
     ),
     submitted: Object.fromEntries(
       Object.entries(world.teamsData).map(([teamId, team]) => [teamId, Boolean(team?.submitted)])
@@ -307,10 +337,6 @@ export async function publishFinalRound(plan) {
         averageScore: ranked?.averageScore ?? 0,
         fundableVotes: ranked?.fundableVotes ?? 0,
         judgeCount: ranked?.judgeCount ?? 0,
-        // still means "scored this team in round one", which is what
-        // peopleService and dangerZone already clean up. The edit layer refuses
-        // to seat an excluded judge, so this and the panel cannot disagree.
-        excludedJudges: plan.excluded?.[slot.teamId] ?? {},
         timeslot,
         room: plan.room,
       };

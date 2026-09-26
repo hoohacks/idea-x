@@ -1,9 +1,11 @@
-import { ref, update, push, serverTimestamp } from "firebase/database";
+import { ref, get, update, push, serverTimestamp } from "firebase/database";
 import { database } from "../../firebase.js";
 import { requireAdmin } from "../../roles.js";
 import { guardWith } from "../admin/snapshots.js";
 import { resolveName } from "../admin/adminAction.js";
 import { checkDrift, readLiveBasis } from "./checkDrift.js";
+import { FIRST_ROUND } from "./getTeamInfo.js";
+import { strandedBy, describeStranded } from "./strandedScores.js";
 
 /**
  * Publishes a plan: the one place that replaces every judge and team
@@ -36,7 +38,7 @@ import { checkDrift, readLiveBasis } from "./checkDrift.js";
  *
  * Returns { ok, error?, drift?, snapshotId? }. Never throws.
  */
-export async function publishPlan(plan) {
+export async function publishPlan(plan, { discardScores = false } = {}) {
     try {
         // a guard rail, not the boundary: the root rule is what actually stops
         // a non-admin, but failing here gives a usable message instead of a
@@ -71,6 +73,34 @@ export async function publishPlan(plan) {
             return { ok: false, error: "This plan is out of date and cannot be published as is.", drift };
         }
 
+        // ---- refuse a plan that would orphan work already done ----
+        //
+        // A card lives at scores/first/{teamId}/{judgeUid}. Republishing moves
+        // assignments and no cards, so a card whose pair this plan does not
+        // seat keeps counting toward that team's average -- the average the
+        // final-round cut is made from -- while belonging to a judge who will
+        // not be in the room. Nothing downstream can tell that has happened.
+        //
+        // Only the dangerous case is refused: a re-plan that still seats every
+        // judge who has scored, and the first publish of an event, strand
+        // nothing and go through untouched. `discardScores` is the deliberate
+        // way past it, and clears the cards rather than leaving them orphaned.
+        const scoresSnap = await get(ref(database, `scores/${FIRST_ROUND}`));
+        const stranded = strandedBy(plan, scoresSnap.exists() ? scoresSnap.val() : {});
+
+        if (stranded.length && !discardScores) {
+            return {
+                ok: false,
+                stranded,
+                error:
+                    `${stranded.length} score card(s) have already been filed for pairings this ` +
+                    `plan does not keep: ${describeStranded(stranded, plan)}. Publishing would ` +
+                    `leave them counting toward the standings for judges who are no longer ` +
+                    `assigned. Move a single judge from Judging progress instead, or discard the ` +
+                    `first round scores and publish again.`,
+            };
+        }
+
         // ---- restore point, before anything is replaced ----
         //
         // Publishing rewrites every assignment in the event. It used to do so
@@ -80,7 +110,11 @@ export async function publishPlan(plan) {
         const guard = await guardWith({
             label: `Before publishing the schedule (${live.teamIds.length} teams, ${live.judgeIds.length} judges)`,
             reason: "publishing replaces every assignment in the event",
-            paths: ["teams", "judges", "config/scheduleMeta"],
+            // `scores` only when they are about to be destroyed, so the
+            // discard is undoable rather than a one-way door
+            paths: discardScores
+                ? ["teams", "judges", "config/scheduleMeta", "scores"]
+                : ["teams", "judges", "config/scheduleMeta"],
         });
         if (!guard.ok) return { ok: false, error: guard.error };
 
@@ -118,6 +152,11 @@ export async function publishPlan(plan) {
         live.allTeamIds.forEach((teamId) => {
             updates[`teams/${teamId}/schedule`] = plan.assignments[teamId] ?? null;
         });
+
+        // In the SAME update as the schedule, so a dropped connection cannot
+        // land the new assignments while leaving the old cards behind against
+        // them -- which is the exact state this guard exists to prevent.
+        if (discardScores) updates[`scores/${FIRST_ROUND}`] = null;
 
         updates["config/scheduleMeta"] = {
             generatedAt: serverTimestamp(),

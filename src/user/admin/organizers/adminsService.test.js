@@ -2,7 +2,7 @@
  * Who is an organizer.
  *
  * /admins is only writable by an admin, so nothing in the app can create the
- * first one -- the README documents the bootstrap by hand in the Firebase
+ * first one -- docs/deployment.md documents the bootstrap by hand in the Firebase
  * console. That makes emptying /admins unrecoverable from inside the app, which
  * is why revokeGuard exists and why it is a pure function with its own tests.
  */

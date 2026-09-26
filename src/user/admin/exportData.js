@@ -183,7 +183,7 @@ export function standingsRows({ teams, scores }, round = FIRST_ROUND) {
 /** One row per judge: what they were given and what they have filed. */
 export function judgeRows({ judges, scores }, round = FIRST_ROUND) {
   const rows = [
-    ["Judge", "Judge UID", "Email", "Company", "Round 1", "Checked in", "Assigned", "Submitted", "Outstanding"],
+    ["Judge", "Judge UID", "Email", "Company", "Round 1", "Final round", "Checked in", "Assigned", "Submitted", "Outstanding"],
   ];
 
   for (const [judgeUid, judge] of Object.entries(judges)) {
@@ -197,6 +197,7 @@ export function judgeRows({ judges, scores }, round = FIRST_ROUND) {
       judge?.email ?? "",
       judge?.company ?? "",
       judge?.isRound1Judge ? "yes" : "no",
+      judge?.isFinalRoundJudge ? "yes" : "no",
       judge?.checkedIn ? "yes" : "no",
       assignments.length,
       submitted.length,

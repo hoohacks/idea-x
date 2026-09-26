@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
+import { LinesSkeleton } from "../../../loadingUi";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   Divider, IconButton, MenuItem, Snackbar, Stack, TextField, Tooltip, Typography,
 } from "@mui/material";
 import { ConfirmDialog } from "../adminUi.js";
-import { planFinalRound, publishFinalRound, warningsFor } from "../../judge/finalRoundService.js";
+import { ref, onValue } from "firebase/database";
+import { database } from "../../../firebase.js";
+import {
+  planFinalRound, publishFinalRound, warningsFor, allJudgesForPicker,
+} from "../../judge/finalRoundService.js";
 import {
   subscribeFinalDraft, saveFinalDraft, clearFinalDraft,
 } from "../../judge/finalDraftStore.js";
 import { applyFinalEdit, undoFinalEdit } from "../../judge/applyFinalEdit.js";
-import { slotsOf, slotLabel, finalStats, eligibleFor } from "../../judge/finalRoundPlan.js";
+import { slotsOf, slotLabel, finalStats } from "../../judge/finalRoundPlan.js";
+import RoomField from "./RoomField.js";
 
 /**
  * Planning the final round, the way the first round is planned.
@@ -28,6 +34,7 @@ import { slotsOf, slotLabel, finalStats, eligibleFor } from "../../judge/finalRo
  */
 export default function FinalRoundPlanner() {
   const [plan, setPlan] = useState(undefined);
+  const [allJudges, setAllJudges] = useState([]);
   const [building, setBuilding] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
@@ -42,6 +49,20 @@ export default function FinalRoundPlanner() {
   const [published, setPublished] = useState(null);
 
   useEffect(() => subscribeFinalDraft((next) => setPlan(next)), []);
+
+  // Live, not read once with the plan. The pool a plan carries is frozen at
+  // build time, so a judge who registered -- or was marked -- after that was
+  // absent from the picker with nothing on screen to say why, and the only way
+  // to reach them was to rebuild and lose every hand edit. Subscribing means
+  // marking somebody on the Judges page puts them in this picker at once.
+  useEffect(() => {
+    const unsubscribe = onValue(
+      ref(database, "judges"),
+      (snapshot) => setAllJudges(allJudgesForPicker(snapshot.exists() ? snapshot.val() : {})),
+      (error) => console.error("Could not read the judges for the panel picker:", error)
+    );
+    return () => unsubscribe();
+  }, []);
 
   const stats = plan ? finalStats(plan) : null;
   const warnings = plan ? warningsFor(plan) : [];
@@ -127,7 +148,7 @@ export default function FinalRoundPlanner() {
   // ---- render ----
 
   if (plan === undefined) {
-    return <Typography variant="body2">Loading the final round plan…</Typography>;
+    return <LinesSkeleton label="Loading the final round plan" lines={4} />;
   }
 
   if (published) {
@@ -237,21 +258,14 @@ export default function FinalRoundPlanner() {
           <Stat label="finalists" value={`${stats.finalists} of ${stats.ranked}`} />
           <Stat label="panel" value={stats.minPanel === stats.maxPanel
             ? String(stats.minPanel)
-            : `${stats.minPanel}–${stats.maxPanel}`} />
+            : `${stats.minPanel}-${stats.maxPanel}`} />
           <Stat label="no panel" value={stats.unjudged.length} warn={stats.unjudged.length > 0} />
           <Stat label="idle judges" value={stats.idle} />
           <Stat label="hand edits" value={stats.edits} />
           <Box sx={{ flexGrow: 1 }} />
-          <TextField
-            size="small"
-            label="Room"
-            defaultValue={plan.room}
-            sx={{ width: 160 }}
-            onBlur={(event) => {
-              if (event.target.value.trim() !== plan.room) {
-                edit({ type: "setRoom", room: event.target.value });
-              }
-            }}
+          <RoomField
+            room={plan.room}
+            onCommit={(room) => edit({ type: "setRoom", room })}
           />
         </Stack>
       </Card>
@@ -306,7 +320,7 @@ export default function FinalRoundPlanner() {
 
       <Card sx={{ p: 2 }}>
         <Typography variant="h3" sx={{ fontSize: "1rem", mb: 1 }}>
-          Running order — {plan.room}
+          Running order in {plan.room}
         </Typography>
         {!slots.length ? (
           <Typography variant="body2">
@@ -328,7 +342,7 @@ export default function FinalRoundPlanner() {
                   <Typography variant="caption" color="text.secondary">
                     {slot.judges.length
                       ? slot.judges.map((judge) => judge.judgeName).join(", ")
-                      : "nobody on the panel — presents to an empty room"}
+                      : "nobody on the panel, so it presents to an empty room"}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.5}>
@@ -362,6 +376,7 @@ export default function FinalRoundPlanner() {
         <PanelDrawer
           plan={plan}
           slot={openTeam}
+          allJudges={allJudges}
           onClose={() => setOpenTeamId(null)}
           onEdit={edit}
         />
@@ -417,31 +432,52 @@ function Stat({ label, value, warn = false }) {
 }
 
 /** Add, remove or swap a judge on one finalist's panel. */
-function PanelDrawer({ plan, slot, onClose, onEdit }) {
+function PanelDrawer({ plan, slot, allJudges = [], onClose, onEdit }) {
   const [mode, setMode] = useState("add");
   const [target, setTarget] = useState("");
   const [replacing, setReplacing] = useState("");
 
   const seated = slot.judges;
   const seatedIds = new Set(seated.map((judge) => judge.judgeId));
-  // everyone eligible for THIS team who is not already on it: the round-one
-  // scorers are excluded here as well as refused by applyFinalEdit, so nobody
-  // is offered a choice that will be rejected
-  const available = eligibleFor(plan.pool, plan.excluded?.[slot.teamId]).filter(
-    (judge) => !seatedIds.has(judge.judgeId)
-  );
-  const barred = (plan.pool ?? []).filter((judge) => plan.excluded?.[slot.teamId]?.[judge.judgeId]);
+
+  // Every registered judge who is not already on this team, read live rather
+  // than taken from the plan's frozen pool. Somebody outside the pool is a
+  // legitimate choice -- applyFinalEdit takes their record and adds them to it
+  // -- so the picker offers them and says which they are.
+  const inPool = new Set((plan.pool ?? []).map((judge) => judge.judgeId));
+  const roster = allJudges.length
+    ? allJudges
+    : (plan.pool ?? []).map((judge) => ({ ...judge, marked: true }));
+  const available = roster.filter((judge) => !seatedIds.has(judge.judgeId));
+
+  const labelFor = (judge) => {
+    if (judge.marked === false) return `${judge.judgeName} (not marked for a round)`;
+    if (!inPool.has(judge.judgeId)) return `${judge.judgeName} (not in the built pool)`;
+    return judge.judgeName;
+  };
 
   const choices = mode === "remove" ? seated : available;
   const ready = target && (mode !== "swap" || replacing);
 
+  /** The record applyFinalEdit needs when the judge is outside plan.pool. */
+  const recordFor = (judgeId) => {
+    const found = roster.find((judge) => judge.judgeId === judgeId);
+    return found ? { judgeId: found.judgeId, judgeName: found.judgeName } : undefined;
+  };
+
   async function run() {
     const op =
       mode === "add"
-        ? { type: "addJudge", teamId: slot.teamId, judgeId: target }
+        ? { type: "addJudge", teamId: slot.teamId, judgeId: target, judge: recordFor(target) }
         : mode === "remove"
         ? { type: "removeJudge", teamId: slot.teamId, judgeId: target }
-        : { type: "swapJudge", teamId: slot.teamId, fromJudgeId: replacing, toJudgeId: target };
+        : {
+            type: "swapJudge",
+            teamId: slot.teamId,
+            fromJudgeId: replacing,
+            toJudgeId: target,
+            judge: recordFor(target),
+          };
 
     if (await onEdit(op)) onClose();
   }
@@ -460,12 +496,6 @@ function PanelDrawer({ plan, slot, onClose, onEdit }) {
             Nothing is written until the plan is published.
           </Alert>
 
-          {barred.length > 0 && (
-            <Typography variant="caption" color="text.secondary">
-              Not offered: {barred.map((judge) => judge.judgeName).join(", ")} — they scored
-              {" "}{slot.teamName} in round one.
-            </Typography>
-          )}
 
           <TextField
             select
@@ -494,10 +524,18 @@ function PanelDrawer({ plan, slot, onClose, onEdit }) {
             value={target}
             fullWidth
             onChange={(event) => setTarget(event.target.value)}
-            helperText={choices.length ? undefined : "Nobody available."}
+            helperText={
+              choices.length
+                ? mode === "remove"
+                  ? undefined
+                  : "Any registered judge can be put on a panel by hand."
+                : "Nobody available."
+            }
           >
             {choices.map((judge) => (
-              <MenuItem key={judge.judgeId} value={judge.judgeId}>{judge.judgeName}</MenuItem>
+              <MenuItem key={judge.judgeId} value={judge.judgeId}>
+                {mode === "remove" ? judge.judgeName : labelFor(judge)}
+              </MenuItem>
             ))}
           </TextField>
         </Stack>

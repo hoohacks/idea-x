@@ -8,7 +8,7 @@ import { pageMinHeight } from "../../../theme";
 /**
  * The schedule on paper, one sheet per room.
  *
- * The README already treats "a judge scored on paper" as an ordinary event-day
+ * docs/running-the-event.md already treats "a judge scored on paper" as an ordinary event-day
  * occurrence and there is a Record score flow for it -- but nothing printed, so
  * the paper fallback started with somebody copying a screen by hand. When the
  * wifi in Rice Hall does what wifi does, the thing that keeps judging running is
@@ -57,16 +57,16 @@ export default function PrintableSchedule() {
 
       {rooms.length === 0 ? (
         <Typography variant="body2" className="no-print">
-          Nothing to print yet — no team has a room. Publish a schedule first.
+          Nothing to print yet. No team has a room. Publish a schedule first.
         </Typography>
       ) : (
         rooms.map((room) => (
           <Box key={room.name} className="sheet" sx={{ mb: 6 }}>
             <Stack
-              direction="row"
+              direction={{ xs: "column", sm: "row" }}
               justifyContent="space-between"
-              alignItems="baseline"
-              sx={{ borderBottom: 2, borderColor: "text.primary", pb: 1, mb: 1.5 }}
+              alignItems={{ xs: "flex-start", sm: "baseline" }}
+              sx={{ borderBottom: 2, borderColor: "text.primary", pb: 1, mb: 1.5, gap: 0.25 }}
             >
               <Typography variant="h2">{room.name}</Typography>
               <Typography variant="body2">
@@ -82,7 +82,10 @@ export default function PrintableSchedule() {
               viewport to overflow.
             */}
             <Box sx={{ overflowX: "auto", "@media print": { overflowX: "visible" } }}>
-              <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
+              {/* a floor on the width, so on a phone the columns keep their
+                  shape and the table scrolls, instead of judge names breaking
+                  one word to a line */}
+              <Box component="table" sx={{ width: "100%", minWidth: 620, borderCollapse: "collapse", "@media print": { minWidth: 0 } }}>
                 <Box component="thead">
                   <Box component="tr">
                     {["Batch", "Time", "Team", "Judges", "Score out of 40"].map((head) => (
@@ -106,10 +109,10 @@ export default function PrintableSchedule() {
                 <Box component="tbody">
                   {room.slots.map((slot) => (
                     <Box component="tr" key={`${slot.batch}-${slot.teamId}`}>
-                      <Cell data>{slot.batch ?? "—"}</Cell>
-                      <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "—"}</Cell>
+                      <Cell data>{slot.batch ?? "-"}</Cell>
+                      <Cell data>{slot.time ?? batchTimes[slot.batch] ?? "-"}</Cell>
                       <Cell>{slot.teamName}</Cell>
-                      <Cell>{slot.judges.join(", ") || "—"}</Cell>
+                      <Cell>{slot.judges.join(", ") || "-"}</Cell>
                       {/* deliberately blank: this column is why the sheet exists */}
                       <Cell />
                     </Box>
@@ -144,7 +147,8 @@ function Cell({ children, data = false }) {
         borderColor: "divider",
         verticalAlign: "top",
         minWidth: children ? undefined : 110,
-        ...(data ? t.typography.data : { fontSize: "0.875rem" }),
+        // a time or a batch number never breaks across two lines
+        ...(data ? { ...t.typography.data, whiteSpace: "nowrap" } : { fontSize: "0.875rem" }),
       })}
     >
       {children}

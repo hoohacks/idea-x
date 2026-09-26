@@ -46,6 +46,28 @@ test("nothing moved", () => {
   expect(advisory).toEqual([]);
 });
 
+test("a hand-added final-round judge is never called lost", () => {
+  // an organizer can put an industry judge on a first-round panel by hand.
+  // `judgeIds` is the pool the plan was ALLOCATED from, and checkDrift only
+  // looks for losses within it, so somebody added from outside that pool must
+  // not register as drift -- otherwise every publish blocks on a judge who
+  // never left.
+  const handEdited = {
+    ...plan,
+    assignments: {
+      ...plan.assignments,
+      t1: {
+        ...plan.assignments.t1,
+        judges: [{ judgeId: "j0", judgeName: "Ada" }, { judgeId: "prof", judgeName: "Prof Chen" }],
+      },
+    },
+  };
+
+  const { blocking, advisory } = checkDrift(basis, live(), handEdited);
+  expect(blocking).toEqual([]);
+  expect(advisory).toEqual([]);
+});
+
 test("a team submitted since, and can be placed", () => {
   const { blocking } = checkDrift(basis, live({
     teamIds: ["t1", "t2", "t3"], teamNames: { t1: "A", t2: "B", t3: "Vireo" },
@@ -342,6 +364,8 @@ describe("readLiveBasis", () => {
     expect(liveBasis.judgeIds).toEqual(["j0", "j1", "j2"]);
     expect(liveBasis.judgeIds).not.toContain("notRoundOne");
   });
+
+
 
   test("allTeamIds and allJudgeIds carry the ids the filtered sets exclude", async () => {
     // ghost never submitted; notRoundOne is registered but not a round-one

@@ -22,8 +22,8 @@ export default function ClosedNotice({ what = "Registration" }) {
         title={`${what} is not open yet`}
         facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
       >
-        Sign-ups have not started. This page will become the form when they do —
-        there is nothing to do here until then, and nothing has gone wrong.
+        Sign-ups have not started. This page will become the form when they do.
+        There is nothing to do here until then, and nothing has gone wrong.
       </Hero>
 
       <Box sx={{ pb: 8 }}>

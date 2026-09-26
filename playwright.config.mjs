@@ -23,7 +23,14 @@ export default defineConfig({
   testDir: "./e2e",
   // the app is a HashRouter served from the CRA dev server
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: {
+    timeout: 10_000,
+    // visual.spec.mjs. Animations are frozen and the caret hidden, so a
+    // screenshot is of the page at rest; a sliver of tolerance absorbs
+    // anti-aliasing without letting a moved element through.
+    toHaveScreenshot: { animations: "disabled", caret: "hide", maxDiffPixelRatio: 0.01 },
+  },
+
 
   // A judging schedule is one shared document. Two specs publishing at once
   // would fight over it, and the failure would look like a bug in the app.

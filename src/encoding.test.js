@@ -69,7 +69,7 @@ test("a byte order mark never reaches a source file", () => {
 test("the event strings are the characters they are meant to be", () => {
   const { EVENT } = require("./eventInfo");
 
-  // en dashes, not hyphens and not three bytes of wreckage
-  expect(EVENT.hours).toBe("10:00 AM – 7:00 PM");
-  expect(EVENT.judgingHours).toBe("5:00 PM – 7:00 PM");
+  // plain hyphens, not three bytes of wreckage
+  expect(EVENT.hours).toBe("10:00 AM - 7:00 PM");
+  expect(EVENT.judgingHours).toBe("5:00 PM - 7:00 PM");
 });

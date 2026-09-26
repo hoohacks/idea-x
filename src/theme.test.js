@@ -51,9 +51,8 @@ describe("everything readable clears AA", () => {
 });
 
 describe("the numbers are the content", () => {
-  test("there is a role for operational data, and it is monospaced", () => {
+  test("there is a role for operational data", () => {
     expect(theme.typography.data).toBeDefined();
-    expect(theme.typography.data.fontFamily).toContain("IBM Plex Mono");
   });
 
   test("its figures are tabular, so a column of them lines up", () => {
@@ -67,13 +66,14 @@ describe("the numbers are the content", () => {
 
 describe("one voice", () => {
   test("headings and body share a family; hierarchy is weight and size", () => {
-    expect(theme.typography.fontFamily).toContain("IBM Plex Sans");
+    expect(theme.typography.fontFamily).toContain("Inter");
     expect(theme.typography.h1.fontFamily).toBe(theme.typography.body1.fontFamily);
     expect(theme.typography.h2.fontFamily).toBe(theme.typography.body1.fontFamily);
     expect(theme.typography.h1.fontWeight).toBeGreaterThan(theme.typography.body1.fontWeight ?? 400);
   });
 
-  test("only the data role breaks out of it", () => {
-    expect(theme.typography.data.fontFamily).not.toBe(theme.typography.body1.fontFamily);
+  test("data is the same face -- no monospace anywhere -- told apart by its figures", () => {
+    expect(theme.typography.data.fontFamily).toBe(theme.typography.body1.fontFamily);
+    expect(theme.typography.data.fontFeatureSettings).toContain("tnum");
   });
 });

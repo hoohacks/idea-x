@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { signIn, goto, expectPagePainted } from "./helpers.mjs";
+import { signIn, goto, expectPagePainted, clearFirstRoundScores } from "./helpers.mjs";
+
+// this spec publishes a schedule, which is refused once first-round cards exist
+// for pairings the new plan drops. Start from "judging has not begun".
+test.beforeEach(async ({ request }) => {
+  await clearFirstRoundScores(request);
+});
 
 /**
  * The most critical hour of the event: planning a schedule, publishing it, and

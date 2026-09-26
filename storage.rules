@@ -13,7 +13,7 @@ service firebase.storage {
     // Resumes are picked and uploaded on the public registration form, before
     // the person has an account, so this cannot require auth. That means an
     // anonymous write endpoint, which is why it is capped hard and pinned to
-    // document types. See the README for the alternative.
+    // document types. See docs/decisions/0006 for the alternative.
     //
     // The event year is a path segment rather than part of the folder name.
     // The old rule hardcoded /ideathon-resume-2025/, while the form uploads to

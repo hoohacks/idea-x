@@ -79,7 +79,7 @@ export default function RoomsSection({ rooms, teamsData, onResult }) {
       {rooms.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           No rooms are configured, so a schedule cannot be generated. There is no
-          built-in list — add the rooms this event has booked.
+          built-in list. Add the rooms this event has booked.
         </Alert>
       )}
 

@@ -225,6 +225,112 @@ describe("the submission", () => {
   });
 });
 
+/**
+ * Before the day. Organizers open submissions with config/submissionsOpen, and
+ * until then a team can form but not hand anything in -- including by seeding
+ * a submission into the call that creates the team, which the create rule's
+ * cascade would otherwise let through.
+ */
+describe("while submissions are closed", () => {
+  beforeEach(async () => {
+    const world = baseWorld();
+    world.config.submissionsOpen = false;
+    world.teams.team3 = { name: "Gamma", createdBy: "carol", submitted: false, members: { carol: true } };
+    await testEnv.clearDatabase();
+    await seed(testEnv, world);
+  });
+
+  test("a member cannot write the submission", async () => {
+    await assertFails(set(ref(db("alice"), "teams/team1/submission"), { ideaName: "Early" }));
+  });
+
+  test("or one field of it", async () => {
+    await assertFails(set(ref(db("alice"), "teams/team1/submission/ideaName"), "Early"));
+  });
+
+  test("a member cannot mark the team submitted, which would lock out late joiners", async () => {
+    await assertFails(set(ref(db("carol"), "teams/team3/submitted"), true));
+  });
+
+  test("but can still write submitted: false", async () => {
+    await assertSucceeds(set(ref(db("carol"), "teams/team3/submitted"), false));
+  });
+
+  test("a new team cannot arrive with a submission already in it", async () => {
+    await assertFails(
+      set(ref(db("dave"), "teams/team4"), {
+        name: "Delta", createdBy: "dave", members: { dave: true },
+        submission: { ideaName: "Sneaked in" },
+      })
+    );
+    await assertFails(
+      set(ref(db("dave"), "teams/team4"), {
+        name: "Delta", createdBy: "dave", members: { dave: true }, submitted: true,
+      })
+    );
+  });
+
+  test("an ordinary new team is still fine", async () => {
+    await assertSucceeds(
+      set(ref(db("dave"), "teams/team4"), { name: "Delta", createdBy: "dave", members: { dave: true }, submitted: false })
+    );
+  });
+
+  test("an absent flag counts as closed", async () => {
+    await testEnv.withSecurityRulesDisabled((ctx) => set(ref(ctx.database(), "config/submissionsOpen"), null));
+    await assertFails(set(ref(db("alice"), "teams/team1/submission"), { ideaName: "Early" }));
+  });
+
+  test("an organizer can still fix a submission by hand", async () => {
+    await assertSucceeds(set(ref(db("admin"), "teams/team1/submission/ideaName"), "Fixed"));
+    await assertSucceeds(set(ref(db("admin"), "teams/team3/submitted"), true));
+  });
+
+  test("a competitor cannot open submissions themselves", async () => {
+    await assertFails(set(ref(db("alice"), "config/submissionsOpen"), true));
+  });
+});
+
+/**
+ * The deadline, checked against the server's clock: a phone set an hour slow
+ * cannot buy a team extra time.
+ */
+describe("the submission deadline", () => {
+  const withDeadline = async (closeAt) => {
+    const world = baseWorld();
+    world.config.submissionsCloseAt = closeAt;
+    world.teams.team3 = { name: "Gamma", createdBy: "carol", submitted: false, members: { carol: true } };
+    await testEnv.clearDatabase();
+    await seed(testEnv, world);
+  };
+
+  test("before it, a member can still write", async () => {
+    await withDeadline(Date.now() + 60 * 60_000);
+    await assertSucceeds(set(ref(db("alice"), "teams/team1/submission/ideaName"), "Revised"));
+    await assertSucceeds(set(ref(db("carol"), "teams/team3/submitted"), true));
+  });
+
+  test("after it, the submission and the submitted flag are refused", async () => {
+    await withDeadline(Date.now() - 60_000);
+    await assertFails(set(ref(db("alice"), "teams/team1/submission/ideaName"), "Too late"));
+    await assertFails(set(ref(db("carol"), "teams/team3/submitted"), true));
+  });
+
+  test("an organizer can still enter one by hand after it", async () => {
+    await withDeadline(Date.now() - 60_000);
+    await assertSucceeds(set(ref(db("admin"), "teams/team3/submission"), { ideaName: "Paper form" }));
+  });
+
+  test("the deadline has to be a number the rules can compare", async () => {
+    await assertFails(set(ref(db("admin"), "config/submissionsCloseAt"), "3:00 PM"));
+    await assertSucceeds(set(ref(db("admin"), "config/submissionsCloseAt"), Date.now()));
+  });
+
+  test("a competitor cannot move it", async () => {
+    await assertFails(set(ref(db("alice"), "config/submissionsCloseAt"), Date.now() + 1e9));
+  });
+});
+
 describe("a judge reads the submissions they are assigned", () => {
   test("an assigned judge can read the submission", async () => {
     await assertSucceeds(get(ref(db("judge1"), "teams/team1/submission")));

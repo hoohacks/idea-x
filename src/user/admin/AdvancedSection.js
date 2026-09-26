@@ -154,7 +154,7 @@ export default function AdvancedSection({ config = {}, onResult }) {
 
               {mismatch && (
                 <Alert severity="warning">
-                  {key.trim()} is read as a {expected}. Saving it as {type} will not fail —
+                  {key.trim()} is read as a {expected}. Saving it as {type} will not fail,
                   it will just be wrong in a way nothing reports.
                 </Alert>
               )}

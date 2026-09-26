@@ -356,7 +356,7 @@ function JudgingProgress() {
                     {team.unassignedScorers.length > 0 && (
                       <Typography variant="body2">
                         Also scored by {team.unassignedScorers.map((j) => j.judgeName).join(", ")},
-                        who are no longer assigned — these still count toward the average.
+                        who are no longer assigned. These still count toward the average.
                       </Typography>
                     )}
                   </Box>

@@ -22,8 +22,13 @@ jest.mock("../../roles.js", () => ({
 const { planSchedule } = require("./planSchedule");
 const { requireAdmin } = require("../../roles.js");
 
-/** An event with `teams` submitted teams and `judges` round-one judges. */
-function world({ teams = 12, judges = 12, rooms = 10, batchCount = 3, checkedIn = true } = {}) {
+/**
+ * An event with `teams` submitted teams, `judges` round-one judges and
+ * `finalJudges` judges marked for the final round only.
+ */
+function world({
+  teams = 12, judges = 12, rooms = 10, batchCount = 3, checkedIn = true, finalJudges = 0,
+} = {}) {
   const teamsData = {};
   for (let i = 0; i < teams; i++) {
     teamsData[`t${i}`] = { name: `Team ${i}`, submitted: true, members: { [`c${i}`]: true } };
@@ -32,6 +37,11 @@ function world({ teams = 12, judges = 12, rooms = 10, batchCount = 3, checkedIn 
   for (let i = 0; i < judges; i++) {
     judgesData[`j${i}`] = {
       firstName: "Judge", lastName: String(i), isRound1Judge: true, checkedIn,
+    };
+  }
+  for (let i = 0; i < finalJudges; i++) {
+    judgesData[`f${i}`] = {
+      firstName: "Prof", lastName: String(i), isFinalRoundJudge: true, checkedIn,
     };
   }
 
@@ -62,6 +72,39 @@ describe("planSchedule writes nothing", () => {
     const result = await planSchedule({});
     expect(result.ok).toBe(true);
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("judges marked for the final round only", () => {
+  test("none of them is given a first-round assignment", async () => {
+    mockGet.mockImplementation(world({ finalJudges: 4 }));
+    const { plan } = await planSchedule({});
+
+    const seated = Object.values(plan.assignments)
+      .flatMap((assignment) => assignment.judges.map((judge) => judge.judgeId));
+    expect(seated.filter((id) => id.startsWith("f"))).toEqual([]);
+  });
+
+  test("none of them is in the basis the plan is checked against", async () => {
+    mockGet.mockImplementation(world({ finalJudges: 4 }));
+    const { plan } = await planSchedule({});
+    expect(plan.basis.judgeIds.filter((id) => id.startsWith("f"))).toEqual([]);
+  });
+
+  test("they are still named, so an organizer can add one by hand", async () => {
+    mockGet.mockImplementation(world({ finalJudges: 2 }));
+    const { plan } = await planSchedule({});
+    expect(plan.judgeNames.f0).toBe("Prof 0");
+  });
+
+  test("they do not make up a shortage of round-one judges", async () => {
+    mockGet.mockImplementation(
+      world({ teams: 12, judges: 2, finalJudges: 20, rooms: 12, batchCount: 1 })
+    );
+    const result = await planSchedule({});
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/2 judges cannot cover 12 teams/);
   });
 });
 

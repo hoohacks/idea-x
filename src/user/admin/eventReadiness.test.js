@@ -36,6 +36,40 @@ const ready = {
   judges: judges(12),
 };
 
+describe("the two judging roles", () => {
+  const withProfessors = {
+    ...ready,
+    judges: {
+      ...judges(12),
+      p0: { isFinalRoundJudge: true, checkedIn: true },
+      p1: { isFinalRoundJudge: true, checkedIn: true },
+    },
+  };
+
+  test("final-round judges are counted separately from round-one judges", () => {
+    const { counts } = readEventState(withProfessors);
+    expect(counts.judges.roundOne).toBe(12);
+    expect(counts.judges.finalRound).toBe(2);
+    expect(counts.judges.total).toBe(14);
+  });
+
+  test("they do not make an unschedulable event look ready", () => {
+    // supply is a first-round question: nobody marked for the final round
+    // alone can stand in a room during a first-round batch
+    const shortHanded = {
+      ...ready,
+      judges: {
+        ...judges(1),
+        ...Object.fromEntries(
+          Array.from({ length: 20 }, (_, i) => [`p${i}`, { isFinalRoundJudge: true }])
+        ),
+      },
+    };
+
+    expect(readEventState(shortHanded).supply.ok).toBe(false);
+  });
+});
+
 describe("which part of the day this is", () => {
   test("nothing set up yet is setup", () => {
     expect(readEventState({}).phase).toBe(SETUP);
@@ -82,6 +116,20 @@ describe("what is blocking, before it blocks", () => {
   test("a check says what the number actually is, not just that it failed", () => {
     const state = readEventState({ ...ready, judges: judges(12, { roundOne: 5 }) });
     expect(state.checks.find((c) => c.id === "judges").detail).toBe("5 of 12 judges");
+  });
+
+  test("with nothing submitted and submissions closed, the check says to open them", () => {
+    const closed = readEventState({ ...ready, teams: teams(4, { submitted: 0 }) });
+    const check = closed.checks.find((c) => c.id === "submissions");
+    expect(check.detail).toMatch(/Submissions are closed/);
+    expect(check.to).toBe("/user/admin/control?tab=setup");
+
+    const open = readEventState({
+      ...ready,
+      config: { ...ready.config, submissionsOpen: true },
+      teams: teams(4, { submitted: 0 }),
+    });
+    expect(open.checks.find((c) => c.id === "submissions").detail).toBe("0 of 4 teams");
   });
 
   test("every check knows where it gets fixed", () => {

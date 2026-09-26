@@ -8,7 +8,7 @@
 const MAX = 28;
 
 function render(value) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   if (typeof value === "boolean") return value ? "yes" : "no";
   if (Array.isArray(value)) return `${value.length} items`;
   if (typeof value === "object") {

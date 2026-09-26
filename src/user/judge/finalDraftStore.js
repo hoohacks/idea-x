@@ -64,7 +64,7 @@ export function decodeDraft(raw) {
     ...raw,
     ranked: decodeList(raw?.ranked),
     pool: decodeList(raw?.pool),
-    excluded: raw?.excluded ?? {},
+
     assignments: Object.fromEntries(
       Object.entries(raw?.assignments ?? {}).map(([teamId, assignment]) => [
         teamId,
@@ -121,7 +121,7 @@ export async function saveFinalDraft(plan) {
       return {
         ok: false,
         error:
-          "This draft was discarded while you were editing it. Build a new plan — your edits " +
+          "This draft was discarded while you were editing it. Build a new plan; your edits " +
           "cannot be re-applied to a draft that no longer exists.",
       };
     }

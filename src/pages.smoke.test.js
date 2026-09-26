@@ -132,7 +132,7 @@ describe("pages render without crashing", () => {
 
   test("home", async () => {
     renderPage(Home, { userTypes: ["competitor"] });
-    expect(await screen.findByText(/Welcome/)).toBeInTheDocument();
+    expect(await screen.findByText("Hi, Alex")).toBeInTheDocument();
   });
 
   test("an organizer's dashboard tells them where the day is", async () => {
@@ -147,7 +147,7 @@ describe("pages render without crashing", () => {
 
   test("a competitor's dashboard is unchanged by that", async () => {
     renderPage(Home, { userTypes: ["competitor"] });
-    await screen.findByText(/Welcome/);
+    await screen.findByText("Hi, Alex");
     expect(screen.queryByText("Event status")).not.toBeInTheDocument();
   });
 
@@ -387,11 +387,11 @@ describe("pages render without crashing", () => {
 
   test("login", async () => {
     renderPage(Login);
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
   });
 
   test("forgot password", async () => {
     renderPage(ForgotPassword);
-    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
   });
 });

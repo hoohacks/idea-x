@@ -40,14 +40,7 @@ database.rules.cutover.json
 # migration backups contain judges' free-text notes
 scripts/backups/
 
-# agent scratch: worktrees and subagent-driven-development ledgers
-.claude/worktrees/
-.superpowers/
 /playwright-report
 /test-results
 /blob-report
 /playwright/.cache
-
-# Working notes: specs and plans that live on the machine they were
-# written on, not in the repo.
-/docs/superpowers/

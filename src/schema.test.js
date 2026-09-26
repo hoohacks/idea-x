@@ -150,7 +150,7 @@ describe("a judge cannot grant themselves an assignment", () => {
   // of assignment, so seeding one at registration is a privilege escalation.
   const judgeWrite = RULES.rules.judges.$uid[".write"];
 
-  test.each(["isRound1Judge", "teamAssignments", "finalAssignments"])(
+  test.each(["isRound1Judge", "isFinalRoundJudge", "teamAssignments", "finalAssignments"])(
     "%s is excluded from the judge's own write",
     (field) => {
       expect(judgeWrite).toContain(`!newData.hasChild('${field}')`);
@@ -187,8 +187,8 @@ describe("the deployed rules cannot drift from these ones unnoticed", () => {
    * When it fails: republish database.rules.json in the console, bump
    * `// rulesVersion:` at the top of that file, and put the printed digest here.
    */
-  const EXPECTED_VERSION = 7;
-  const EXPECTED_DIGEST = "4220aa274ad62df857088d83029400c09e782dc892a8a28d47da1968d7db5666";
+  const EXPECTED_VERSION = 10;
+  const EXPECTED_DIGEST = "19fd630f4a2c028fe3bc28a98f82703fa8ee0cf5a7f84c460eddedb8429184eb";
 
   // sorted so a pure reordering of the file is not treated as a rules change
   function sortDeep(value) {

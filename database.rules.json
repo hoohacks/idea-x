@@ -1,8 +1,8 @@
 {
-  // rulesVersion: 7 -- bump this whenever anything below changes, and republish
+  // rulesVersion: 10 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
-  // drifted from the ones in git. See "Publishing the rules" in the README.
+  // drifted from the ones in git. See docs/security-rules.md.
   "rules": {
     // Admins read and write everything. Every rule below grants some narrower
     // slice to a specific actor. Remember that Realtime Database rules CASCADE:
@@ -23,7 +23,26 @@
 
     // Judging room list and event start date. Admin-writable via the root rule.
     "config": {
-      ".read": "auth != null"
+      ".read": "auth != null",
+      // compared with `now` by the submission rules, so it has to be a number
+      "submissionsCloseAt": {
+        ".validate": "newData.isNumber()"
+      }
+    },
+
+    // Organizer announcements, shown at the top of every signed-in page. Anyone
+    // signed in may read them -- they are said to the room anyway -- and only
+    // admins write, through the root rule.
+    "announcements": {
+      ".read": "auth != null",
+      "$id": {
+        ".validate": "newData.hasChildren(['text','audience','postedAt','active'])",
+        "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 280" },
+        "audience": { ".validate": "newData.val() === 'everyone' || newData.val() === 'competitors' || newData.val() === 'judges'" },
+        "postedAt": { ".validate": "newData.isNumber()" },
+        "active": { ".validate": "newData.isBoolean()" },
+        "$other": { ".validate": false }
+      }
     },
 
     // There is deliberately no ".read" at this level. One here would cascade
@@ -52,14 +71,18 @@
         ".read": "auth != null && $uid === auth.uid",
 
         // A judge writes their own record once, at registration. isRound1Judge,
-        // checkedIn, teamAssignments and finalAssignments are set by admins
-        // through the root rule, so a judge cannot add themselves to the
-        // judging pool, check themselves in, or hand themselves extra teams.
+        // isFinalRoundJudge, checkedIn, teamAssignments and finalAssignments are
+        // set by admins through the root rule, so a judge cannot add themselves
+        // to either judging pool, check themselves in, or hand themselves extra
+        // teams.
         //
         // finalAssignments is the load-bearing one: the /scores write rule
         // treats an entry there as proof of assignment, so a judge who could
         // seed it at registration could file a final-round score for any team.
-        ".write": "auth != null && $uid === auth.uid && !data.exists() && !newData.hasChild('isRound1Judge') && !newData.hasChild('teamAssignments') && !newData.hasChild('finalAssignments') && newData.child('checkedIn').val() === false && newData.child('foodCheckIn').val() === false",
+        // isFinalRoundJudge is one step behind it -- it is what puts somebody in
+        // the pool the final round plan seats, and publishing that plan is what
+        // turns a seat into finalAssignments.
+        ".write": "auth != null && $uid === auth.uid && !data.exists() && !newData.hasChild('isRound1Judge') && !newData.hasChild('isFinalRoundJudge') && !newData.hasChild('teamAssignments') && !newData.hasChild('finalAssignments') && newData.child('checkedIn').val() === false && newData.child('foodCheckIn').val() === false",
 
         // Final round assignments, denormalised the same way teamAssignments
         // is, so a judge can load them from a node they already read. Keyed by
@@ -169,6 +192,16 @@
         },
 
         "submission": {
+          // Only while organizers have submissions open (config/submissionsOpen),
+          // so a team formed weeks ahead cannot hand in a pitch before the day,
+          // and only before the deadline (config/submissionsCloseAt) if one is
+          // set, checked against the server's clock rather than the phone's.
+          // A .validate rather than a clause in .write, because the team create
+          // rule above cascades over this node: as a .write clause, a team could
+          // seed its submission in the same call that created it. Admins pass
+          // either way, to fix a record on a team's behalf.
+          ".validate": "(root.child('config').child('submissionsOpen').val() === true && (!root.child('config').child('submissionsCloseAt').exists() || now < root.child('config').child('submissionsCloseAt').val())) || root.child('admins').hasChild(auth.uid)",
+
           // A judge reads the deck and the problem statement for the teams they
           // are actually going to see, in either round. This grants the
           // submission subtree and nothing else: a read granted at a child
@@ -179,7 +212,11 @@
         },
 
         "submitted": {
-          ".write": "auth != null && root.child('teams').child($teamId).child('members').hasChild(auth.uid)"
+          ".write": "auth != null && root.child('teams').child($teamId).child('members').hasChild(auth.uid)",
+          // Marking a team submitted closes it to new members, so it waits for
+          // submissions to open too -- otherwise an early "submit" would lock
+          // out a teammate who registers later. Writing false is always fine.
+          ".validate": "newData.val() !== true || (root.child('config').child('submissionsOpen').val() === true && (!root.child('config').child('submissionsCloseAt').exists() || now < root.child('config').child('submissionsCloseAt').val())) || root.child('admins').hasChild(auth.uid)"
         },
 
         // The finalist slot, denormalised so a team can see it through the team

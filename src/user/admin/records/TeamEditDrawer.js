@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { LinesSkeleton } from "../../../loadingUi";
 import { Alert, Button, Divider, MenuItem, TextField, Typography } from "@mui/material";
 import EditDrawer from "./EditDrawer";
 import { renameTeam } from "./recordEdits";
 import { overrideTeamSlot, setTeamSubmitted, forceIntoFinalRound } from "../danger/dangerZone";
 import { listRooms } from "../rooms/roomsService";
 import { findOpenSlots, scheduleTeamIntoBatch } from "../../judge/assignmentEdits";
+import { judgePickerOptions } from "../../judge/judgeRoles";
 import { deleteTeam } from "../people/peopleService";
 import { ref, get } from "firebase/database";
 import { database } from "../../../firebase";
@@ -153,7 +155,7 @@ function FinalRoundControls({ team, teamId, name, saving, run }) {
 
       <Alert severity="warning">
         This adds the team to the standings and gives it a slot. It does not assign
-        judges — do that from the judging progress page.
+        judges. Do that from the judging progress page.
       </Alert>
 
       <Button
@@ -200,16 +202,9 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
       .then(([openSlots, judgesData]) => {
         if (!live) return;
         setSlots(openSlots);
-        setJudges(
-          Object.entries(judgesData)
-            .filter(([, judge]) => judge?.isRound1Judge)
-            .map(([uid, judge]) => ({
-              uid,
-              name: [judge.firstName, judge.lastName].filter(Boolean).join(" ") || uid.slice(0, 8),
-              checkedIn: judge.checkedIn === true,
-            }))
-            .sort((a, b) => Number(b.checkedIn) - Number(a.checkedIn) || a.name.localeCompare(b.name))
-        );
+        // both roles, because this places a team by hand: the generator would
+        // not seat a final-round judge, but an organizer filling a gap may
+        setJudges(judgePickerOptions(judgesData));
       })
       .catch(() => { if (live) setSlots([]); })
       .finally(() => { if (live) setLoading(false); });
@@ -218,7 +213,7 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
 
   const chosen = slots.find((slot) => String(slot.batch) === String(batch));
 
-  if (loading) return <Alert severity="info">Loading the batches…</Alert>;
+  if (loading) return <LinesSkeleton label="Loading the batches" lines={2} />;
 
   if (!slots.length) {
     return (
@@ -233,7 +228,7 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
     <>
       <Alert severity="warning">
         This team submitted after the schedule was generated, so it has no slot. Give it one here
-        rather than regenerating — a regenerate moves every assignment in the event and strands the
+        rather than regenerating: a regenerate moves every assignment in the event and strands the
         scores already collected.
       </Alert>
 
@@ -278,7 +273,9 @@ function ScheduleIntoBatch({ teamId, run, saving }) {
       >
         {judges.map((judge) => (
           <MenuItem key={judge.uid} value={judge.uid}>
-            {judge.name}{judge.checkedIn ? "" : " (not checked in)"}
+            {judge.name}
+            {judge.finalOnly ? " (final round judge)" : ""}
+            {judge.checkedIn ? "" : " (not checked in)"}
           </MenuItem>
         ))}
       </TextField>
