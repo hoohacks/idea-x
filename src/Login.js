@@ -5,17 +5,18 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Checkbox,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
   Link,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { EVENT } from "./eventInfo";
-import { PublicShell } from "./registrationUi";
+import { AuthCard, PublicShell } from "./registrationUi";
+import { PiEye, PiEyeSlash } from "react-icons/pi";
 import { PAST_WINNERS } from "./winners";
 import { REGISTRATION_OPEN, isStaffEntrance } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
@@ -36,6 +37,7 @@ function SignInForm() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -63,47 +65,65 @@ function SignInForm() {
     );
     setBusy(false);
     if (success) navigate("/user/home");
-    else setError("We could not sign you in. Check your email and password, or reset it below.");
+    else setError("We could not sign you in. Check your email and password, or reset your password above.");
   };
 
   return (
     <PublicShell maxWidth="xs" pad backdrop={PAST_WINNERS}>
-      <Card sx={{ borderRadius: 4, bgcolor: "background.paper", boxShadow: "0 0 16px rgba(0, 0, 0, 0.12)" }}>
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, "&:last-child": { pb: { xs: 3, sm: 4 } } }}>
-          {/* the bar carries the wordmark, so the page says what it is for */}
-          <Typography variant="h1" gutterBottom>
-            Sign in
-          </Typography>
-          <Typography variant="body2">{EVENT.dateLabel}</Typography>
+      <AuthCard
+        title="Welcome back"
+        subtitle="Sign in for your team, your judging list or the organizer dashboard."
+        footer={
+          <>
+            New to {EVENT.name}?{" "}
+            <Link href="#/ideathon-registration">Create an account</Link>
+          </>
+        }
+      >
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={2.25}>
+            <TextField
+              required
+              fullWidth
+              id="email"
+              label="Email address"
+              name="email"
+              type="email"
+              autoComplete="email"
+              autoFocus
+              value={formData.email}
+              onChange={handleChange}
+            />
+            <TextField
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              id="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={handleChange}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    {/* labelled without the word "password", so a label lookup
+                        for the field itself still finds exactly one thing */}
+                    <IconButton
+                      edge="end"
+                      onClick={() => setShowPassword((shown) => !shown)}
+                      aria-label={showPassword ? "Hide what you typed" : "Show what you typed"}
+                      aria-pressed={showPassword}
+                      sx={{ mr: -0.5, color: "text.secondary" }}
+                    >
+                      {showPassword ? <PiEyeSlash size={20} /> : <PiEye size={20} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <TextField
-                required
-                fullWidth
-                id="email"
-                label="Email address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={handleChange}
-              />
-              <TextField
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-
-              {error && <Alert severity="error">{error}</Alert>}
-
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ gap: 1 }}>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -113,30 +133,22 @@ function SignInForm() {
                     onChange={handleChange}
                   />
                 }
-                label={<Typography variant="body2">Keep me signed in</Typography>}
+                label={<Typography variant="body2" sx={{ color: "text.primary" }}>Keep me signed in</Typography>}
                 sx={{ mr: 0 }}
               />
-
-              <Button type="submit" fullWidth variant="contained" disabled={busy}>
-                {busy ? "Signing in…" : "Sign in"}
-              </Button>
-
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                sx={{ pt: 0.5 }}
-              >
-                <Link href="#/forgot-password" variant="body2">
-                  Forgot password?
-                </Link>
-                <Link href="#/ideathon-registration" variant="body2">
-                  Create an account
-                </Link>
-              </Stack>
+              <Link href="#/forgot-password" variant="body2">
+                Forgot password?
+              </Link>
             </Stack>
-          </Box>
-        </CardContent>
-      </Card>
+
+            {error && <Alert severity="error">{error}</Alert>}
+
+            <Button type="submit" fullWidth variant="contained" size="large" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in"}
+            </Button>
+          </Stack>
+        </Box>
+      </AuthCard>
     </PublicShell>
   );
 }

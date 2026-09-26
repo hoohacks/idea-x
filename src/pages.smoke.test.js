@@ -387,11 +387,11 @@ describe("pages render without crashing", () => {
 
   test("login", async () => {
     renderPage(Login);
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
   });
 
   test("forgot password", async () => {
     renderPage(ForgotPassword);
-    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
   });
 });

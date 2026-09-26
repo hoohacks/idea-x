@@ -436,6 +436,68 @@ export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop =
   );
 }
 
+/**
+ * The card the sign-in and password pages are built on: the bulb mark, a
+ * greeting, one line on what the page is for, the form, and a footer line
+ * pointing at the other door.
+ *
+ * It is laid out the way a sign-in sheet over a board of pins is: centred,
+ * generously padded, with the mark carrying the brand rather than the heading.
+ * The plain "Sign in" heading over a date line it replaced said nothing the
+ * button did not already say.
+ *
+ * It rises into place once when the page opens, which is what draws the eye
+ * to it over the photos; reduced motion (index.css) stills that.
+ */
+export function AuthCard({ title, subtitle, footer, children }) {
+  return (
+    <Box
+      sx={{
+        bgcolor: "background.paper",
+        borderRadius: 4,
+        boxShadow: "0 24px 48px rgba(17, 17, 16, 0.24), 0 2px 8px rgba(17, 17, 16, 0.12)",
+        px: { xs: 3, sm: 5 },
+        pt: { xs: 4, sm: 5 },
+        pb: { xs: 3, sm: 4 },
+        "@keyframes authRise": {
+          from: { opacity: 0, transform: "translateY(12px)" },
+          to: { opacity: 1, transform: "none" },
+        },
+        animation: "authRise 360ms cubic-bezier(0.16, 1, 0.3, 1) both",
+      }}
+    >
+      <Stack alignItems="center" sx={{ textAlign: "center" }}>
+        <Box
+          component="img"
+          src={`${process.env.PUBLIC_URL ?? ""}/ideathon-bulb.png`}
+          alt=""
+          aria-hidden
+          sx={{ height: 44, width: "auto", display: "block" }}
+        />
+        <Typography
+          variant="h1"
+          sx={{ mt: 2, fontSize: { xs: "1.625rem", sm: "1.75rem" }, letterSpacing: "-0.03em" }}
+        >
+          {title}
+        </Typography>
+        {subtitle && (
+          <Typography variant="body2" sx={{ mt: 1, maxWidth: "30ch", fontSize: "0.9375rem" }}>
+            {subtitle}
+          </Typography>
+        )}
+      </Stack>
+
+      <Box sx={{ mt: 3.5 }}>{children}</Box>
+
+      {footer && (
+        <Box sx={{ mt: 3, pt: 2.5, borderTop: 1, borderColor: "divider", textAlign: "center" }}>
+          <Typography variant="body2">{footer}</Typography>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 export function RegistrationShell({ hero, children }) {
   return (
     <PublicShell>
