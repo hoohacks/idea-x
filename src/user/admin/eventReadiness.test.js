@@ -118,6 +118,20 @@ describe("what is blocking, before it blocks", () => {
     expect(state.checks.find((c) => c.id === "judges").detail).toBe("5 of 12 judges");
   });
 
+  test("with nothing submitted and submissions closed, the check says to open them", () => {
+    const closed = readEventState({ ...ready, teams: teams(4, { submitted: 0 }) });
+    const check = closed.checks.find((c) => c.id === "submissions");
+    expect(check.detail).toMatch(/Submissions are closed/);
+    expect(check.to).toBe("/user/admin/control?tab=setup");
+
+    const open = readEventState({
+      ...ready,
+      config: { ...ready.config, submissionsOpen: true },
+      teams: teams(4, { submitted: 0 }),
+    });
+    expect(open.checks.find((c) => c.id === "submissions").detail).toBe("0 of 4 teams");
+  });
+
   test("every check knows where it gets fixed", () => {
     for (const check of readEventState({}).checks) {
       expect(check.to).toMatch(/^\/user\//);

@@ -82,6 +82,22 @@ export async function setEventStart(iso) {
   });
 }
 
+/**
+ * Whether teams can hand in their project. Closed until an organizer opens it,
+ * so an absent node means closed: a database nobody has touched should not
+ * start taking pitches weeks before the event. The rules enforce the same flag.
+ */
+export async function setSubmissionsOpen(open) {
+  const before = (await readOne("config/submissionsOpen", false)) === true;
+  const after = open === true;
+  if (before === after) return { ok: true };
+  return applyAdminAction({
+    action: "config.submissionsOpen",
+    summary: after ? "Opened project submissions" : "Closed project submissions",
+    changes: [{ path: "config/submissionsOpen", before, after }],
+  });
+}
+
 export async function setFinalRoundRoom(room) {
   const next = String(room ?? "").trim();
   if (!next) return { ok: false, error: "Give the final round a room." };

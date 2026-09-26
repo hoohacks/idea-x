@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, TextField } from "@mui/material";
-import { FIELD, Section, SettingList, SettingRow } from "../adminUi";
-import { setEventStart } from "./eventConfig";
+import { FIELD, Section, SettingList, SettingRow, StateToggle } from "../adminUi";
+import { setEventStart, setSubmissionsOpen } from "./eventConfig";
 import { EVENT_START, eventLocalToInstant, instantToEventLocal } from "../../../eventInfo";
 
 /**
@@ -21,6 +21,8 @@ export default function EventSection({ config, onResult }) {
   const stored = config.eventStart ?? EVENT_START;
   const [value, setValue] = useState(() => instantToEventLocal(stored));
   const [busy, setBusy] = useState(false);
+  const [toggling, setToggling] = useState(false);
+  const submissionsOpen = config.submissionsOpen === true;
 
   useEffect(() => { setValue(instantToEventLocal(stored)); }, [stored]);
 
@@ -57,6 +59,29 @@ export default function EventSection({ config, onResult }) {
             >
               Save
             </Button>
+          </SettingRow>
+          <SettingRow
+            label="Project submissions"
+            hint="Teams can form and invite people either way. While closed, the team page says submissions open on the day, and the database refuses them."
+          >
+            <StateToggle
+              on={submissionsOpen}
+              onLabel="Open"
+              offLabel="Closed"
+              minWidth={104}
+              onClick={async () => {
+                if (toggling) return;
+                setToggling(true);
+                try {
+                  onResult(
+                    await setSubmissionsOpen(!submissionsOpen),
+                    submissionsOpen ? "Submissions closed" : "Submissions open"
+                  );
+                } finally {
+                  setToggling(false);
+                }
+              }}
+            />
           </SettingRow>
         </SettingList>
       </Card>

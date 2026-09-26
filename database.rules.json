@@ -1,5 +1,5 @@
 {
-  // rulesVersion: 8 -- bump this whenever anything below changes, and republish
+  // rulesVersion: 9 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
   // drifted from the ones in git. See "Publishing the rules" in the README.
@@ -173,6 +173,14 @@
         },
 
         "submission": {
+          // Only while organizers have submissions open (config/submissionsOpen),
+          // so a team formed weeks ahead cannot hand in a pitch before the day.
+          // A .validate rather than a clause in .write, because the team create
+          // rule above cascades over this node: as a .write clause, a team could
+          // seed its submission in the same call that created it. Admins pass
+          // either way, to fix a record on a team's behalf.
+          ".validate": "root.child('config').child('submissionsOpen').val() === true || root.child('admins').hasChild(auth.uid)",
+
           // A judge reads the deck and the problem statement for the teams they
           // are actually going to see, in either round. This grants the
           // submission subtree and nothing else: a read granted at a child
@@ -183,7 +191,11 @@
         },
 
         "submitted": {
-          ".write": "auth != null && root.child('teams').child($teamId).child('members').hasChild(auth.uid)"
+          ".write": "auth != null && root.child('teams').child($teamId).child('members').hasChild(auth.uid)",
+          // Marking a team submitted closes it to new members, so it waits for
+          // submissions to open too -- otherwise an early "submit" would lock
+          // out a teammate who registers later. Writing false is always fine.
+          ".validate": "newData.val() !== true || root.child('config').child('submissionsOpen').val() === true || root.child('admins').hasChild(auth.uid)"
         },
 
         // The finalist slot, denormalised so a team can see it through the team

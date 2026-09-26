@@ -9,11 +9,12 @@ import { describeSupply, BATCH_COUNT } from "../judge/schedulePlan.js";
  * not readable from a browser. So an admin records what they published in
  * `config/rulesVersion`, and this compares the two.
  *
- * It matters more than a version mismatch usually does: until version 5 is
- * published, restoring a restore point that contains scores fails and changes
- * nothing. The recovery mechanism is inert and says so nowhere.
+ * It matters more than a version mismatch usually does: before version 5,
+ * restoring a restore point that contains scores fails and changes nothing, and
+ * before version 9 the database takes a team's submission whether or not
+ * organizers have opened submissions -- only the page hides the form.
  */
-export const REQUIRED_RULES_VERSION = 5;
+export const REQUIRED_RULES_VERSION = 9;
 
 /**
  * Where the event has got to, and what an organizer should do next.
@@ -161,8 +162,15 @@ function checksFor({ rooms, judge, team, config, supply }) {
       id: "submissions",
       label: "Teams submitted",
       done: team.submitted > 0,
-      detail: `${team.submitted} of ${team.total} team${team.total === 1 ? "" : "s"}`,
-      to: "/user/admin/teams",
+      // with nothing in yet, the likely reason is that nobody opened the form
+      detail:
+        team.submitted === 0 && config.submissionsOpen !== true
+          ? "Submissions are closed. Open them in Event setup on the day"
+          : `${team.submitted} of ${team.total} team${team.total === 1 ? "" : "s"}`,
+      to:
+        team.submitted === 0 && config.submissionsOpen !== true
+          ? "/user/admin/control?tab=setup"
+          : "/user/admin/teams",
     },
     {
       id: "schedule",
@@ -187,8 +195,8 @@ function blockersFor({ config, legacyScoreTeams }) {
       id: "rules",
       title: `Publish database rules version ${REQUIRED_RULES_VERSION}`,
       detail: Number.isFinite(published)
-        ? `Version ${published} is recorded as published. Until ${REQUIRED_RULES_VERSION} is, restoring a restore point that contains scores fails and changes nothing.`
-        : `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores fails and changes nothing.`,
+        ? `Version ${published} is recorded as published. Until ${REQUIRED_RULES_VERSION} is, the database does not enforce the submissions switch${published < 5 ? ", and restoring a restore point that contains scores fails and changes nothing" : ""}.`
+        : `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores may fail, and the database does not enforce the submissions switch.`,
       how: "Paste database.rules.json into Realtime Database → Rules, then set config/rulesVersion to match.",
       to: "/user/admin/control?tab=setup",
     });

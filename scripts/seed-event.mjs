@@ -254,6 +254,7 @@ async function main() {
       batchTimes,
       finalRoundRoom: "Rice 011",
       eventStart: new Date(now + 86400000).toISOString(),
+      submissionsOpen: true,
     },
     judges: {},
     competitors: {},

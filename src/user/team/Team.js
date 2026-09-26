@@ -8,6 +8,7 @@ import { memberIds } from "./teamMembers";
 import { personName } from "../../roles.js";
 import { leaveTeam } from "./teamMembership.js";
 import { PageSkeleton } from "../../loadingUi";
+import { EVENT } from "../../eventInfo";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 import {
@@ -46,6 +47,18 @@ function Team() {
     const [problemStatement, setProblemStatement] = useState(userData ? userData.problemStatement : "");
     const [targetIndustry, setTargetIndustry] = useState(userData ? userData.targetIndustry : "");
     const [showModal, setShowModal] = useState(false);
+    // null until the flag arrives, so the form does not flash up and vanish
+    const [submissionsOpen, setSubmissionsOpen] = useState(null);
+
+    // Live, so the form appears the moment organizers open submissions on the
+    // day, without anybody reloading. An absent flag means closed.
+    useEffect(() => {
+        return onValue(
+            ref(database, "config/submissionsOpen"),
+            (snapshot) => setSubmissionsOpen(snapshot.val() === true),
+            () => setSubmissionsOpen(false)
+        );
+    }, []);
 
 
     // Get team ID from userData if available
@@ -181,7 +194,11 @@ function Team() {
             setShowModal(true);
         } catch (error) {
             console.error("Could not save the submission:", error);
-            setUploadError("Your submission could not be saved. Please try again.");
+            setUploadError(
+                String(error?.message ?? error).includes("PERMISSION_DENIED")
+                    ? "Submissions are closed right now, so this was not saved."
+                    : "Your submission could not be saved. Please try again."
+            );
         } finally {
             setSubmitting(false);
         }
@@ -275,6 +292,12 @@ function Team() {
                         <Typography variant="body1" gutterBottom>
                             You are not on a team yet.
                         </Typography>
+                        {/* Said outright, so nobody thinks they must arrive with a
+                            team: plenty of people only meet theirs on the day. */}
+                        <Typography variant="body2">
+                            That is fine. You can find teammates on the day of the event, too. If you
+                            already have people in mind, start a team and share the ID, or join theirs.
+                        </Typography>
                         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                             <Button variant="contained" component={RouterLink} to="/user/team/create">
                                 Create a team
@@ -344,8 +367,8 @@ function Team() {
                             </Card>
                         )}
 
-                        {schedule ? (
-                            teamData.submission && (
+                        {schedule || submissionsOpen !== true ? (
+                            teamData.submission ? (
                                 <Card>
                                     <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
                                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -381,6 +404,8 @@ function Team() {
                                         )}
                                     </CardContent>
                                 </Card>
+                            ) : (
+                                !schedule && submissionsOpen === false && <SubmissionsClosed />
                             )
                         ) : (
                             <Card>
@@ -518,6 +543,25 @@ function PitchLine({ label, time, room }) {
                 </Typography>
             </Box>
         </Stack>
+    );
+}
+
+/**
+ * Before organizers open submissions. The team itself is ready to go -- the ID
+ * and members are on this page -- so this says when the form arrives and what
+ * to do in the meantime, rather than showing a form the database would refuse.
+ */
+function SubmissionsClosed() {
+    return (
+        <Card>
+            <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+                <Typography variant="h5">Project submission</Typography>
+                <Typography variant="body1" sx={{ mt: 1, maxWidth: "65ch" }}>
+                    Submissions open on the day of the event, {EVENT.dayLabel}. Anyone can still join
+                    before then with your Team ID, and people keep finding teammates on the day, too.
+                </Typography>
+            </CardContent>
+        </Card>
     );
 }
 
