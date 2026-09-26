@@ -51,30 +51,53 @@ function FactPills({ facts }) {
 }
 
 /**
- * Event photos, tiled in two columns at their own heights with tight gutters,
- * the way a board of pins sits. Only drawn when there are real photos: a page
- * padded out with stand-in imagery would show an event that did not happen.
+ * Last year's winners, tiled in two columns at their own heights with tight
+ * gutters, the way a board of pins sits. The team and prize are written under
+ * each photo rather than laid over it, so the faces and the cheque stay clear.
  */
-function PhotoBoard({ photos }) {
+function PhotoBoard({ photos, title }) {
   return (
-    <Box sx={{ columnCount: 2, columnGap: "8px" }}>
-      {photos.map((photo) => (
-        <Box
-          key={photo.src}
-          component="img"
-          src={photo.src}
-          alt={photo.alt}
-          loading="lazy"
-          sx={{
-            display: "block",
-            width: "100%",
-            mb: "8px",
-            borderRadius: 2,
-            breakInside: "avoid",
-            bgcolor: "action.hover",
-          }}
-        />
-      ))}
+    <Box component="section" aria-label={title}>
+      {title && (
+        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", mb: 1.25 }}>
+          {title}
+        </Typography>
+      )}
+      <Box sx={{ columnCount: 2, columnGap: "8px" }}>
+        {photos.map((photo) => (
+          <Box
+            component="figure"
+            key={photo.src}
+            sx={{ m: 0, mb: 1.5, breakInside: "avoid" }}
+          >
+            <Box
+              component="img"
+              src={photo.src}
+              alt={photo.alt}
+              width={photo.width}
+              height={photo.height}
+              loading="lazy"
+              sx={{
+                display: "block",
+                width: "100%",
+                height: "auto",
+                borderRadius: 2,
+                bgcolor: "action.hover",
+              }}
+            />
+            {photo.team && (
+              <Box component="figcaption" sx={{ mt: 0.75, px: 0.25 }}>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 700, color: "text.primary" }}>
+                  {photo.team}
+                </Typography>{" "}
+                <Typography variant="body2" component="span">
+                  won {photo.prize}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 }
@@ -85,7 +108,7 @@ function PhotoBoard({ photos }) {
  * there is one, is `children` and sits in its own block under the hero rather
  * than inside it, so the hero reads in a glance.
  */
-export function Hero({ eyebrow, title, facts, summary, photos, children }) {
+export function Hero({ eyebrow, title, facts, summary, photos, photosTitle, children }) {
   const hasPhotos = Array.isArray(photos) && photos.length > 0;
   const details = children && (
     <Typography variant="body1" sx={{ maxWidth: "62ch" }}>
@@ -133,7 +156,7 @@ export function Hero({ eyebrow, title, facts, summary, photos, children }) {
               the closed page; with one, it moves below */}
           {!summary && details && <Box sx={{ mt: 2.5 }}>{details}</Box>}
         </Box>
-        {hasPhotos && <PhotoBoard photos={photos} />}
+        {hasPhotos && <PhotoBoard photos={photos} title={photosTitle} />}
       </Box>
 
       {summary && details && (
@@ -367,7 +390,41 @@ export function ResultDialog({ open, title, children, actions, onClose }) {
  * reset. They share the bar and the footer so that arriving from the marketing
  * site looks the same whichever one you land on.
  */
-export function PublicShell({ children, maxWidth = "lg", pad = false }) {
+/**
+ * Photos behind a page, blurred and dimmed so a card set over them reads as
+ * the one thing to look at: the way a sign-in sheet sits over a board of pins.
+ * Decorative, so hidden from screen readers; the same photos are described
+ * properly on the registration page.
+ */
+function PhotoBackdrop({ photos }) {
+  return (
+    <Box aria-hidden sx={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+      <Box
+        sx={{
+          position: "absolute",
+          inset: -24,
+          display: "grid",
+          gridTemplateColumns: { xs: "repeat(2, 1fr)", md: `repeat(${photos.length}, 1fr)` },
+          gap: "8px",
+          filter: "blur(6px)",
+        }}
+      >
+        {photos.map((photo) => (
+          <Box
+            key={photo.src}
+            component="img"
+            src={photo.src}
+            alt=""
+            sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ))}
+      </Box>
+      <Box sx={{ position: "absolute", inset: 0, bgcolor: "rgba(17, 17, 16, 0.55)" }} />
+    </Box>
+  );
+}
+
+export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop = null }) {
   return (
     <Box
       sx={{
@@ -378,28 +435,32 @@ export function PublicShell({ children, maxWidth = "lg", pad = false }) {
       }}
     >
       <Nav variant="public" />
-      <Container
-        maxWidth={maxWidth}
-        component="main"
-        sx={{
-          flex: 1,
-          /*
-           * Room for the submit bar, which is pinned to the bottom of the
-           * viewport on a phone.
-           *
-           * Focusing a field makes the browser scroll it just barely into view,
-           * and "just barely" means underneath a bar that is sitting over the
-           * last 86 pixels of the screen -- so tapping Password put the cursor
-           * somewhere the person could not see, right as the keyboard opened.
-           * scroll-margin is what that scroll is told to leave clear.
-           */
-          "& input, & textarea": { scrollMarginBottom: 120 },
-          ...(pad ? { py: { xs: 5, sm: 8 } } : null),
-        }}
-      >
-        {children}
-      </Container>
-      <PageFooter maxWidth={maxWidth} />
+      <Box sx={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
+        {backdrop && <PhotoBackdrop photos={backdrop} />}
+        <Container
+          maxWidth={maxWidth}
+          component="main"
+          sx={{
+            flex: 1,
+            position: "relative",
+            /*
+             * Room for the submit bar, which is pinned to the bottom of the
+             * viewport on a phone.
+             *
+             * Focusing a field makes the browser scroll it just barely into view,
+             * and "just barely" means underneath a bar that is sitting over the
+             * last 86 pixels of the screen -- so tapping Password put the cursor
+             * somewhere the person could not see, right as the keyboard opened.
+             * scroll-margin is what that scroll is told to leave clear.
+             */
+            "& input, & textarea": { scrollMarginBottom: 120 },
+            ...(pad ? { py: { xs: 5, sm: 8 } } : null),
+          }}
+        >
+          {children}
+        </Container>
+      </Box>
+      <PageFooter maxWidth={maxWidth} flush={Boolean(backdrop)} />
     </Box>
   );
 }

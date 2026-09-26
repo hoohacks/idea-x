@@ -13,6 +13,7 @@ import {
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "./firebase";
 import { PublicShell } from "./registrationUi";
+import { PAST_WINNERS } from "./winners";
 
 export default function ForgotPasswordPage() {
     const [sentReset, setSentReset] = useState(false);
@@ -43,8 +44,8 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <PublicShell maxWidth="xs" pad>
-            <Card sx={{ borderRadius: 4 }}>
+        <PublicShell maxWidth="xs" pad backdrop={PAST_WINNERS}>
+            <Card sx={{ borderRadius: 4, bgcolor: "background.paper", boxShadow: "0 0 16px rgba(0, 0, 0, 0.12)" }}>
                 <CardContent sx={{ p: { xs: 3, sm: 4 }, "&:last-child": { pb: { xs: 3, sm: 4 } } }}>
                     <Typography variant="h1">Reset password</Typography>
 
