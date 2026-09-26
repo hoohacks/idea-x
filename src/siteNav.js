@@ -259,8 +259,17 @@ function Nav({ variant = "app", overlay = false }) {
                 // the photos run up behind it rather than stopping at a white strip
                 sx={overlay ? { bgcolor: "transparent", borderBottom: "none" } : undefined}
             >
-                <Container maxWidth="lg">
-                    <Toolbar disableGutters sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1 }}>
+                {/* Over the photos nothing else uses the page's content column,
+                    so the wordmark sits in the window's own corner instead of
+                    floating a column's width in from it. */}
+                <Container
+                    maxWidth={overlay ? false : "lg"}
+                    sx={overlay ? { px: { xs: 2.5, sm: 4 } } : undefined}
+                >
+                    <Toolbar
+                        disableGutters
+                        sx={{ minHeight: { xs: 56, sm: 64 }, gap: 1, ...(overlay && { pt: { sm: 1 } }) }}
+                    >
                         {/* Over the sign-in photos the bar is only the way back
                             to the event site: the card below already carries
                             the mark and its own link to the other door, and a
