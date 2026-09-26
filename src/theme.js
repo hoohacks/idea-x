@@ -368,7 +368,18 @@ const theme = createTheme({
         },
       },
       styleOverrides: {
-        root: { alignItems: "center", borderRadius: RADIUS, fontSize: "0.875rem" },
+        root: {
+          alignItems: "center",
+          borderRadius: RADIUS,
+          fontSize: "0.875rem",
+          // on a phone an action beside the message squeezed the message into
+          // a column a few words wide; it goes underneath instead
+          "@media (max-width: 599.95px)": {
+            flexWrap: "wrap",
+            "& .MuiAlert-message": { flex: "1 1 0", minWidth: 0 },
+            "& .MuiAlert-action": { flexBasis: "100%", ml: 0, pl: "34px", pt: 0, mt: -0.5 },
+          },
+        },
         standardError: { backgroundColor: DANGER_PALE, color: DANGER, "& .MuiAlert-icon": { color: DANGER } },
         standardWarning: { backgroundColor: CAUTION_PALE, color: CAUTION, "& .MuiAlert-icon": { color: CAUTION } },
         standardSuccess: { backgroundColor: GOOD_PALE, color: GOOD, "& .MuiAlert-icon": { color: GOOD } },
@@ -416,10 +427,16 @@ const theme = createTheme({
         },
       },
     },
+    // Scrollable everywhere: on a phone the control panel's four tabs ran off
+    // the right edge and "Recovery" could not be reached at all.
     MuiTabs: {
+      defaultProps: { variant: "scrollable", scrollButtons: "auto", allowScrollButtonsMobile: true },
       styleOverrides: {
         root: { minHeight: 44 },
         indicator: { height: 3, borderRadius: 3 },
+        // the arrow at an end with nothing past it folds away, rather than
+        // holding an empty gap that indents the first tab
+        scrollButtons: { width: 32, "&.Mui-disabled": { width: 0, opacity: 0 } },
       },
     },
 

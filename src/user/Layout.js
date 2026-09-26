@@ -20,7 +20,9 @@ function Layout({ children, maxWidth = "md", bleed = false }) {
                 flexDirection: "column",
                 bgcolor: "background.default",
                 // clear of the rail on a laptop, and of the tab bar on a phone
+                // (and of the notch, now there is no top bar to sit under it)
                 pl: { md: `${RAIL_WIDTH}px` },
+                pt: { xs: "env(safe-area-inset-top, 0px)", md: 0 },
                 pb: {
                     xs: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
                     md: 0,
@@ -41,7 +43,13 @@ function Layout({ children, maxWidth = "md", bleed = false }) {
                     {children}
                 </Container>
             )}
-            {!bleed && <PageFooter maxWidth={maxWidth} />}
+            {/* on a phone the tab bar is the bottom of the page; a copyright
+                strip sitting above it was dead space before the chrome */}
+            {!bleed && (
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                    <PageFooter maxWidth={maxWidth} />
+                </Box>
+            )}
         </Box>
     );
 }

@@ -282,7 +282,8 @@ function TeamSearch() {
             // go looking for.
             <Row key={key} accent={!team.submitted}>
               <Stack spacing={0.5}>
-                <Stack sx={{ gap: 1 }} direction="row" alignItems="center" flexWrap="wrap">
+                <Stack direction="row" alignItems="flex-start" sx={{ gap: 1 }}>
+                <Stack sx={{ gap: 1, flex: 1, minWidth: 0 }} direction="row" alignItems="center" flexWrap="wrap">
                   <Typography sx={{ fontWeight: 600 }}>{team.name || "Unnamed team"}</Typography>
                   <Chip
                     label={team.submitted ? "submitted" : "not submitted"}
@@ -299,11 +300,12 @@ function TeamSearch() {
                       variant="outlined"
                     />
                   )}
+                </Stack>
                   <Button
                     size="small"
                     variant="outlined"
                     onClick={() => setEditing({ teamId: key, team })}
-                    sx={{ ml: "auto" }}
+                    sx={{ flexShrink: 0 }}
                   >
                     Edit
                   </Button>

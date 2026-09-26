@@ -3,7 +3,7 @@ import { database } from "../../firebase";
 
 import React, { useEffect, useMemo, useState } from "react";
 
-import { Alert, Button, Chip, Snackbar, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Snackbar, Stack, Typography } from "@mui/material";
 import Layout from "../Layout";
 import { assignmentList } from "../judge/assignmentList";
 import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
@@ -186,7 +186,15 @@ function JudgeSearch() {
                   )}
                 </Stack>
 
-                <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1,
+                    width: { xs: "100%", md: "auto" },
+                    gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, auto)" },
+                    "& > .MuiButton-root": { minWidth: 0 },
+                  }}
+                >
                   <Button size="small" variant="outlined" onClick={() => setEditing(judge)}>
                     Edit
                   </Button>
@@ -213,7 +221,7 @@ function JudgeSearch() {
                     onClick={() => handleCheckIn(judge)}
                     minWidth={124}
                   />
-                </Stack>
+                </Box>
               </Stack>
             </Row>
           );

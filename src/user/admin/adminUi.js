@@ -51,16 +51,21 @@ export function StatStrip({ stats = [], sx }) {
             sx={{
                 display: "grid",
                 gap: 1,
-                gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))",
+                // three or fewer sit in one row on a phone; four make two
+                // rows of two, rather than a lone tile under the rest
+                gridTemplateColumns: {
+                    xs: stats.length === 4 ? "repeat(2, 1fr)" : `repeat(${Math.min(stats.length, 3)}, 1fr)`,
+                    sm: "repeat(auto-fill, minmax(128px, 1fr))",
+                },
                 ...sx,
             }}
         >
             {stats.map(({ label, singular, value }) => (
-                <Box key={label} sx={{ bgcolor: "action.hover", borderRadius: 2, px: 2, py: 1.5 }}>
+                <Box key={label} sx={{ bgcolor: "action.hover", borderRadius: 2, px: { xs: 1.5, sm: 2 }, py: 1.5, minWidth: 0 }}>
                     <Typography
                         variant="data"
                         component="p"
-                        sx={{ fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}
+                        sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, fontWeight: 700, lineHeight: 1.1, color: "text.primary" }}
                     >
                         {value}
                     </Typography>
@@ -258,6 +263,13 @@ export function SettingRow({ label, hint, children }) {
                     // reads as one block however many lines it takes
                     justifyContent: { sm: "flex-end" },
                     gap: 1,
+                    // On a phone the fields' desktop widths left ragged gaps and
+                    // stranded Save buttons; there they grow to share the row.
+                    "@media (max-width: 599.95px)": {
+                        width: "100%",
+                        "& > .MuiFormControl-root": { flex: "1 1 88px", width: "auto", minWidth: 0 },
+                        "& > .MuiButton-root": { flexShrink: 0, alignSelf: "flex-end" },
+                    },
                 }}
             >
                 {children}
@@ -277,7 +289,12 @@ export function FilterBar({ children }) {
 /** Several `FilterChips` groups on one wrapping line. */
 export function FilterGroups({ children }) {
     return (
-        <Stack direction="row" sx={{ flexWrap: "wrap", columnGap: 3, rowGap: 1.5 }}>
+        // no wrapping on a phone: a wrapping column is as wide as its widest
+        // row, which stopped each row of pills scrolling and widened the page
+        <Stack
+            direction={{ xs: "column", sm: "row" }}
+            sx={{ flexWrap: { xs: "nowrap", sm: "wrap" }, columnGap: 3, rowGap: 1.25, minWidth: 0, "& > *": { minWidth: 0 } }}
+        >
             {children}
         </Stack>
     );
@@ -292,7 +309,24 @@ export function FilterGroups({ children }) {
  */
 export function FilterChips({ label, value, onChange, options }) {
     return (
-        <Stack direction="row" alignItems="center" sx={{ gap: 0.75, flexWrap: "wrap" }} role="group" aria-label={label}>
+        <Stack
+            direction="row"
+            alignItems="center"
+            role="group"
+            aria-label={label}
+            sx={{
+                gap: 0.75,
+                flexWrap: { xs: "nowrap", sm: "wrap" },
+                // on a phone the pills run in one line that scrolls sideways,
+                // rather than wrapping so one option sits alone on a line
+                overflowX: { xs: "auto", sm: "visible" },
+                mx: { xs: -2, sm: 0 },
+                px: { xs: 2, sm: 0 },
+                scrollbarWidth: "none",
+                "&::-webkit-scrollbar": { display: "none" },
+                "& > *": { flexShrink: 0 },
+            }}
+        >
             <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", mr: 0.5 }}>
                 {label}
             </Typography>
