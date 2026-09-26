@@ -95,3 +95,102 @@ jobs:
           echo "publish them in the Firebase console now. Nothing here does it for you." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           grep -o 'rulesVersion: [0-9]*' database.rules.json >> $GITHUB_STEP_SUMMARY || true
+
+  # Tells the team's Discord what happened to a release: live, or failed and
+  # why to look. A job of its own, after the deploy, so it can report either
+  # outcome -- a step inside the deploy job would never run once a test failed,
+  # which is exactly the release people most need to hear about.
+  #
+  # Runs for releases only: a manual redeploy from the Actions tab is somebody
+  # already watching it happen.
+  notify:
+    name: Tell Discord
+    needs: deploy
+    if: always() && github.event_name == 'release' && needs.deploy.result != 'cancelled'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RESULT: ${{ needs.deploy.result }}
+          TAG: ${{ github.event.release.tag_name }}
+          NAME: ${{ github.event.release.name }}
+          NOTES: ${{ github.event.release.body }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          AUTHOR: ${{ github.event.release.author.login }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REGISTRATION_OPEN: ${{ vars.REGISTRATION_OPEN }}
+          SITE_URL: https://hoohacks.github.io/idea-x
+        run: |
+          # A missing secret should not turn a good deploy red.
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL is not set, so no Discord message was sent."
+            exit 0
+          fi
+
+          if [ "$RESULT" = "success" ]; then
+            TITLE="${NAME:-$TAG} is live"
+            COLOR=1064997      # the success green, #103c25
+            STATUS="Deployed"
+          else
+            TITLE="${NAME:-$TAG} did not deploy"
+            COLOR=10357258     # the error oxblood, #9e0a0a
+            STATUS="Failed. The site is still on the previous release."
+          fi
+
+          if [ "$REGISTRATION_OPEN" = "true" ]; then
+            DOORS="Open"
+          else
+            DOORS="Closed (organizers can still sign in at #/login?staff)"
+          fi
+
+          # Discord caps an embed description at 4096 characters; release notes
+          # are cut well short of that and point at the full release instead.
+          if [ -z "$NOTES" ]; then
+            SUMMARY="No release notes."
+          elif [ ${#NOTES} -gt 1500 ]; then
+            SUMMARY="${NOTES:0:1500}..."
+          else
+            SUMMARY="$NOTES"
+          fi
+
+          # jq builds the JSON, so quotes and newlines in the release notes
+          # cannot break the payload.
+          jq -n \
+            --arg title "$TITLE" \
+            --arg url "$RELEASE_URL" \
+            --arg summary "$SUMMARY" \
+            --arg status "$STATUS" \
+            --arg tag "$TAG" \
+            --arg author "$AUTHOR" \
+            --arg doors "$DOORS" \
+            --arg site "$SITE_URL" \
+            --arg run "$RUN_URL" \
+            --arg prerelease "$PRERELEASE" \
+            --argjson color "$COLOR" \
+            '{
+              username: "Ideathon deploys",
+              embeds: [{
+                title: $title,
+                url: $url,
+                description: $summary,
+                color: $color,
+                fields: ([
+                  { name: "Status", value: $status, inline: false },
+                  { name: "Version", value: ("`" + $tag + "`" + (if $prerelease == "true" then " (pre-release)" else "" end)), inline: true },
+                  { name: "Released by", value: $author, inline: true },
+                  { name: "Registration", value: $doors, inline: false },
+                  { name: "Links", value: ("[Site](" + $site + ") | [Release](" + $url + ") | [Deploy log](" + $run + ")"), inline: false }
+                ]),
+                timestamp: (now | todate)
+              }]
+            }' > payload.json
+
+          # --fail-with-body so a rejected webhook shows Discord's reason in the
+          # log rather than a bare exit code
+          curl --silent --show-error --fail-with-body \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "$WEBHOOK"
