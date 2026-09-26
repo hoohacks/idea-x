@@ -387,8 +387,9 @@ function initials(name) {
  * a "Role" label and select, a switch, three text links and a chip repeating
  * the select, all in one strip; on a phone it fell apart into a stack of
  * fragments with the name lost among them. Now the everyday controls (role,
- * admin) are in view and the rare ones (reset, history, delete) sit behind
- * one menu, with delete set apart in red at the end of it.
+ * admin) are in view and the rare ones (reset, history, delete) sit at the end
+ * of the line where there is room for them, and fold into one menu on a
+ * narrower screen, with delete set apart in red at the end either way.
  */
 function PersonRow({ person, busy, selected, onToggle, onRole, onAdmin, onReset, onHistory, onDelete }) {
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -506,10 +507,34 @@ function PersonRow({ person, busy, selected, onToggle, onRole, onAdmin, onReset,
         aria-label={`More for ${person.name}`}
         onClick={(event) => setMenuAnchor(event.currentTarget)}
         disabled={busy}
-        sx={{ gridArea: "more", justifySelf: "end" }}
+        sx={{ gridArea: "more", justifySelf: "end", display: { md: "none" } }}
       >
         <PiDotsThreeBold size={20} />
       </IconButton>
+
+      {/* the same three, laid out, once the row is wide enough to hold them */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={0.25}
+        sx={{ gridArea: "more", display: { xs: "none", md: "flex" } }}
+      >
+        <Tooltip title={person.email ? "Email them a password reset link" : "No email on file"}>
+          <span>
+            <Button size="small" variant="text" disabled={busy || !person.email} onClick={onReset}>
+              Reset
+            </Button>
+          </span>
+        </Tooltip>
+        <Tooltip title="Records deleted by a role change">
+          <Button size="small" variant="text" disabled={busy} onClick={onHistory}>
+            History
+          </Button>
+        </Tooltip>
+        <Button size="small" variant="text" color="error" disabled={busy} onClick={onDelete} sx={{ color: "error.main" }}>
+          Delete
+        </Button>
+      </Stack>
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
