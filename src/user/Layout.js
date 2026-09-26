@@ -1,6 +1,7 @@
 import { Box, Container } from "@mui/material";
 import Nav, { RAIL_WIDTH, TAB_BAR_HEIGHT } from "../siteNav";
 import PageFooter from "../siteFooter";
+import AnnouncementBanner from "./AnnouncementBanner";
 import { pageMinHeight } from "../theme";
 
 /**
@@ -40,6 +41,8 @@ function Layout({ children, maxWidth = "md", bleed = false }) {
                     maxWidth={maxWidth}
                     sx={{ flex: 1, width: "100%", py: { xs: 3, sm: 4 } }}
                 >
+                    {/* every signed-in page but the scanner, which is edge to edge */}
+                    <AnnouncementBanner />
                     {children}
                 </Container>
             )}
