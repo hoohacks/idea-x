@@ -8,7 +8,7 @@ import { pageMinHeight } from "../../../theme";
 /**
  * The schedule on paper, one sheet per room.
  *
- * The README already treats "a judge scored on paper" as an ordinary event-day
+ * docs/running-the-event.md already treats "a judge scored on paper" as an ordinary event-day
  * occurrence and there is a Record score flow for it -- but nothing printed, so
  * the paper fallback started with somebody copying a screen by hand. When the
  * wifi in Rice Hall does what wifi does, the thing that keeps judging running is

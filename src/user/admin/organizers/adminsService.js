@@ -8,7 +8,7 @@ import { applyAdminAction } from "../adminAction.js";
  *
  * The rules give root access only to uids under /admins, and writing to
  * /admins requires being an admin already. Nothing in the app can break that
- * cycle -- the README bootstraps the first one by hand in the Firebase console.
+ * cycle -- docs/deployment.md bootstraps the first one by hand in the Firebase console.
  *
  * So a revoke that empties /admins locks everyone out permanently, with no way
  * back except the console. revokeGuard is the whole reason this module exists,

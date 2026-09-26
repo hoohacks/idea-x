@@ -2,7 +2,7 @@
   // rulesVersion: 10 -- bump this whenever anything below changes, and republish
   // in the Firebase console. `npm test` fails if the rules change without it,
   // because nothing else in this project can tell you the deployed rules have
-  // drifted from the ones in git. See "Publishing the rules" in the README.
+  // drifted from the ones in git. See docs/security-rules.md.
   "rules": {
     // Admins read and write everything. Every rule below grants some narrower
     // slice to a specific actor. Remember that Realtime Database rules CASCADE:
