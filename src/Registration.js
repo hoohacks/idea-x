@@ -352,8 +352,8 @@ const RegistrationForm = () => {
           title={`${EVENT.name} ${EVENT.year}`}
           facts={[EVENT.dateLabel, EVENT.hours, EVENT.venue]}
           summary="Build an idea with a team in one day, then pitch it to judges for funding."
-          photos={PAST_WINNERS}
-          photosTitle={`Funded at Ideathon ${PAST_WINNERS_YEAR}`}
+          photo={PAST_WINNERS[0]}
+          photoCaption={`${PAST_WINNERS[0].team} won ${PAST_WINNERS[0].prize} at Ideathon ${PAST_WINNERS_YEAR}.`}
         >
           A one-day event for UVA students from technical and business backgrounds, working
           in teams on a single idea. You must be a currently enrolled UVA student and 18 or

@@ -16,7 +16,7 @@ export const PAST_WINNERS = [
         prize: "$700",
         src: photo("winner-behind-the-plate.jpg"),
         width: 900,
-        height: 1073,
+        height: 863,
     },
     {
         team: "ClearCause",

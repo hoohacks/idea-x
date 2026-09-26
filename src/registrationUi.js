@@ -51,53 +51,36 @@ function FactPills({ facts }) {
 }
 
 /**
- * Last year's winners, tiled in two columns at their own heights with tight
- * gutters, the way a board of pins sits. The team and prize are written under
- * each photo rather than laid over it, so the faces and the cheque stay clear.
+ * One photo, large, with what it shows written under it. Four tiles made the
+ * hero taller than the screen and pushed the form out of sight; one picture of
+ * a team holding the cheque says the same thing and leaves the form in view.
+ * Hidden on a phone, where it would sit between the title and the first field.
  */
-function PhotoBoard({ photos, title }) {
+function FeaturedPhoto({ photo, caption }) {
   return (
-    <Box component="section" aria-label={title}>
-      {title && (
-        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", mb: 1.25 }}>
-          {title}
+    <Box
+      component="figure"
+      sx={{ m: 0, display: { xs: "none", md: "block" }, justifySelf: "end", width: "100%", maxWidth: 380 }}
+    >
+      <Box
+        component="img"
+        src={photo.src}
+        alt={photo.alt}
+        width={photo.width}
+        height={photo.height}
+        sx={{
+          display: "block",
+          width: "100%",
+          height: "auto",
+          borderRadius: 4,
+          bgcolor: "action.hover",
+        }}
+      />
+      {caption && (
+        <Typography component="figcaption" variant="body2" sx={{ mt: 1, px: 0.5 }}>
+          {caption}
         </Typography>
       )}
-      <Box sx={{ columnCount: 2, columnGap: "8px" }}>
-        {photos.map((photo) => (
-          <Box
-            component="figure"
-            key={photo.src}
-            sx={{ m: 0, mb: 1.5, breakInside: "avoid" }}
-          >
-            <Box
-              component="img"
-              src={photo.src}
-              alt={photo.alt}
-              width={photo.width}
-              height={photo.height}
-              loading="lazy"
-              sx={{
-                display: "block",
-                width: "100%",
-                height: "auto",
-                borderRadius: 2,
-                bgcolor: "action.hover",
-              }}
-            />
-            {photo.team && (
-              <Box component="figcaption" sx={{ mt: 0.75, px: 0.25 }}>
-                <Typography variant="body2" component="span" sx={{ fontWeight: 700, color: "text.primary" }}>
-                  {photo.team}
-                </Typography>{" "}
-                <Typography variant="body2" component="span">
-                  won {photo.prize}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        ))}
-      </Box>
     </Box>
   );
 }
@@ -105,25 +88,17 @@ function PhotoBoard({ photos, title }) {
 /**
  * The top of a public page: what it is, when and where, and one sentence on
  * why you would come. `summary` is that sentence; the longer explanation, when
- * there is one, is `children` and sits in its own block under the hero rather
- * than inside it, so the hero reads in a glance.
+ * there is one, is `children`, set quieter under the facts.
  */
-export function Hero({ eyebrow, title, facts, summary, photos, photosTitle, children }) {
-  const hasPhotos = Array.isArray(photos) && photos.length > 0;
-  const details = children && (
-    <Typography variant="body1" sx={{ maxWidth: "62ch" }}>
-      {children}
-    </Typography>
-  );
-
+export function Hero({ eyebrow, title, facts, summary, photo, photoCaption, children }) {
   return (
-    <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 4 } }}>
+    <Box sx={{ pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 5 } }}>
       <Box
         sx={{
           display: "grid",
           gap: { xs: 3, md: 6 },
           alignItems: "center",
-          gridTemplateColumns: { xs: "1fr", md: hasPhotos ? "7fr 5fr" : "1fr" },
+          gridTemplateColumns: { xs: "1fr", md: photo ? "1fr auto" : "1fr" },
         }}
       >
         <Box>
@@ -152,21 +127,14 @@ export function Hero({ eyebrow, title, facts, summary, photos, photosTitle, chil
             </Typography>
           )}
           {facts && <FactPills facts={facts} />}
-          {/* without a summary the paragraph is the hero's own copy, as on
-              the closed page; with one, it moves below */}
-          {!summary && details && <Box sx={{ mt: 2.5 }}>{details}</Box>}
+          {children && (
+            <Typography variant="body1" sx={{ mt: 2.5, maxWidth: "58ch", color: "text.secondary" }}>
+              {children}
+            </Typography>
+          )}
         </Box>
-        {hasPhotos && <PhotoBoard photos={photos} title={photosTitle} />}
+        {photo && <FeaturedPhoto photo={photo} caption={photoCaption} />}
       </Box>
-
-      {summary && details && (
-        <Box sx={{ mt: { xs: 4, md: 5 }, p: { xs: 2.5, sm: 3 }, bgcolor: "action.hover", borderRadius: 2 }}>
-          <Typography variant="h3" component="h2" sx={{ mb: 1 }}>
-            About the day
-          </Typography>
-          {details}
-        </Box>
-      )}
     </Box>
   );
 }
@@ -455,6 +423,9 @@ export function PublicShell({ children, maxWidth = "lg", pad = false, backdrop =
              */
             "& input, & textarea": { scrollMarginBottom: 120 },
             ...(pad ? { py: { xs: 5, sm: 8 } } : null),
+            // over photos the card is the only thing on the page, so it sits in
+            // the middle of them rather than at the top with space below
+            ...(backdrop ? { display: "flex", flexDirection: "column", justifyContent: "center" } : null),
           }}
         >
           {children}
