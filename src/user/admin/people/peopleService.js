@@ -436,7 +436,9 @@ export async function restoreArchived({ uid, key }) {
   const entry = entries.find((candidate) => candidate.key === key);
   if (!entry?.record) return { ok: false, error: "That archived record no longer exists." };
 
-  const node = ROLE_NODES[entry.role];
+  // only a role's own record can come back: /admins holds a flag, and writing
+  // an archived record there would grant organizer access
+  const node = PERSON_ROLES.includes(entry.role) ? ROLE_NODES[entry.role] : null;
   if (!node) return { ok: false, error: `Cannot restore a "${entry.role}" record.` };
 
   // whole-node read, like every other lookup in this file, so one place decides
