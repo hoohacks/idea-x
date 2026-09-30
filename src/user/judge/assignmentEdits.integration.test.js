@@ -115,7 +115,7 @@ describe("slotting a late team into a batch", () => {
   });
 
   test("an unnamed team, a nameless judge and no time get placeholders", async () => {
-    db.setData("teams/t3/name", null);
+    db.setData("teams/t3", { submitted: true });
     const { assignment } = await go({ judgeUids: ["j3"], time: undefined });
     expect(assignment).toMatchObject({ teamName: "Unnamed Team", time: "TBD", judges: [{ judgeId: "j3", judgeName: "Unnamed Judge" }] });
   });
