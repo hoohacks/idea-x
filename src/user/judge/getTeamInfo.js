@@ -115,13 +115,6 @@ export async function writeScoreOnBehalf({ round, teamId, teamName, judgeUid, sc
   );
 }
 
-/** The card this judge already filed for one team, or null. */
-export async function getMyScore({ round, teamId }) {
-  const user = requireUser();
-  const snap = await get(ref(database, scorePath(round, teamId, user.uid)));
-  return snap.exists() ? snap.val() : null;
-}
-
 async function scoredTeamIds(teamIds, round) {
   const user = requireUser();
   const ids = [...new Set((teamIds ?? []).filter(Boolean))];
