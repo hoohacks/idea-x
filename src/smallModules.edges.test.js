@@ -10,7 +10,7 @@ const mockCurrentUser = { value: { uid: "u1" } };
 jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
 const db = require("./testing/fakeDatabase");
-const { mergeRoleProfiles, personName, requireAdmin } = require("./roles");
+const { mergeRoleProfiles, personName, requireAdmin, isAdmin } = require("./roles");
 const { describeChange } = require("./user/admin/activity/describeChange");
 const { judgePickerOptions } = require("./user/judge/judgeRoles");
 const { assignmentList, rosterOf } = require("./user/judge/assignmentList");
@@ -24,6 +24,15 @@ describe("merging a person's records", () => {
       email: "a@x.io",
     });
     expect(mergeRoleProfiles([{ firstName: "", email: null }, { firstName: "Ada" }])).toEqual({ firstName: "Ada", email: null });
+  });
+
+  test("a null never overwrites a filled field", () => {
+    expect(mergeRoleProfiles([{ company: "Navy" }, { company: null }])).toEqual({ company: "Navy" });
+  });
+
+  test("isAdmin looks for the admin role and nothing else", () => {
+    expect(isAdmin(["admin"])).toBe(true);
+    expect(isAdmin(["judge", "competitor"])).toBe(false);
   });
 
   test("a filled field replaces an earlier filled one", () => {
