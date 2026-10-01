@@ -130,6 +130,18 @@ describe("the first round", () => {
     expect(rows[0].assigned).toEqual([{ judgeId: "ghost", judgeName: "Unnamed Judge" }]);
   });
 
+  test("explicitly empty scores leave every assignment outstanding, and a nameless judge row is unnamed", () => {
+    const result = buildProgress({
+      teams: { t: { name: "T", submitted: true, schedule: { judges: [{ judgeId: "j" }] } } },
+      judges: { j: { isRound1Judge: true, teamAssignments: { t: { id: "t" } } } },
+      scores: null,
+    });
+    expect(result.teamRows[0]).toMatchObject({ received: 0, expected: 1, status: "unjudged" });
+    expect(result.judgeRows).toEqual([
+      { judgeId: "j", name: "Unnamed Judge", email: null, checkedIn: false, isRound1Judge: true, assignedCount: 1, submittedCount: 0, outstanding: [{ id: "t" }] },
+    ]);
+  });
+
   test("null records anywhere are tolerated", () => {
     const result = buildProgress({ teams: { n: null }, judges: { j: null }, scores: undefined });
     expect(result.teamRows).toEqual([]);
@@ -172,8 +184,16 @@ describe("the final round", () => {
 
   test("a finalist standing with no name, and no standings at all", () => {
     const rows = buildProgress({ final: true, finalRoundTeams: { x: null } }).teamRows;
-    expect(rows).toEqual([expect.objectContaining({ teamId: "x", name: "Unnamed Team", submitted: true })]);
+    expect(rows).toEqual([
+      expect.objectContaining({ teamId: "x", name: "Unnamed Team", submitted: true, assigned: [], expected: 0, status: "unjudged" }),
+    ]);
     expect(buildProgress({ teams, final: true }).teamRows).toEqual([]);
+  });
+
+  test("explicitly empty teams, judges and scores are tolerated in the final round too", () => {
+    const result = buildProgress({ teams: null, judges: { j: null, k: { finalAssignments: { x: {} } } }, scores: null, final: true, finalRoundTeams: { x: { name: "X" } } });
+    expect(result.teamRows).toEqual([expect.objectContaining({ teamId: "x", name: "X", received: 0, expected: 1 })]);
+    expect(result.judgeRows).toEqual([expect.objectContaining({ judgeId: "k", assignedCount: 1, submittedCount: 0 })]);
   });
 
   test("a finalist judge with no name is unnamed", () => {

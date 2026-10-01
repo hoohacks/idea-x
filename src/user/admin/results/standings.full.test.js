@@ -19,6 +19,12 @@ describe("ordering", () => {
     expect([...rows].reverse().sort(byRank).map((r) => r.name)).toEqual(["High", "Low", "Abe", "Zed"]);
   });
 
+  test("unscored teams sort by name alone, whatever else their cards carry", () => {
+    const zed = { name: "Zed", averageScore: null, fundableVotes: 1, judgeCount: 0 };
+    const abe = { name: "Abe", averageScore: null, fundableVotes: 0, judgeCount: 0 };
+    expect([zed, abe].sort(byRank).map((r) => r.name)).toEqual(["Abe", "Zed"]);
+  });
+
   test("an unscored team against a scored one sorts after it from either side", () => {
     const scored = { name: "S", averageScore: 1 };
     const unscored = { name: "A" };
