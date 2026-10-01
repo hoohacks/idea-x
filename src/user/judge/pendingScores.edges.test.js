@@ -26,6 +26,10 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+test("the queue's storage key never changes, or a deploy would orphan cards already queued on devices", () => {
+  expect(STORAGE_KEY).toBe("ideathon:pendingScores:v1");
+});
+
 test("an unacknowledged write is given eight seconds", () => {
   expect(SUBMIT_TIMEOUT_MS).toBe(8000);
 });

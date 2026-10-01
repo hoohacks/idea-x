@@ -626,3 +626,103 @@ describe("config values", () => {
     await expect(people.setConfigValue(key, 1)).resolves.toEqual({ ok: false, error: "Give a single config key, with no slashes." });
   });
 });
+
+describe("edges found by mutation testing", () => {
+  test("an archived name never replaces a live one, even when the archive also supplies the missing email", async () => {
+    db.setData("archive/people/admin-1", { "5-competitor": { record: { firstName: "Archived", email: "arch@x.io" } } });
+    expect((await people.listPeople()).find((p) => p.uid === "admin-1")).toMatchObject({ name: "Org One", email: "arch@x.io" });
+  });
+
+  test("the newest archived record is found by key, not by the order it was stored in", () => {
+    expect(people.latestArchivedRecord({ "300-a": { record: { email: "new" } }, "100-a": { record: { email: "old" } } })).toEqual({ email: "new" });
+  });
+
+  test("a legacy roster with holes, and a standing with no exclusions, are handled", () => {
+    const changes = people.removalChanges({
+      uid: "g",
+      teamsData: { t: { schedule: { judges: [null, { judgeId: "g" }, { judgeId: "h" }] } } },
+      finalRoundTeams: { t: { name: "T" }, u: { excludedJudges: { g: true } } },
+    });
+    expect(changes).toEqual([
+      { path: "teams/t/schedule/judges", before: [null, { judgeId: "g" }, { judgeId: "h" }], after: [null, { judgeId: "h" }] },
+      { path: "finalRound/teams/u/excludedJudges/g", before: true, after: null },
+    ]);
+  });
+
+  test("scores are only cleared where this person filed a card", () => {
+    const changes = people.removalChanges({
+      uid: "g",
+      includeScores: true,
+      scoresData: { first: { t1: { g: { problem: 1 }, h: { problem: 2 } }, t2: { h: { problem: 3 } } } },
+    });
+    expect(changes).toEqual([{ path: "scores/first/t1/g", before: { problem: 1 }, after: null }]);
+  });
+
+  test("narrowing someone with both roles down to competitor removes only the judge side", async () => {
+    db.setData("judges/bo", { firstName: "Bo", teamAssignments: { t2: { id: "t2" } } });
+    db.setData("teams/t2/schedule", { judges: [{ judgeId: "bo" }, { judgeId: "x" }] });
+    await expect(people.setSoleRole({ uid: "bo", name: "Bo", role: "competitor" })).resolves.toMatchObject({ ok: true });
+    expect(db.getData("judges/bo")).toBeNull();
+    expect(db.getData("competitors/bo")).toEqual({ firstName: "Bo", email: "bo@x.io", teamId: "t2" });
+    expect(db.getData("teams/t2/members")).toEqual({ bo: true });
+    expect(lastLog().changes.map((c) => c.path)).toEqual([`archive/people/bo/${NOW}-judge`, "judges/bo", "teams/t2/schedule/judges"]);
+  });
+
+  test("a judge's own record is what gets archived when they switch", async () => {
+    await people.setSoleRole({ uid: "grace", name: "Grace", role: "none" });
+    expect(db.getData(`archive/people/grace/${NOW}-judge/record`)).toEqual(grace);
+    expect(lastLog().changes.map((c) => c.path)).toEqual([
+      `archive/people/grace/${NOW}-judge`,
+      "judges/grace",
+      "teams/t1/schedule/judges",
+      "finalRound/teams/t1/excludedJudges/grace",
+    ]);
+  });
+
+  test("a judge made a competitor gets a competitor record, not a judge-shaped one", async () => {
+    await people.setSoleRole({ uid: "grace", name: "Grace", role: "competitor" });
+    const record = db.getData("competitors/grace");
+    expect(record).toMatchObject({ dietaryRestriction: "none", major: "" });
+    expect(record).not.toHaveProperty("isRound1Judge");
+  });
+
+  test("a person with no record is created, and the change list is exactly that", async () => {
+    await people.setSoleRole({ uid: "admin-2", name: "Two", role: "judge" });
+    expect(lastLog().changes.map((c) => c.path)).toEqual(["judges/admin-2"]);
+  });
+
+  test("turning organizer access off without a person is refused the same way as on", async () => {
+    await expect(people.setOrganizer({ uid: "", enabled: false })).resolves.toEqual({ ok: false, error: "Pick a person first." });
+  });
+
+  test("revoking through the People page names the person in the feed", async () => {
+    await people.setOrganizer({ uid: "admin-2", name: "Two", enabled: false });
+    expect(lastLog().summary).toBe("Removed admin access from Two");
+  });
+
+  test("deleting an organizer records their flag as it was", async () => {
+    await people.deletePerson({ uid: "admin-2", name: "Two" });
+    expect(lastLog().changes).toEqual([{ path: "admins/admin-2", before: true, after: null }]);
+  });
+
+  test("a judge created or attached without a company has none", async () => {
+    await people.createPerson({ role: "judge", email: "a@b.c", password: "secret" });
+    expect(db.getData("judges/new-uid")).toMatchObject({ company: "", withCompany: false });
+    await people.attachRecord({ uid: "u9", role: "judge" });
+    expect(db.getData("judges/u9")).toMatchObject({ company: "", withCompany: false });
+  });
+
+  test("six characters is long enough for a password", async () => {
+    await expect(people.createPerson({ role: "competitor", email: "a@b.c", password: "123456" })).resolves.toMatchObject({ ok: true });
+  });
+
+  test("a competitor's email is stored trimmed", async () => {
+    await people.createPerson({ role: "competitor", email: "  pad@x.io ", password: "secret1" });
+    expect(db.getData("competitors/new-uid/email")).toBe("pad@x.io");
+  });
+
+  test("a reset that fails with nothing at all still says it was not sent", async () => {
+    firebaseAuth.sendPasswordResetEmail.mockRejectedValueOnce(undefined);
+    await expect(people.sendReset("a@b.c")).resolves.toEqual({ ok: false, error: "The reset email could not be sent." });
+  });
+});
