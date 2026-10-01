@@ -187,6 +187,19 @@ describe("clearing the schedule", () => {
     expect(lastLog()).toMatchObject({ action: "schedule.clear", summary: "Cleared the schedule: 5 assignment records" });
   });
 
+  test("logs the schedule meta it removed, so the log is accurate", async () => {
+    await clearSchedule();
+    const meta = lastLog().changes.find((c) => c.path === "config/scheduleMeta");
+    expect(meta).toEqual({ path: "config/scheduleMeta", before: { generatedAt: 1 }, after: null });
+  });
+
+  test("a clear too big to log in full says it is undone from Restore points", async () => {
+    const big = { name: "Big", schedule: { ...slot("R"), notes: "x".repeat(60000) } };
+    db.setData("teams/t9", big);
+    await clearSchedule();
+    expect(lastLog()).toMatchObject({ summary: "Cleared the schedule: 6 assignment records (7 paths; undo from Restore points)", undoable: false });
+  });
+
   test("takes a restore point of the schedule first", async () => {
     const { snapshotId } = await clearSchedule();
     expect(db.getData(`snapshotIndex/${snapshotId}`)).toMatchObject({
@@ -297,6 +310,27 @@ describe("forcing a team into the final round", () => {
     await expect(forceIntoFinalRound({ teamId: "t4", room: "Rice 011", timeslot: "Slot 1" })).resolves.toEqual({
       ok: false,
       error: "Another team is already in Rice 011 at Slot 1.",
+    });
+  });
+
+  test("changing only the timeslot, or only the room, is still checked against other finalists", async () => {
+    db.setData("teams/t1/finalSlot", { room: "Rice 011", timeslot: "Slot 1" });
+    db.setData("teams/t4/finalSlot", { room: "Rice 011", timeslot: "Slot 2" });
+    await expect(forceIntoFinalRound({ teamId: "t4", room: "Rice 011", timeslot: "Slot 1" })).resolves.toMatchObject({ ok: false });
+    db.setData("teams/t4/finalSlot", { room: "Rice 012", timeslot: "Slot 1" });
+    await expect(forceIntoFinalRound({ teamId: "t4", room: "Rice 011", timeslot: "Slot 1" })).resolves.toMatchObject({ ok: false });
+  });
+
+  test("records the standing and judge assignments it replaced", async () => {
+    db.setData("finalRound/teams/t4", { name: "Old standing" });
+    db.setData("judges/j1/finalAssignments/t4", { room: "Old" });
+    await forceIntoFinalRound({ teamId: "t4", teamName: "Unscheduled", room: "Rice 011", timeslot: "Slot 1", judgeUids: ["j1", "j3"] });
+    const before = Object.fromEntries(lastLog().changes.map((c) => [c.path, c.before]));
+    expect(before).toEqual({
+      "finalRound/teams/t4": { name: "Old standing" },
+      "teams/t4/finalSlot": null,
+      "judges/j1/finalAssignments/t4": { room: "Old" },
+      "judges/j3/finalAssignments/t4": null,
     });
   });
 

@@ -83,6 +83,10 @@ describe("the room", () => {
     expect(checkFinalDrift({ ...plan(), room: "Olsson 120" }, live({ room: "Olsson 120" }))).toEqual([]);
   });
 
+  test("a room the organizer changed in the plan, while the live room is unchanged, is not reported", () => {
+    expect(checkFinalDrift({ ...plan(), room: "Olsson 120" }, live())).toEqual([]);
+  });
+
   test("no live room, or no room in the basis, is not reported", () => {
     expect(checkFinalDrift(plan(), live({ room: "" }))).toEqual([]);
     expect(checkFinalDrift({ ...plan(), basis: { ...plan().basis, room: undefined } }, live({ room: "Elsewhere" }))).toEqual([]);
@@ -99,6 +103,10 @@ describe("the size", () => {
 describe("missing pieces", () => {
   test("no live state at all reports every finalist as gone, and every card as moved", () => {
     expect(checkFinalDrift(plan(), undefined).map((issue) => issue.kind)).toEqual(["scores", "scores", "scores", "team", "judge"]);
+  });
+
+  test("a live state missing its maps treats every count, submission and judge as gone", () => {
+    expect(checkFinalDrift(plan(), {}).map((issue) => issue.kind)).toEqual(["scores", "scores", "scores", "team", "judge"]);
   });
 
   test("no plan basis or ranking checks only what there is", () => {
