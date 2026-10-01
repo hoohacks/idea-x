@@ -127,7 +127,9 @@ const MAJORS = ["Computer Science","Systems Engineering","Economics","Cognitive 
 const SCHOOLS = ["College of Arts & Sciences","School of Engineering","McIntire School of Commerce","School of Data Science"];
 const YEARS = ["First Year","Second Year","Third Year","Fourth Year"];
 const COMPANIES = ["Capital One","Deloitte","CarMax","Willow Tree","Aurora Labs","Northrop","S&P Global","Booz Allen"];
-const INDUSTRIES = ["Healthcare","Education","Climate","Fintech","Accessibility","Agriculture","Transit","Civic tech"];
+// the same list as src/mentorShifts.js, which a .mjs script cannot import
+const MENTOR_SHIFTS = ["11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"];
+const INDUSTRIES =["Healthcare","Education","Climate","Fintech","Accessibility","Agriculture","Transit","Civic tech"];
 const IDEAS = ["Wayfinder","Rootstock","Clearing","Tandem","Almanac","Kindling","Foothold","Lantern","Sparrow","Ledger","Compass","Thicket","Beacon","Harbour","Quarry"];
 
 const person = (i) => ({
@@ -271,7 +273,9 @@ async function main() {
       wantsToJudge: true,
       wantsToMentor: i % 3 === 0,
       skills: ["Product", "Engineering"],
-      timeslots: [],
+      // two consecutive hours each, staggered, so the Mentors page has shifts
+      // with one mentor, with several, and with none
+      timeslots: i % 3 === 0 ? [MENTOR_SHIFTS[(i / 3) % 4], MENTOR_SHIFTS[((i / 3) % 4) + 1]] : [],
       checkedIn: true,
       foodCheckIn: false,
       isRound1Judge: !judge.finalOnly,

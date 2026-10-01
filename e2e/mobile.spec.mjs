@@ -220,6 +220,7 @@ const PHONE_SWEEP = {
     "/user/admin/schedule",
     "/user/admin/teams",
     "/user/admin/judges",
+    "/user/admin/mentors",
     "/user/admin/search",
     "/user/admin/metrics",
     "/user/admin/control?tab=people",

@@ -11,6 +11,8 @@ Everything lives in one Firebase Realtime Database tree.
                            checkedIn, foodCheckIn, teamId
 /judges/{uid}              name, email, company, checkedIn, isRound1Judge,
                            isFinalRoundJudge
+                           wantsToMentor wantsToJudge timeslots[] skills[]
+                           questionsAndConcerns registeredAt
                            teamAssignments/{teamId}   room time batch judges[]
                            finalAssignments/{teamId}  room timeslot
 /teams/{teamId}            name createdBy submitted

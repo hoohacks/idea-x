@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 
 import { EVENT } from "./eventInfo";
+import { SHIFTS } from "./mentorShifts";
 import { PAST_WINNERS, PAST_WINNERS_YEAR } from "./winners";
 import { REGISTRATION_OPEN, isStaffEntrance } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
@@ -47,8 +48,6 @@ import {
   Section,
   SubmitRail,
 } from "./registrationUi";
-
-const SHIFTS = ["11:00 AM", "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"];
 
 const MIN_SHIFTS = 2;
 

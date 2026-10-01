@@ -28,6 +28,7 @@ test("every admin destination in the nav opens a painted page", async ({ page })
   const destinations = [
     "/user/admin/search",
     "/user/admin/judges",
+    "/user/admin/mentors",
     "/user/admin/teams",
     "/user/admin/judging",
     "/user/admin/results",
