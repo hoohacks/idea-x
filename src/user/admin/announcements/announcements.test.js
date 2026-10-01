@@ -73,6 +73,7 @@ describe("who sees what", () => {
 
 describe("audience labels", () => {
   test("each audience has its label, and an unknown one reads as everyone", () => {
+    expect(audienceLabel("everyone")).toBe("Everyone");
     expect(audienceLabel("judges")).toBe("Judges");
     expect(audienceLabel("competitors")).toBe("Competitors");
     expect(audienceLabel("nonsense")).toBe("Everyone");
@@ -82,6 +83,11 @@ describe("audience labels", () => {
 
 describe("remembering dismissals", () => {
   const KEY = "ideathon.dismissedAnnouncements";
+
+  test("reads what is stored under its own key, so dismissals survive a deploy", () => {
+    window.localStorage.setItem(KEY, JSON.stringify(["a1"]));
+    expect(readDismissed()).toEqual(["a1"]);
+  });
 
   test("round-trips through storage", () => {
     rememberDismissed(["a1", "a2"]);
