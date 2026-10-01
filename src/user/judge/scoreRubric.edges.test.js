@@ -80,6 +80,9 @@ describe("the tiebreak", () => {
 
   test("a missing name sorts before a named team, and a missing id before an id", () => {
     expect(order(team({ teamId: "x", name: "A" }), team({ teamId: "y", name: undefined }))).toEqual(["y", "x"]);
-    expect(compareForRanking(team({ teamId: undefined }), team({ teamId: "a" }))).toBe(-1);
+    expect(compareForRanking(team({ teamId: undefined }), team({ teamId: "A" }))).toBe(-1);
+    expect(compareForRanking(team({ teamId: "A" }), team({ teamId: undefined }))).toBe(1);
+    expect(compareForRanking(team({ name: "A" }), team({ name: undefined }))).toBeGreaterThan(0);
+    expect(compareForRanking(team({ name: undefined }), team({ name: "A" }))).toBeLessThan(0);
   });
 });
