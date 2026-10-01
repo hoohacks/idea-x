@@ -182,6 +182,13 @@ describe("the room", () => {
   });
 });
 
+test("a plan with no edit log yet starts one, for a plain edit and for a swap", () => {
+  const noLog = { ...plan(), edits: undefined };
+  expect(applyFinalEdit(noLog, { type: "setRoom", room: "Olsson 120" }).plan.edits).toHaveLength(1);
+  const swapped = applyFinalEdit(noLog, { type: "swapJudge", teamId: "t1", fromJudgeId: "j1", toJudgeId: "j2" }).plan.edits;
+  expect(swapped.map((e) => e.summary)).toEqual(["Swapped Ada for Grace on Lantern"]);
+});
+
 describe("undo", () => {
   const undoAfter = (op) => undoFinalEdit(applyFinalEdit(plan(), op).plan);
 

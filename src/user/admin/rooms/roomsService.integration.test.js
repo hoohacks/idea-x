@@ -10,6 +10,7 @@ jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin
 
 const db = require("../../../testing/fakeDatabase");
 const {
+  remapChanges,
   roomsInUse,
   finalRoomsInUse,
   moveCollisions,
@@ -79,6 +80,33 @@ describe("what is in use", () => {
     expect(finalMoveCollisions({ from: "X", to: "Z", teamsData })).toEqual([]);
     expect(finalMoveCollisions({ from: "Z", to: "X", teamsData })).toEqual([]);
     expect(moveCollisions({ from: "Z", to: "X", teamsData: {} })).toEqual([]);
+  });
+});
+
+describe("moving out of or into an empty room", () => {
+  test("never collides, even with teams that have no batch or timeslot", () => {
+    const teamsData = {
+      a: { name: "A", schedule: { room: "X" }, finalSlot: { room: "X" } },
+    };
+    expect(moveCollisions({ from: "Empty", to: "X", teamsData })).toEqual([]);
+    expect(moveCollisions({ from: "X", to: "Empty", teamsData })).toEqual([]);
+    expect(finalMoveCollisions({ from: "Empty", to: "X", teamsData })).toEqual([]);
+    expect(finalMoveCollisions({ from: "X", to: "Empty", teamsData })).toEqual([]);
+  });
+});
+
+describe("remapping, at the edges", () => {
+  test("null team and judge records are skipped", () => {
+    expect(
+      remapChanges({ from: "X", to: "Y", teamsData: { a: null, b: { schedule: { room: "X" } } }, judgesData: { j: null }, finalRoundTeams: {} })
+    ).toEqual([{ path: "teams/b/schedule/room", before: "X", after: "Y" }]);
+  });
+
+  test("a finalist with no standing entry, or no standings at all, moves only its slot", () => {
+    const teamsData = { f: { finalSlot: { room: "X" } } };
+    const slotOnly = [{ path: "teams/f/finalSlot/room", before: "X", after: "Y" }];
+    expect(remapChanges({ from: "X", to: "Y", teamsData, judgesData: {}, finalRoundTeams: { other: {} } })).toEqual(slotOnly);
+    expect(remapChanges({ from: "X", to: "Y", teamsData, judgesData: {} })).toEqual(slotOnly);
   });
 });
 
