@@ -127,6 +127,68 @@ test("rooms removed under several teams are handled in id order", () => {
   ]);
 });
 
+test("teams that appeared or withdrew are handled in id order, however they are listed", () => {
+  const live = { ...unchanged, teamIds: ["d", "c"], teamNames: undefined };
+  const kinds = checkDrift({ ...basis, teamIds: ["b", "a"] }, live, plan).blocking.map((issue) => [issue.kind, issue.repair.teamId]);
+  expect(kinds).toEqual([
+    ["teamAppeared", "c"],
+    ["teamAppeared", "d"],
+    ["teamWithdrew", "a"],
+    ["teamWithdrew", "b"],
+  ]);
+});
+
+test("rooms removed under three teams are handled in id order", () => {
+  const three = {
+    ...plan,
+    assignments: {
+      z: { id: "z", teamName: "Z", batch: 1, room: "Old1", judges: [] },
+      m: { id: "m", teamName: "M", batch: 1, room: "Old2", judges: [] },
+      a: { id: "a", teamName: "A", batch: 1, room: "Old3", judges: [] },
+    },
+  };
+  const live = { ...unchanged, teamIds: ["a", "m", "z"], rooms: ["N1", "N2", "N3"] };
+  const moves = checkDrift({ ...basis, teamIds: ["a", "m", "z"] }, live, three).blocking.map((issue) => [issue.repair.teamId, issue.repair.room]);
+  expect(moves).toEqual([
+    ["a", "N1"],
+    ["m", "N2"],
+    ["z", "N3"],
+  ]);
+});
+
+test("a room taken only in another batch is free for a team that lost its room", () => {
+  const twoBatches = {
+    ...plan,
+    assignments: {
+      a: { id: "a", teamName: "A", batch: 1, room: "Old", judges: [] },
+      b: { id: "b", teamName: "B", batch: 2, room: "N1", judges: [] },
+    },
+  };
+  const live = { ...unchanged, rooms: ["N1", "N2"] };
+  expect(checkDrift(basis, live, twoBatches).blocking.map((issue) => issue.repair)).toEqual([
+    { type: "moveTeam", teamId: "a", batch: 1, room: "N1" },
+  ]);
+});
+
+test("a judge who left a panel they shared is still reported for it", () => {
+  const shared = {
+    ...plan,
+    assignments: { ...plan.assignments, a: { ...plan.assignments.a, judges: [{ judgeId: "j1" }, { judgeId: "j3" }] } },
+  };
+  const live = { ...unchanged, judgeIds: ["j2", "j3"] };
+  expect(checkDrift(basis, live, shared).blocking).toEqual([
+    {
+      kind: "judgeLost",
+      message: "J1 is no longer a first round judge, but is on the panel for A.",
+      repair: { type: "removeJudge", teamId: "a", judgeUid: "j1" },
+    },
+  ]);
+});
+
+test("live names missing altogether are not reported as renames", () => {
+  expect(checkDrift(basis, { ...unchanged, teamNames: undefined, judgeNames: undefined }, plan).advisory).toEqual([]);
+});
+
 test("a new team with every room taken is told to rebuild", () => {
   const live = { ...unchanged, teamIds: ["a", "b", "c"], batchCount: 1, teamNames: { ...unchanged.teamNames, c: "C" } };
   expect(checkDrift({ ...basis, batchCount: 1 }, live, plan).blocking).toEqual([
@@ -185,13 +247,13 @@ describe("reading the live basis", () => {
         ja: { isRound1Judge: true },
         jf: { firstName: "Final", isFinalRoundJudge: true },
       },
-      teams: { tb: { name: "B", submitted: true }, ta: { submitted: true }, tx: { name: "Draft" } },
+      teams: { tb: { name: "B", submitted: true }, ta: { submitted: true }, tx: { name: "Draft" }, tn: null },
       config: { judgingRooms: ["R1"], batchCount: 2, batchTimes: { 1: "x", 2: "y" }, targetJudgesPerTeam: 2 },
     });
     await expect(readLiveBasis(false)).resolves.toEqual({
       teamIds: ["ta", "tb"],
       judgeIds: ["ja", "jb"],
-      allTeamIds: ["ta", "tb", "tx"],
+      allTeamIds: ["ta", "tb", "tn", "tx"],
       allJudgeIds: ["ja", "jb", "jf"],
       rooms: ["R1"],
       batchCount: 2,
