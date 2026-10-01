@@ -15,6 +15,7 @@ import UserProfile from "./user/Profile"
 import CheckIn from "./user/CheckIn"
 import AdminScan from "./user/admin/Scan"
 import JudgeDashboard from "./user/admin/JudgeSearch.js"
+import Mentors from "./user/admin/Mentors.js"
 import ForgotPassword from "./ForgotPassword.js"
 import Assignments from "./user/judge/Assignments.js"
 import { ref, get } from "firebase/database"
@@ -200,6 +201,7 @@ function App() {
             <Route path="scan" element={<ProtectedRoute requiredRoles={["admin"]}><AdminScan /></ProtectedRoute>} />
             <Route path="search" element={<ProtectedRoute requiredRoles={["admin"]}><Search /></ProtectedRoute>} />
             <Route path="judges" element={<ProtectedRoute requiredRoles={["admin"]}><JudgeDashboard /></ProtectedRoute>} />
+            <Route path="mentors" element={<ProtectedRoute requiredRoles={["admin"]}><Mentors /></ProtectedRoute>} />
             <Route path="teams" element={<ProtectedRoute requiredRoles={["admin"]}><TeamDashboard /></ProtectedRoute>} />
             <Route path="judging" element={<ProtectedRoute requiredRoles={["admin"]}><JudgingProgress /></ProtectedRoute>} />
             <Route path="schedule" element={<ProtectedRoute requiredRoles={["admin"]}><SchedulePlanner /></ProtectedRoute>} />

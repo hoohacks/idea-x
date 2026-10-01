@@ -54,6 +54,7 @@ const SIGNED_IN = {
     "/user/admin/schedule",
     "/user/admin/teams",
     "/user/admin/judges",
+    "/user/admin/mentors",
     "/user/admin/search",
     "/user/admin/results",
     "/user/admin/control",

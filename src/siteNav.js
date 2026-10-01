@@ -17,6 +17,8 @@ import {
 } from "@mui/material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
+    PiChalkboardTeacher,
+    PiChalkboardTeacherFill,
     PiChartLineUp,
     PiChartLineUpFill,
     PiClipboardText,
@@ -101,6 +103,7 @@ const ADMIN_GROUPS = [
             { to: "/user/admin/scan", label: "Scan check-in", short: "Scan", icon: PiScan, activeIcon: PiScanFill },
             { to: "/user/admin/search", label: "Competitors", short: "Competitors", icon: PiStudent, activeIcon: PiStudentFill },
             { to: "/user/admin/judges", label: "Judges", short: "Judges", icon: PiIdentificationBadge, activeIcon: PiIdentificationBadgeFill },
+            { to: "/user/admin/mentors", label: "Mentors", short: "Mentors", icon: PiChalkboardTeacher, activeIcon: PiChalkboardTeacherFill },
             { to: "/user/admin/teams", label: "Teams", short: "Teams", icon: PiUsersThree, activeIcon: PiUsersThreeFill },
         ],
     },
