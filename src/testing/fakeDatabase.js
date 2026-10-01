@@ -41,13 +41,22 @@ function write(path, value) {
     return;
   }
   let node = tree;
+  const trail = [];
   keys.slice(0, -1).forEach((key) => {
     if (node[key] === null || typeof node[key] !== "object") node[key] = {};
+    trail.push([node, key]);
     node = node[key];
   });
   const last = keys[keys.length - 1];
-  if (value === null || value === undefined) delete node[last];
-  else node[last] = value;
+  if (value === null || value === undefined) {
+    delete node[last];
+    // the real database has no empty nodes: removing the last child removes
+    // the parent, all the way up
+    for (const [parent, key] of trail.reverse()) {
+      if (Object.keys(parent[key]).length) break;
+      delete parent[key];
+    }
+  } else node[last] = value;
 }
 
 const clone = (value) => (value === null || value === undefined ? null : JSON.parse(JSON.stringify(value)));

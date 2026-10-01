@@ -205,7 +205,8 @@ export function schoolLabel(value) {
   if (!key) return "";
   const offered = SCHOOLS.find(([id]) => id === key);
   if (offered) return offered[1];
-  return RETIRED_SCHOOLS[key] ?? key;
+  // own keys only: "toString" is not a retired school
+  return Object.prototype.hasOwnProperty.call(RETIRED_SCHOOLS, key) ? RETIRED_SCHOOLS[key] : key;
 }
 
 // Graduation years offered on the registration form: this year's class through

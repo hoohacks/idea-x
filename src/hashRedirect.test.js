@@ -102,3 +102,69 @@ describe("reading the base out of package.json's homepage", () => {
     expect(basePath("/idea-x")).toBe("/idea-x");
   });
 });
+
+describe("the edges", () => {
+  test("several leading and trailing slashes are all trimmed", () => {
+    expect(hashTargetFor({ pathname: "///judge-registration///", base: "" })).toBe("/#/judge-registration");
+    expect(hashTargetFor({ pathname: "/idea-x//judge//", base: "/idea-x" })).toBe("/idea-x/#/judge");
+  });
+
+  test("a slash inside the path is kept", () => {
+    expect(hashTargetFor({ pathname: "/user/admin/", base: "" })).toBe("/#/user/admin");
+  });
+
+  test("with nothing given it is the root, and stays put", () => {
+    expect(hashTargetFor({})).toBeNull();
+  });
+
+  test("a search with no hash comes along exactly", () => {
+    expect(hashTargetFor({ pathname: "/scan", search: "?team=1" })).toBe("/#/scan?team=1");
+  });
+
+  test("an http URL, several trailing slashes, and a base mentioning https elsewhere", () => {
+    expect(basePath("http://localhost:3000/idea-x///")).toBe("/idea-x");
+    expect(basePath("/apps/https://x")).toBe("/apps/https://x");
+  });
+
+  test("with no argument the build's PUBLIC_URL is used, or nothing", () => {
+    const saved = process.env.PUBLIC_URL;
+    try {
+      process.env.PUBLIC_URL = "https://hoohacks.github.io/idea-x/";
+      expect(basePath()).toBe("/idea-x");
+      delete process.env.PUBLIC_URL;
+      expect(basePath()).toBe("");
+    } finally {
+      if (saved === undefined) delete process.env.PUBLIC_URL;
+      else process.env.PUBLIC_URL = saved;
+    }
+  });
+});
+
+describe("redirecting the browser", () => {
+  const { redirectToHashRoute } = require("./hashRedirect");
+  const saved = process.env.PUBLIC_URL;
+  beforeEach(() => {
+    process.env.PUBLIC_URL = "/idea-x";
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env.PUBLIC_URL;
+    else process.env.PUBLIC_URL = saved;
+  });
+
+  test("replaces a path-shaped URL with its hash route, and says where", () => {
+    const location = { pathname: "/idea-x/judge-registration", search: "?ref=email", hash: "", replace: jest.fn() };
+    expect(redirectToHashRoute(location)).toBe("/idea-x/#/judge-registration?ref=email");
+    expect(location.replace).toHaveBeenCalledWith("/idea-x/#/judge-registration?ref=email");
+  });
+
+  test("leaves a hash route alone", () => {
+    const location = { pathname: "/idea-x/", search: "", hash: "#/login", replace: jest.fn() };
+    expect(redirectToHashRoute(location)).toBeNull();
+    expect(location.replace).not.toHaveBeenCalled();
+  });
+
+  test("reads the real location by default", () => {
+    // jsdom serves the tests from the root, which is already where it should be
+    expect(redirectToHashRoute()).toBeNull();
+  });
+});
