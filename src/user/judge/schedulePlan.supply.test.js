@@ -62,6 +62,12 @@ describe("refusals", () => {
     });
   });
 
+  test("one team per batch counts as a way out when nothing larger is", () => {
+    expect(describeSupply({ teamCount: 3, judgeCount: 1, roomCount: 3, batchCount: 1 }).error).toBe(
+      "1 judges cannot cover 3 teams presenting at once, and each judge can only be in one room. Either mark 2 more first-round judge(s), or raise the batch count to 3 so only 1 teams present at a time."
+    );
+  });
+
   test("the smallest batch count is the first that brings a batch within the judges", () => {
     expect(describeSupply({ teamCount: 7, judgeCount: 2, roomCount: 3, batchCount: 3 }).error).toBe(
       "2 judges cannot cover 3 teams presenting at once, and each judge can only be in one room. Either mark 1 more first-round judge(s), or raise the batch count to 4 so only 2 teams present at a time."
@@ -142,6 +148,13 @@ describe("what a schedulable event will look like", () => {
     const ten = describeSupply({ teamCount: 10, judgeCount: 4, roomCount: 10, batchCount: 3 }).advice;
     expect(ten).toContain(
       "Teams are split 4/3/3, so the smaller batches get more judges per team. A batch count of 2 or 5 divides 10 teams evenly and removes that."
+    );
+  });
+
+  test("at most three even batch counts are offered", () => {
+    const { advice } = describeSupply({ teamCount: 24, judgeCount: 5, roomCount: 24, batchCount: 5 });
+    expect(advice).toContain(
+      "Teams are split 5/5/5/5/4, so the smaller batches get more judges per team. A batch count of 2, 3 or 4 divides 24 teams evenly and removes that."
     );
   });
 
