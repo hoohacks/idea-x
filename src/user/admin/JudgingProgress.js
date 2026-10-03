@@ -25,6 +25,7 @@ import { buildProgress, TEAM_OK, TEAM_THIN, TEAM_UNJUDGED } from "./scores/judgi
 import PaperScoreDialog from "./scores/PaperScoreDialog";
 import { SCORE_MAX_TOTAL } from "../judge/scoreRubric";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
+import usePageTitle from "../../usePageTitle";
 import {
   assignJudgeToTeam,
   unassignJudgeFromTeam,
@@ -173,6 +174,8 @@ function JudgingProgress() {
   const [toast, setToast] = useState(null);
   const [reassigning, setReassigning] = useState(null);
   const [scoring, setScoring] = useState(null);
+
+  usePageTitle("Judging progress");
 
   useEffect(() => {
     const stop = [

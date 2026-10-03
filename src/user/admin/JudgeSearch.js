@@ -8,6 +8,7 @@ import Layout from "../Layout";
 import { assignmentList } from "../judge/assignmentList";
 import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, RowList, Row, StateToggle } from "./adminUi";
 import JudgeEditDrawer from "./records/JudgeEditDrawer";
+import usePageTitle from "../../usePageTitle";
 
 function JudgeSearch() {
   const [query, setQuery] = useState("");
@@ -16,6 +17,8 @@ function JudgeSearch() {
   const [judges, setJudges] = useState([]);
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState(null);
+
+  usePageTitle("Judges");
 
   useEffect(() => {
     const unsubscribe = onValue(ref(database, "/judges/"), (snapshot) => {

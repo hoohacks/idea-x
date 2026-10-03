@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 // firebase
@@ -48,6 +48,8 @@ import {
   Section,
   SubmitRail,
 } from "./registrationUi";
+
+import usePageTitle from "./usePageTitle";
 
 const MIN_SHIFTS = 2;
 
@@ -387,15 +389,7 @@ const JudgeRegistrationForm = () => {
     busyLabel: "Creating account…",
   };
 
-  // the tab is a label too, and "Ideathon Registration" on both public pages
-  // is the same problem as two forms that look alike
-  useEffect(() => {
-    const was = document.title;
-    document.title = "Judge and mentor sign-up · Ideathon";
-    return () => {
-      document.title = was;
-    };
-  }, []);
+  usePageTitle("Judge and mentor sign-up");
 
   // everything YesNo needs, gathered in one place
   const choiceProps = (name) => ({

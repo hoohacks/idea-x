@@ -14,6 +14,7 @@ import ActivityFeed from "./activity/ActivityFeed";
 import DangerSection from "./danger/DangerSection";
 import RestorePointsSection from "./danger/RestorePointsSection";
 import ExportSection from "./ExportSection";
+import usePageTitle from "../../usePageTitle";
 
 /**
  * Everything that had no home before: the judging rooms, the batch shape, the
@@ -53,6 +54,8 @@ function Control() {
   const [teamsData, setTeamsData] = useState({});
   const [log, setLog] = useState([]);
   const [toast, setToast] = useState(null);
+
+  usePageTitle("Control panel");
 
   useEffect(() => {
     const stop = [

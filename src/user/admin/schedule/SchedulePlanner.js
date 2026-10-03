@@ -5,6 +5,7 @@ import Layout from "../../Layout.js";
 import { PageHeader } from "../adminUi";
 import SchedulePreview from "./SchedulePreview.js";
 import FinalRoundPlanner from "./FinalRoundPlanner.js";
+import usePageTitle from "../../../usePageTitle";
 
 /**
  * Both rounds are planned here.
@@ -27,6 +28,8 @@ import FinalRoundPlanner from "./FinalRoundPlanner.js";
 export default function SchedulePlanner() {
   const [params, setParams] = useSearchParams();
   const [round, setRound] = useState(params.get("round") === "final" ? "final" : "first");
+
+  usePageTitle("Judging schedule");
 
   function pick(next) {
     setRound(next);

@@ -9,6 +9,7 @@ import { Box, Card, CardContent, Typography } from "@mui/material";
 import Layout from "./user/Layout";
 import { PageHeader } from "./user/admin/adminUi";
 import { tokens } from "./theme";
+import usePageTitle from "./usePageTitle";
 
 /**
  * Registration over time.
@@ -75,6 +76,8 @@ function Chart({ title, caption, children }) {
 
 function RegisteredAtDisplay() {
   const [registeredAt, setRegisteredAt] = useState([]);
+
+  usePageTitle("Registration Metrics");
 
   useEffect(() => {
     const unsubscribe = onValue(ref(database, "/competitors/"), (snapshot) => {

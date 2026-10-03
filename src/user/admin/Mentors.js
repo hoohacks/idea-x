@@ -8,6 +8,7 @@ import { alpha } from "@mui/material/styles";
 import Layout from "../Layout";
 import { SHIFTS, heatOf, shiftRoster, timeslotsOf } from "../../mentorShifts";
 import { PageHeader, FilterBar, FilterChips, SearchField, RowList, Row } from "./adminUi";
+import usePageTitle from "../../usePageTitle";
 
 // The heat strip's opacity, from a shift with barely anyone to the busiest one.
 // It starts above zero so one mentor still shows green, and stops short of
@@ -47,6 +48,8 @@ function Mentors() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [open, setOpen] = useState({});
+
+  usePageTitle("Mentors");
 
   useEffect(() => {
     const unsubscribe = onValue(ref(database, "/judges/"), (snapshot) => {
