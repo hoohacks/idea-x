@@ -15,6 +15,9 @@ import {
   Typography,
 } from "@mui/material";
 
+// page title
+import usePageTitle from "../../usePageTitle";
+
 function CreateTeam() {
   const navigate = useNavigate();
   const { refreshUserData, userData } = useContext(AuthContext);
@@ -22,10 +25,14 @@ function CreateTeam() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  usePageTitle("Create a team");
+
   // If user data already has a teamId, redirect to team page
   useEffect(() => {
     if (userData && userData.teamId) navigate("/user/team");
   }, [userData, navigate]);
+
+  
 
   const createTeam = async (teamName) => {
     // one multi-path update, so the team and the competitor's teamId cannot

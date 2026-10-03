@@ -3,9 +3,14 @@ import { useAuth } from "../App";
 import { QRCodeCanvas } from "qrcode.react";
 import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
 
+// page title
+import usePageTitle from "../usePageTitle";
+
 function CheckIn() {
   const { userCredential, userData } = useAuth();
   const uid = userCredential?.user?.uid;
+
+  usePageTitle("Check in");
 
   return (
     <Layout maxWidth="xs">

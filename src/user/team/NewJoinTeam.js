@@ -15,12 +15,17 @@ import {
   Typography,
 } from "@mui/material";
 
+// page title
+import usePageTitle from "../../usePageTitle";
+
 function NewJoinTeam() {
   const navigate = useNavigate();
   const { refreshUserData, userData } = useContext(AuthContext);
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  usePageTitle("Join a team");
 
   // If user data already has a teamId, redirect to team page
   useEffect(() => {

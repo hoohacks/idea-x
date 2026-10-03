@@ -32,6 +32,9 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import { PiArrowSquareOut, PiPresentationChart } from "react-icons/pi";
 
+// page title
+import usePageTitle from "../../usePageTitle";
+
 function Team() {
     const navigate = useNavigate();
     // leaveTeam reads the signed-in uid itself, so this no longer destructures
@@ -49,6 +52,8 @@ function Team() {
     const [showModal, setShowModal] = useState(false);
     // null until the flag arrives, so the form does not flash up and vanish
     const [submissionsOpen, setSubmissionsOpen] = useState(null);
+
+    usePageTitle("Team");
 
     // Live, so the form appears the moment organizers open submissions on the
     // day, without anybody reloading. An absent flag means closed.
