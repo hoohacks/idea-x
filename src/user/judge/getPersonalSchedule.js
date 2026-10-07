@@ -1,5 +1,5 @@
 // getPersonalSchedule.js
-import { ref, get, onValue } from "firebase/database";
+import { ref, onValue } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { database } from "../../firebase.js";
 import { assignmentList } from "./assignmentList.js";
@@ -10,17 +10,8 @@ function requireUser() {
   return user;
 }
 
-export async function getPersonalSchedule() {
-  const user = requireUser();
-
-  const snap = await get(ref(database, `judges/${user.uid}`));
-  if (!snap.exists()) return [];
-
-  return assignmentList(snap.val().teamAssignments);
-}
-
 /**
- * The live version of `getPersonalSchedule`.
+ * A judge's first-round assignments, kept live.
  *
  * A one-shot `get` was read once when the page mounted and never again, so a
  * judge who left the judging page open all day never saw a room fix, a
@@ -43,30 +34,6 @@ export function subscribeToPersonalSchedule(onTeams, onError) {
   );
 }
 
-/**
- * The judge's own final-round list.
- *
- * Read from their own judge record rather than derived from /finalRound, which
- * is no longer readable by a judge — the standings carry every team's average
- * score, and handing those to anyone before the announcement is the leak this
- * denormalisation closes. Exclusions are applied at activation, so whatever is
- * here is exactly what this judge should see.
- */
-export async function getFinalRoundSchedule() {
-  const user = requireUser();
-
-  const snap = await get(ref(database, `judges/${user.uid}/finalAssignments`));
-  if (!snap.exists()) return [];
-
-  // final assignments have no batch, so assignmentList's sort is a no-op here;
-  // it is still the one place that copes with the legacy array shape
-  return assignmentList(snap.val()).map((entry) => ({
-    ...entry,
-    id: entry.teamId ?? entry.id,
-    time: entry.timeslot ?? entry.time,
-  }));
-}
-
 function toFinalRoundList(raw) {
   return assignmentList(raw).map((entry) => ({
     ...entry,
@@ -76,9 +43,14 @@ function toFinalRoundList(raw) {
 }
 
 /**
- * The live version of `getFinalRoundSchedule`.
+ * A judge's own final-round list, kept live.
  *
- * The one-shot read behind `getFinalRoundSchedule` was only ever re-run when
+ * It is read from their own judge record rather than derived from /finalRound,
+ * which a judge cannot read: the standings carry every team's average score.
+ * Exclusions are applied at activation, so whatever is here is exactly what
+ * this judge should see.
+ *
+ * A one-shot read here was only ever re-run when
  * `finalRound/active` flipped, which meant a final round that was published,
  * then corrected -- a room swap, a panel fix, a republish -- while it stayed
  * active the whole time never reached a judge who already had the page open.

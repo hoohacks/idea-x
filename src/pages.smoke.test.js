@@ -109,6 +109,7 @@ const JoinTeam = require("./user/team/NewJoinTeam").default;
 const Assignments = require("./user/judge/Assignments").default;
 const Search = require("./user/admin/Search").default;
 const JudgeSearch = require("./user/admin/JudgeSearch").default;
+const Mentors = require("./user/admin/Mentors").default;
 const TeamSearch = require("./user/admin/TeamSearch").default;
 const JudgingProgress = require("./user/admin/JudgingProgress").default;
 const Registration = require("./Registration").default;
@@ -293,6 +294,11 @@ describe("pages render without crashing", () => {
   test("judge dashboard", async () => {
     renderPage(JudgeSearch, { userTypes: ["admin"] });
     expect(await screen.findByRole("heading", { name: "Judges" })).toBeInTheDocument();
+  });
+
+  test("mentors", async () => {
+    renderPage(Mentors, { userTypes: ["admin"] });
+    expect(await screen.findByRole("heading", { name: "Mentors" })).toBeInTheDocument();
   });
 
   test("team dashboard", async () => {

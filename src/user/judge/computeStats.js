@@ -27,7 +27,8 @@ export function computeStats(plan) {
   for (const { judges } of assignments) {
     for (let i = 0; i < judges.length; i++) {
       for (let k = i + 1; k < judges.length; k++) {
-        const key = [judges[i].judgeId, judges[k].judgeId].sort().join("-");
+        // JSON, not join("-"): ("a-b", "c") and ("a", "b-c") are different pairs
+        const key = JSON.stringify([judges[i].judgeId, judges[k].judgeId].sort());
         if (seenPairs.has(key)) repeatPairings += 1;
         else seenPairs.add(key);
       }
