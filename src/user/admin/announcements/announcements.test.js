@@ -9,7 +9,7 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderPage } from "../../../testing/renderPage";
-import { visibleAnnouncements } from "../../../announcements";
+import { audienceLabel, readDismissed, rememberDismissed, visibleAnnouncements } from "../../../announcements";
 import AnnouncementBanner from "../../AnnouncementBanner";
 import AnnouncementsCard from "./AnnouncementsCard";
 
@@ -55,6 +55,57 @@ describe("who sees what", () => {
       Array.from({ length: 5 }, (_, i) => [`m${i}`, { text: `N${i}`, audience: "everyone", postedAt: i, active: true }])
     );
     expect(visibleAnnouncements(many, ["competitor"]).map((a) => a.id)).toEqual(["m4", "m3", "m2"]);
+  });
+
+  test("newest first however they were stored", () => {
+    const shuffled = Object.fromEntries(
+      [2, 0, 3, 1].map((i) => [`s${i}`, { text: `S${i}`, audience: "everyone", postedAt: i + 1, active: true }])
+    );
+    expect(visibleAnnouncements(shuffled, ["competitor"]).map((a) => a.id)).toEqual(["s3", "s2", "s1"]);
+  });
+
+  test("one with no posted time sorts as the oldest", () => {
+    const undated = { ...announcements, a0: { text: "Undated.", audience: "everyone", active: true } };
+    expect(visibleAnnouncements(undated, ["admin"]).map((a) => a.id)).toEqual(["a3", "a2", "a1"]);
+    expect(visibleAnnouncements(undated, ["competitor"]).map((a) => a.id)).toEqual(["a3", "a1", "a0"]);
+  });
+});
+
+describe("audience labels", () => {
+  test("each audience has its label, and an unknown one reads as everyone", () => {
+    expect(audienceLabel("everyone")).toBe("Everyone");
+    expect(audienceLabel("judges")).toBe("Judges");
+    expect(audienceLabel("competitors")).toBe("Competitors");
+    expect(audienceLabel("nonsense")).toBe("Everyone");
+    expect(audienceLabel(undefined)).toBe("Everyone");
+  });
+});
+
+describe("remembering dismissals", () => {
+  const KEY = "ideathon.dismissedAnnouncements";
+
+  test("reads what is stored under its own key, so dismissals survive a deploy", () => {
+    window.localStorage.setItem(KEY, JSON.stringify(["a1"]));
+    expect(readDismissed()).toEqual(["a1"]);
+  });
+
+  test("round-trips through storage", () => {
+    rememberDismissed(["a1", "a2"]);
+    expect(readDismissed()).toEqual(["a1", "a2"]);
+  });
+
+  test("keeps only the latest fifty", () => {
+    const ids = Array.from({ length: 60 }, (_, i) => `id${i}`);
+    rememberDismissed(ids);
+    expect(readDismissed()).toEqual(ids.slice(10));
+  });
+
+  test("nothing stored, bad JSON, or a non-list all read as none dismissed", () => {
+    expect(readDismissed()).toEqual([]);
+    window.localStorage.setItem(KEY, "{bad json");
+    expect(readDismissed()).toEqual([]);
+    window.localStorage.setItem(KEY, JSON.stringify({ a1: true }));
+    expect(readDismissed()).toEqual([]);
   });
 });
 

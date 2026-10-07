@@ -13,6 +13,11 @@ readiness check on the dashboard can link straight to the section that fixes it.
 Per-record editing lives on the Competitors, Judges and Teams pages (**Edit** on
 each row). Announcements are posted from the dashboard at `/user/home`.
 
+What the judge and mentor sign-up form collected is on the Mentors page,
+`/user/admin/mentors`: each mentoring shift with the people who offered it, and
+every response in full. It only reads; the shifts are what people said they could
+do, not an assignment, and a record is still changed from the Judges page.
+
 ## People and roles
 
 A role is membership of a node: `/judges/{uid}` or `/competitors/{uid}`. **One
