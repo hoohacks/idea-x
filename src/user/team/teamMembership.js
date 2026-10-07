@@ -34,7 +34,7 @@ import { database } from "../../firebase.js";
  * The closed-after-submission limit below IS enforced in the rules, because
  * that one is expressible.
  */
-export const MAX_TEAM_SIZE = 6;
+export const MAX_TEAM_SIZE = 4;
 
 function requireUid() {
   const user = getAuth().currentUser;
