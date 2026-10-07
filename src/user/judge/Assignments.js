@@ -33,6 +33,9 @@ import { useJudgingSync } from "./useJudgingSync";
 import { clearDraft } from "./scoreDraft";
 import { readDraft } from "./draftStore";
 
+// page title
+import usePageTitle from "../../usePageTitle";
+
 function Section({ title, caption, children }) {
   return (
     <Box>
@@ -111,6 +114,8 @@ function Assignments() {
   const { online, pendingCount, pendingTeamIdsByRound, syncing, retry } = useJudgingSync(
     canViewAssignments ? currentUserId : null
   );
+
+  usePageTitle("Judging");
 
   /**
    * The judge's first-round assignments, live.

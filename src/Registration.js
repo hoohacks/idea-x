@@ -8,6 +8,9 @@ import { ref, update, serverTimestamp } from "firebase/database";
 import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { ref as storageRef } from "firebase/storage";
 
+// page title
+import usePageTitle from "./usePageTitle";
+
 import {
   Alert,
   Box,
@@ -172,6 +175,8 @@ const RegistrationForm = () => {
   const [skipResume, setSkipResume] = useState(false);
 
   const problems = useMemo(() => problemsFor(values), [values]);
+
+  usePageTitle("Register");
 
   const sections = SECTIONS.map((section) => ({
     id: section.id,

@@ -4,6 +4,7 @@ import { onValue, ref } from "firebase/database";
 import { database } from "../../../firebase";
 import { EVENT } from "../../../eventInfo";
 import { pageMinHeight } from "../../../theme";
+import usePageTitle from "../../../usePageTitle";
 
 /**
  * The schedule on paper, one sheet per room.
@@ -26,6 +27,8 @@ export default function PrintableSchedule() {
   const [teams, setTeams] = useState({});
   const [judges, setJudges] = useState({});
   const [config, setConfig] = useState({});
+
+  usePageTitle("Room sheets");
 
   useEffect(() => {
     const stop = [

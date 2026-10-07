@@ -8,6 +8,7 @@ import { ref, get, update } from "firebase/database";
 import { Box, Container, Stack, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { tokens } from "../../theme";
 import { personName, mergeRoleProfiles } from "../../roles";
+import usePageTitle from "../../usePageTitle";
 
 /**
  * The check-in desk.
@@ -82,6 +83,8 @@ function AdminScan() {
     const [paused, setPaused] = useState(false);
     const [result, setResult] = useState(null);
     const [checkinType, setCheckinType] = useState("event");
+
+    usePageTitle("Scan check-in");
 
     const field = checkinType === "event" ? "checkedIn" : "foodCheckIn";
 

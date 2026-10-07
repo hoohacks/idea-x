@@ -11,6 +11,9 @@ import { database } from "../firebase";
 import { EVENT, EVENT_START, eventPhase } from "../eventInfo";
 import { tokens } from "../theme";
 
+// page title
+import usePageTitle from "../usePageTitle";
+
 function differenceToTime(target) {
     if (!target || Number.isNaN(target.getTime())) return null;
 
@@ -112,6 +115,8 @@ function Home() {
     const { userData, userTypes } = useContext(AuthContext);
     const [eventStart, setEventStart] = useState(() => new Date(EVENT_START));
     const [time, setTime] = useState(() => differenceToTime(new Date(EVENT_START)));
+
+    usePageTitle("Home");
 
     useEffect(() => {
         const unsubscribe = onValue(ref(database, "config/eventStart"), (snapshot) => {

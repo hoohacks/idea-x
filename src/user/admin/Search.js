@@ -19,6 +19,7 @@ import Layout from "../Layout";
 import { schoolLabel } from "../../eventInfo";
 import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, StateToggle } from "./adminUi";
 import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
+import usePageTitle from "../../usePageTitle";
 
 // dietary values are meant to be the small fixed lowercase set Registration.js
 // writes ("none", "vegetarian", ...), but peopleService.blankCompetitor used
@@ -144,6 +145,8 @@ function Search() {
   const [teams, setTeams] = useState({});
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState(null);
+
+  usePageTitle("Competitors");
 
   const checkedInCount = competitors.filter((person) => person.checkedIn).length;
   const percentCheckedIn = competitors.length

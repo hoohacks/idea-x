@@ -8,6 +8,7 @@ import { database } from "../../../firebase";
 import Layout from "../../Layout";
 import { PageHeader } from "../adminUi";
 import { SCORE_MAX_TOTAL } from "../../judge/scoreRubric";
+import usePageTitle from "../../../usePageTitle";
 import {
   finalStandings, firstRoundStandings, panelsFrom, standingsState, winnerOf,
 } from "./standings";
@@ -56,6 +57,8 @@ export default function Results() {
   const [finalScores, setFinalScores] = useState({});
   const [judges, setJudges] = useState({});
   const [active, setActive] = useState(false);
+
+  usePageTitle("Results");
 
   useEffect(() => {
     const stop = [

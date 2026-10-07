@@ -21,6 +21,9 @@ import { PAST_WINNERS } from "./winners";
 import { REGISTRATION_OPEN, isStaffEntrance } from "./registrationWindow";
 import ClosedNotice from "./ClosedNotice";
 
+// page title
+import usePageTitle from "./usePageTitle.js";
+
 export default function LoginPage() {
   // Organizers still have to reach the control panel while the doors are shut,
   // and signing in is how. `#/login?staff` is the way through.
@@ -44,6 +47,8 @@ function SignInForm() {
     password: "",
     remember: false,
   });
+
+  usePageTitle("Sign in");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

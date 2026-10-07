@@ -22,6 +22,9 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { ref, update } from "firebase/database";
 
+// page title
+import usePageTitle from "../usePageTitle";
+
 const DIETARY = ["none", "vegetarian", "vegan", "gluten-free"];
 
 // label/value pairs on one line each, rather than a stack of centred headings
@@ -50,7 +53,7 @@ function Profile() {
         userData?.dietaryRestriction ?? "none"
     );
 
-
+    usePageTitle("Profile");
 
     const setDietaryRestrictions = async (restriction) => {
         if (!userData || !restriction) return;

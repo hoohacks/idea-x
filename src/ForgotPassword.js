@@ -12,11 +12,16 @@ import { auth } from "./firebase";
 import { AuthCard, PublicShell } from "./registrationUi";
 import { PAST_WINNERS } from "./winners";
 
+// page title
+import usePageTitle from "./usePageTitle.js";
+
 export default function ForgotPasswordPage() {
     const [sentReset, setSentReset] = useState(false);
     const [error, setError] = useState("");
     const [sending, setSending] = useState(false);
     const [email, setEmail] = useState("");
+
+    usePageTitle("Reset password");
 
     const handleSubmit = async (e) => {
         e.preventDefault();

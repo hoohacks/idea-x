@@ -37,6 +37,7 @@ import { deleteScore } from "./danger/dangerZone";
 import { FIRST_ROUND, FINAL_ROUND } from "../judge/getTeamInfo";
 import PaperScoreDialog from "./scores/PaperScoreDialog";
 import TeamEditDrawer from "./records/TeamEditDrawer";
+import usePageTitle from "../../usePageTitle";
 
 function ScoreSummary({ label, round, teamId, teamName, scores, judgeNames = {}, onDelete }) {
   const judgeIds = Object.keys(scores ?? {});
@@ -126,6 +127,8 @@ function TeamSearch() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const [editing, setEditing] = useState(null);
+
+  usePageTitle("Teams");
 
   /**
    * A deleted card cannot be written back: enteredBy is pinned to auth.uid, so
