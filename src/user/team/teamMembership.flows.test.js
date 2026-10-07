@@ -22,8 +22,8 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-test("a team holds at most six", () => {
-  expect(MAX_TEAM_SIZE).toBe(6);
+test("a team holds at most four", () => {
+  expect(MAX_TEAM_SIZE).toBe(4);
 });
 
 describe("creating a team", () => {
@@ -143,10 +143,10 @@ describe("joining, the edges", () => {
   });
 
   test("a full team is refused and is not ok", async () => {
-    db.setData("teams/-abc/members", { a: true, b: true, c: true, d: true, e: true, f: true });
+    db.setData("teams/-abc/members", { a: true, b: true, c: true, d: true });
     const result = await joinTeam("-abc");
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/^Lantern already has 6 members/);
+    expect(result.error).toMatch(/^Lantern already has 4 members/);
   });
 
   test("a read that is denied is treated as unknown, and the write decides", async () => {
