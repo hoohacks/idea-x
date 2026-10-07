@@ -36,6 +36,7 @@ describe("the event's facts", () => {
       judgingHours: "5:00 PM - 7:00 PM",
       venue: "Rice Hall",
       siteUrl: "https://ideathon.hoohacks.io",
+      contactEmail: "team@hoohacks.io",
     });
   });
 

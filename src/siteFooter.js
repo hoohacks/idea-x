@@ -16,6 +16,12 @@ function PageFooter({ maxWidth = "lg" }) {
                         {EVENT.name}
                     </Link>
                 </Typography>
+                <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
+                    {"Questions? "}
+                    <Link color="inherit" href={`mailto:${EVENT.contactEmail}`}>
+                        {EVENT.contactEmail}
+                    </Link>
+                </Typography>
             </Container>
         </Box>
     );

@@ -166,6 +166,8 @@ export const EVENT = {
   judgingHours: "5:00 PM - 7:00 PM",
   venue: "Rice Hall",
   siteUrl: "https://ideathon.hoohacks.io",
+  // Where students and judges write when something goes wrong.
+  contactEmail: "team@hoohacks.io",
 };
 
 /**
