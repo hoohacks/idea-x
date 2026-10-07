@@ -8,7 +8,7 @@
  * nesting. It asserts the page paints something recognisable, not how it looks.
  */
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
@@ -159,7 +159,12 @@ describe("pages render without crashing", () => {
 
   test("profile with no record shows a fallback rather than crashing", async () => {
     renderPage(Profile, { userData: null, userTypes: [] });
-    expect(await screen.findByText(/No profile found/)).toBeInTheDocument();
+    const notice = await screen.findByText(/No profile found/);
+    // the footer carries the same link, so look only inside the notice
+    expect(within(notice).getByRole("link", { name: "team@hoohacks.io" })).toHaveAttribute(
+      "href",
+      "mailto:team@hoohacks.io"
+    );
   });
 
   test("check in", async () => {

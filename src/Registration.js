@@ -326,7 +326,7 @@ const RegistrationForm = () => {
         // able to sign in with no profile and no idea why
         console.error("Could not save registration:", error);
         setFailure(
-          "Your account was created but your registration could not be saved. Email hackathon.virginia@gmail.com before trying again."
+          `Your account was created but your registration could not be saved. Email ${EVENT.contactEmail} before trying again.`
         );
       }
     } finally {

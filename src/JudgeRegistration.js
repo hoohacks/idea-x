@@ -370,7 +370,7 @@ const JudgeRegistrationForm = () => {
         // sign in with no profile and no idea why
         console.error("Could not save judge registration:", error);
         setFailure(
-          "Your account was created but your registration could not be saved. Email hackathon.virginia@gmail.com before trying again."
+          `Your account was created but your registration could not be saved. Email ${EVENT.contactEmail} before trying again.`
         );
       }
     } finally {
@@ -620,8 +620,8 @@ const JudgeRegistrationForm = () => {
                   hint={
                     <>
                       Optional. You can also email{" "}
-                      <Link href="mailto:hackathon.virginia@gmail.com">
-                        hackathon.virginia@gmail.com
+                      <Link href={`mailto:${EVENT.contactEmail}`}>
+                        {EVENT.contactEmail}
                       </Link>
                       .
                     </>
