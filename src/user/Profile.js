@@ -2,6 +2,7 @@ import Layout from "./Layout";
 import { useContext, useState } from "react";
 import { AuthContext } from "../App";
 import { hasRole, roleList } from "../roles";
+import { EVENT } from "../eventInfo";
 import {
     Alert,
     Box,
@@ -96,7 +97,7 @@ function Profile() {
                 </Typography>
                 <Alert severity="warning">
                     No profile found for this account. Please contact HooHacks at{" "}
-                    <a href="mailto:support@hoohacks.com">support@hoohacks.com</a>.
+                    <a href={`mailto:${EVENT.contactEmail}`}>{EVENT.contactEmail}</a>.
                 </Alert>
                 <Button variant="outlined" onClick={handleLogout} sx={{ mt: 2 }}>
                     Log out
