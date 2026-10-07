@@ -1,7 +1,7 @@
 /**
  * The footer is on every page, which makes it the one place a student or judge
- * is sure to find who to email. The address comes from EVENT so it cannot drift
- * from the copies on the judge form and the Profile page.
+ * is sure to find who to email. The address comes from EVENT rather than being
+ * typed into the footer.
  */
 import { render, screen } from "@testing-library/react";
 import PageFooter from "./siteFooter";

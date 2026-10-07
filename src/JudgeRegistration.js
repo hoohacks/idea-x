@@ -620,8 +620,8 @@ const JudgeRegistrationForm = () => {
                   hint={
                     <>
                       Optional. You can also email{" "}
-                      <Link href={`mailto:${EVENT.contactEmail}`}>
-                        {EVENT.contactEmail}
+                      <Link href="mailto:hackathon.virginia@gmail.com">
+                        hackathon.virginia@gmail.com
                       </Link>
                       .
                     </>
