@@ -8,7 +8,7 @@
  */
 import { hashTargetFor, basePath } from "./hashRedirect";
 
-describe("locally, where the app is served from the root", () => {
+describe("with no base, as when served from the root of a domain", () => {
   const at = (pathname, extra = {}) => hashTargetFor({ pathname, base: "", ...extra });
 
   test("a path-shaped route goes to the hash route of the same name", () => {

@@ -19,9 +19,9 @@
 /**
  * The URL to send this location to, or null to leave it alone.
  *
- * Pure, so the base-path arithmetic — the part that differs between
- * `localhost:3000/x` and `hoohacks.github.io/idea-x/x` — can be
- * tested without a browser.
+ * Pure, so the base-path arithmetic — the part that differs between a site at
+ * the root of a domain and one under a base, like `hoohacks.github.io/idea-x/x`
+ * — can be tested without a browser.
  */
 export function hashTargetFor({ pathname = "/", search = "", hash = "", base = "" }) {
   // already a hash route, or the bare "#" a link with href="#" leaves behind
