@@ -4,12 +4,12 @@
  * refusal and its write. adminAction.test.js covers the same paths against
  * scripted reads.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "admin-uid-123456" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   UNDO_SIZE_CAP,
   decodeChanges,
@@ -17,7 +17,7 @@ const {
   applyAdminAction,
   findDrift,
   undoAdminAction,
-} = require("./adminAction");
+} = await import("./adminAction");
 
 const ADMIN = "admin-uid-123456";
 const realGet = db.module.get;
@@ -25,9 +25,9 @@ const realGet = db.module.get;
 beforeEach(() => {
   mockCurrentUser.value = { uid: ADMIN };
   db.reset({ admins: { [ADMIN]: true }, teams: { t1: { name: "Lantern" } } });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const onlyLog = () => {
   const entries = Object.entries(db.getData("adminLog") ?? {});
@@ -58,7 +58,7 @@ describe("who acted", () => {
   test("a denied read is skipped, not fatal", async () => {
     db.setData(`competitors/${ADMIN}`, { firstName: "Grace" });
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path.startsWith("judges") ? Promise.reject(new Error("denied")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path.startsWith("judges") ? Promise.reject(new Error("denied")) : realGet(ref)));
     await expect(resolveName(ADMIN)).resolves.toBe("Grace");
   });
 });
@@ -146,7 +146,7 @@ describe("applying an action", () => {
       error: "PERMISSION_DENIED: Client doesn't have permission",
     });
     expect(console.error).toHaveBeenCalledWith("Admin action a1 failed:", expect.any(Error));
-    jest.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
     await expect(applyAdminAction({ action: "a2", summary: "x", changes: [] })).resolves.toEqual({
       ok: false,
       error: "The change could not be saved.",
@@ -203,7 +203,7 @@ describe("undoing", () => {
     const id = await rename();
     const real = db.module.get;
     let adminChecks = 0;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => {
+    vi.spyOn(db.module, "get").mockImplementation((ref) => {
       if (ref.path.startsWith("admins/")) {
         adminChecks += 1;
         // the second admin check is applyAdminAction's own; land another edit just before it
@@ -231,14 +231,14 @@ describe("undoing", () => {
   });
 
   test("a failed read of the entry or the current values is reported", async () => {
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
     await expect(undoAdminAction("x")).resolves.toEqual({ ok: false, error: "Could not read that log entry." });
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
     await expect(undoAdminAction("x")).resolves.toEqual({ ok: false, error: "offline" });
 
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     const id = await rename();
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams/t1/name" ? Promise.reject(new Error("")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams/t1/name" ? Promise.reject(new Error("")) : realGet(ref)));
     await expect(undoAdminAction(id)).resolves.toEqual({ ok: false, error: "Could not check the current values." });
   });
 

@@ -4,13 +4,13 @@
  * Each subscription must read only the signed-in judge's node, keep up with
  * edits made while the page is open, and stop when unsubscribed.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "j1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
-const { subscribeToPersonalSchedule, subscribeToFinalRoundSchedule } = require("./getPersonalSchedule");
+const db = await import("../../testing/fakeDatabase");
+const { subscribeToPersonalSchedule, subscribeToFinalRoundSchedule } = await import("./getPersonalSchedule");
 
 beforeEach(() => {
   mockCurrentUser.value = { uid: "j1" };
@@ -46,20 +46,20 @@ describe("first round", () => {
 
   test("a judge with nothing assigned gets an empty list", () => {
     mockCurrentUser.value = { uid: "j3" };
-    const onTeams = jest.fn();
+    const onTeams = vi.fn();
     subscribeToPersonalSchedule(onTeams);
     expect(onTeams).toHaveBeenLastCalledWith([]);
   });
 
   test("refuses when nobody is signed in", () => {
     mockCurrentUser.value = null;
-    expect(() => subscribeToPersonalSchedule(jest.fn())).toThrow("Must be signed in");
+    expect(() => subscribeToPersonalSchedule(vi.fn())).toThrow("Must be signed in");
   });
 });
 
 describe("final round", () => {
   test("names each entry by team and time, from this judge's own record", () => {
-    const onTeams = jest.fn();
+    const onTeams = vi.fn();
     subscribeToFinalRoundSchedule(onTeams);
     expect(onTeams).toHaveBeenLastCalledWith([
       { teamId: "t9", timeslot: "16:00", room: "Rice 011", id: "t9", time: "16:00" },
@@ -68,34 +68,35 @@ describe("final round", () => {
 
   test("older entries that already carry id and time keep them", () => {
     db.setData("judges/j1/finalAssignments", { t8: { id: "t8", time: "15:30" } });
-    const onTeams = jest.fn();
+    const onTeams = vi.fn();
     subscribeToFinalRoundSchedule(onTeams);
     expect(onTeams).toHaveBeenLastCalledWith([{ id: "t8", time: "15:30" }]);
   });
 
   test("no final assignments means an empty list", () => {
     db.setData("judges/j1/finalAssignments", null);
-    const onTeams = jest.fn();
+    const onTeams = vi.fn();
     subscribeToFinalRoundSchedule(onTeams);
     expect(onTeams).toHaveBeenLastCalledWith([]);
   });
 
   test("refuses when nobody is signed in", () => {
     mockCurrentUser.value = null;
-    expect(() => subscribeToFinalRoundSchedule(jest.fn())).toThrow("Must be signed in");
+    expect(() => subscribeToFinalRoundSchedule(vi.fn())).toThrow("Must be signed in");
   });
 });
 
 describe("read errors", () => {
+  // patched on the fake itself: the mocked module's namespace is read-only,
+  // but it reads through to this object
   const mockFailingOnValue = (fire) => {
-    const database = require("firebase/database");
-    const original = database.onValue;
-    database.onValue = (_ref, _ok, fail) => {
+    const original = db.module.onValue;
+    db.module.onValue = (_ref, _ok, fail) => {
       fire(fail);
       return () => {};
     };
     return () => {
-      database.onValue = original;
+      db.module.onValue = original;
     };
   };
 
@@ -106,10 +107,10 @@ describe("read errors", () => {
     const denied = new Error("PERMISSION_DENIED");
     const restore = mockFailingOnValue((fail) => fail(denied));
     try {
-      const onError = jest.fn();
-      subscribe(jest.fn(), onError);
+      const onError = vi.fn();
+      subscribe(vi.fn(), onError);
       expect(onError).toHaveBeenCalledWith(denied);
-      expect(() => subscribe(jest.fn())).not.toThrow();
+      expect(() => subscribe(vi.fn())).not.toThrow();
     } finally {
       restore();
     }

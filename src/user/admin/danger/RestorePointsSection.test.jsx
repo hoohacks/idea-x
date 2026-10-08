@@ -20,14 +20,14 @@ import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "../../../theme";
 
-jest.mock("../../../firebase", () => ({ database: {} }));
-const mockGet = jest.fn();
-jest.mock("firebase/database", () => ({
+vi.mock("../../../firebase", () => ({ database: {} }));
+const mockGet = vi.fn();
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
 }));
 
-const RestorePointsSection = require("./RestorePointsSection").default;
+const RestorePointsSection = (await import("./RestorePointsSection")).default;
 
 const mockPoint = {
   id: "snap-1",
@@ -61,25 +61,23 @@ function mockPreviewResult({ extraJudgeScore = true } = {}) {
   };
 }
 
-jest.mock("../snapshots", () => ({
+vi.mock("../snapshots", () => ({
   JUDGING_PATHS: ["teams", "judges", "scores", "finalRound", "config/scheduleMeta"],
   subscribeToSnapshots: (callback) => {
     callback([mockPoint]);
     return () => {};
   },
-  captureSnapshot: jest.fn(async () => ({ ok: true })),
-  restoreSnapshot: jest.fn(async () => ({ ok: true, restored: 3 })),
-  previewSnapshot: jest.fn(async () => mockPreviewResult()),
-  readJudgeNames: jest.fn(async () => ({ ok: true, names: { j1: "Judge Smith" } })),
+  captureSnapshot: vi.fn(async () => ({ ok: true })),
+  restoreSnapshot: vi.fn(async () => ({ ok: true, restored: 3 })),
+  previewSnapshot: vi.fn(async () => mockPreviewResult()),
+  readJudgeNames: vi.fn(async () => ({ ok: true, names: { j1: "Judge Smith" } })),
 }));
 
-const { restoreSnapshot, previewSnapshot, readJudgeNames } = require("../snapshots");
+const { restoreSnapshot, previewSnapshot, readJudgeNames } = await import("../snapshots");
 
 /**
- * create-react-app sets `resetMocks: true`, which strips the implementation
- * off every jest.fn before each test -- so an implementation passed to
- * jest.fn() at declaration is gone by the time the first test runs. Every
- * implementation has to be re-established here.
+ * `mockReset: true` (vite.config.mjs) wipes every mock's calls and anything a
+ * test set on it, so each test starts from the implementations set here.
  */
 beforeEach(() => {
   restoreSnapshot.mockReset();
@@ -92,7 +90,7 @@ beforeEach(() => {
   mockGet.mockResolvedValue({ exists: () => false, val: () => null });
 });
 
-function renderSection(onResult = jest.fn()) {
+function renderSection(onResult = vi.fn()) {
   return render(
     <ThemeProvider theme={theme}>
       <RestorePointsSection onResult={onResult} />
@@ -190,7 +188,7 @@ describe("the preview dialog", () => {
   // publish confirmation: config/eventName when set, otherwise a short count.
 
   test("with no event name configured, restoring requires typing a short count -- typing the label does not work", async () => {
-    const onResult = jest.fn();
+    const onResult = vi.fn();
     renderSection(onResult);
     userEvent.click(screen.getByRole("button", { name: "Preview" }));
     await screen.findByText(/score card will be destroyed/);
@@ -249,7 +247,7 @@ describe("the preview dialog", () => {
   // pre-restore point) -- the organizer simply had no reason to look, because
   // nothing on screen ever told them there was now something to lose.
   test("refuses to restore silently when what would be destroyed changed after the preview was shown", async () => {
-    const onResult = jest.fn();
+    const onResult = vi.fn();
     // Preview opens showing nothing at risk...
     previewSnapshot.mockReset();
     previewSnapshot

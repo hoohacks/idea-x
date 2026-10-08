@@ -2,7 +2,8 @@
 
 ## Setup
 
-You need Node and **JDK 17 or newer** (the Firebase emulators run on Java).
+You need **Node 22** (the version is in `.nvmrc`) and **JDK 17 or newer** (the
+Firebase emulators run on Java).
 
 ```
 npm install
@@ -11,7 +12,8 @@ npm run seed             # terminal 2: a plausible event
 npm run start:emulator   # terminal 3: the app, on local data
 ```
 
-Sign in as `admin@example.com` / `testtest`. Judges are `judge1@example.com` and
+The app is at http://localhost:3000/idea-x/, the same base path as the live
+site. Sign in as `admin@example.com` / `testtest`. Judges are `judge1@example.com` and
 up, competitors `competitor1@example.com` and up, with the same password.
 
 `npm start` (without `:emulator`) talks to the **live** project. Use it only when
@@ -25,10 +27,12 @@ setting.
 | `npm run start:emulator` | The app, on local data |
 | `npm run emulators` | Database, auth and storage emulators |
 | `npm run seed` | Fill the emulator with an event |
+| `npm test` | Unit and page tests, re-run as you edit |
 | `npm run test:ci` | Unit and page tests, once (no Java needed) |
 | `npm run test:rules` | The database rules, executed by the emulator |
 | `npm run test:e2e` | Browser journeys against seeded emulators |
-| `npm run build` | Production bundle |
+| `npm run build` | Production bundle, in `build/` |
+| `npm run preview` | Serve that bundle locally, to check it before a release |
 | `npm run migrate:members`, `npm run migrate:scores` | One-time migrations; see [migrations](migrations.md) |
 
 ## Seed data
@@ -47,8 +51,13 @@ Two things that will confuse you:
 
 ## Stack
 
-- React 18 with Create React App, and React Router in hash mode
-- MUI 5, themed in `src/theme.js`; Phosphor icons (`react-icons/pi`) only
+- React 18 built with Vite (`vite.config.mjs`), and React Router in hash mode.
+  Files containing JSX must be `.jsx`; Vite will not parse JSX in a `.js` file.
+- Build-time settings are `VITE_*` environment variables, read as
+  `import.meta.env.VITE_*` and compiled into the bundle: `VITE_USE_EMULATOR`,
+  `VITE_EMULATOR_HOST` and `VITE_REGISTRATION_OPEN`. Changing one means
+  rebuilding.
+- MUI 5, themed in `src/theme.jsx`; Phosphor icons (`react-icons/pi`) only
 - Firebase Realtime Database, Authentication and Storage, used straight from the
   browser. The emulator namespace is `demo-ideathon-default-rtdb`, pinned in
   `src/firebase.js`, `scripts/seed-event.mjs` and `e2e/helpers.mjs`.

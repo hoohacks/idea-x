@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * The layer every other test in this repo cannot reach.
  *
- * Jest mocks the database, so no test above this one can see a permission
+ * The unit tests mock the database, so no test above this one can see a permission
  * denial. It renders into jsdom, which has no viewport, so no test above this
  * one can see a page pushed below the fold. And it imports components
  * directly, so no test above this one can see a route that nothing links to.
@@ -21,7 +21,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
-  // the app is a HashRouter served from the CRA dev server
+  // the app is a HashRouter served from the Vite dev server
   timeout: 60_000,
   expect: {
     timeout: 10_000,
@@ -45,8 +45,10 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
 
   use: {
-    // A dedicated port, never 3000. See the webServer note below.
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3010",
+    // A dedicated port, never 3000. See the webServer note below. The trailing
+    // slash matters: specs navigate relative to it, under the /idea-x/ base the
+    // site is served from, so a path-shaped URL is exercised the way it is live.
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3010/idea-x/",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
@@ -88,17 +90,13 @@ export default defineConfig({
    * inherited from whatever script happened to start something.
    */
   webServer: {
-    // CI=false for the dev server only: Create React App treats lint warnings as
-    // errors when CI is set, which would stop the server starting on a branch
-    // that merely has an unused import. Playwright's own CI behaviour is
-    // unaffected -- this config is read in the parent process, where CI is
-    // still whatever the runner set. BROWSER=none stops CRA opening a tab.
+    // --strictPort fails rather than drifting to another port if 3010 is taken.
     command:
-      "cross-env CI=false BROWSER=none PORT=3010 REACT_APP_USE_EMULATOR=true " +
-      "REACT_APP_REGISTRATION_OPEN=true react-scripts start",
-    url: "http://localhost:3010",
-    // create-react-app takes its time on a cold start
-    timeout: 180_000,
+      "cross-env VITE_USE_EMULATOR=true VITE_REGISTRATION_OPEN=true " +
+      "vite --port 3010 --strictPort",
+    url: "http://localhost:3010/idea-x/",
+    // the first request after a cold start waits on dependency pre-bundling
+    timeout: 120_000,
     reuseExistingServer: false,
     stdout: "ignore",
     stderr: "pipe",

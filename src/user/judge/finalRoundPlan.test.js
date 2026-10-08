@@ -8,12 +8,12 @@
  * organizer's override of the cut is honoured) and the `basis` the plan was
  * built from, and refuses to write if a card has arrived since.
  */
-jest.mock("../../firebase", () => ({ database: {}, auth: {} }));
+vi.mock("../../firebase", () => ({ database: {}, auth: {} }));
 
-const mockUpdate = jest.fn();
-const mockGet = jest.fn();
+const mockUpdate = vi.fn();
+const mockGet = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
@@ -35,13 +35,13 @@ jest.mock("firebase/database", () => ({
     return { committed: true, snapshot: { val: () => next, exists: () => true } };
   },
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
 
-const { planFinalRound, publishFinalRound, allJudgesForPicker } = require("./finalRoundService");
-const { slotsOf } = require("./finalRoundPlan");
-const { applyFinalEdit } = require("./applyFinalEdit");
-const { requireAdmin } = require("../../roles.js");
+const { planFinalRound, publishFinalRound, allJudgesForPicker } = await import("./finalRoundService");
+const { slotsOf } = await import("./finalRoundPlan");
+const { applyFinalEdit } = await import("./applyFinalEdit");
+const { requireAdmin } = await import("../../roles.js");
 
 /**
  * Five submitted teams with first-round cards:

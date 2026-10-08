@@ -5,12 +5,12 @@
  *
  * The pruning race has its own fixture in snapshots.test.js.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "admin-1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   JUDGING_PATHS,
   captureSnapshot,
@@ -20,7 +20,7 @@ const {
   readJudgeNames,
   restoreSnapshot,
   subscribeToSnapshots,
-} = require("./snapshots");
+} = await import("./snapshots");
 
 const teams = { t1: { name: "Lantern" } };
 
@@ -32,10 +32,10 @@ beforeEach(() => {
     teams,
     config: { scheduleMeta: { rounds: 2 } },
   });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const onlySnapshotId = () => Object.keys(db.getData("snapshotIndex"))[0];
 
@@ -98,7 +98,7 @@ describe("capturing", () => {
   });
 
   test("an index that will not commit is reported, and nothing is saved", async () => {
-    jest.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
+    vi.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
     await expect(captureSnapshot({ label: "x", paths: ["teams"] })).resolves.toEqual({
       ok: false,
       error: "Could not update the restore point list. Nothing was saved.",
@@ -108,14 +108,14 @@ describe("capturing", () => {
 
   test("a failed read or write reports the reason, or a fallback when there is none", async () => {
     const realGet = db.module.get;
-    const get = jest
+    const get = vi
       .spyOn(db.module, "get")
       .mockImplementation((ref) => (ref.path === "teams" ? Promise.reject(new Error("offline")) : realGet(ref)));
     await expect(captureSnapshot({ label: "x", paths: ["teams"] })).resolves.toEqual({ ok: false, error: "offline" });
     expect(console.error).toHaveBeenCalledWith("Could not create a restore point:", expect.any(Error));
     get.mockRestore();
 
-    jest.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
     await expect(captureSnapshot({ label: "x", paths: ["teams"] })).resolves.toEqual({
       ok: false,
       error: "The restore point could not be saved.",
@@ -202,7 +202,7 @@ describe("restoring", () => {
   });
 
   test("a failed read of the restore point reports why", async () => {
-    jest.spyOn(db.module, "get").mockImplementation(async (ref) => {
+    vi.spyOn(db.module, "get").mockImplementation(async (ref) => {
       if (ref.path.startsWith("admins")) return { exists: () => true, val: () => true };
       throw new Error("");
     });
@@ -211,7 +211,7 @@ describe("restoring", () => {
 
   test("changes nothing when the safety copy cannot be taken", async () => {
     const id = await takeThenChange();
-    jest.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
+    vi.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
     await expect(restoreSnapshot(id)).resolves.toEqual({
       ok: false,
       error:
@@ -225,7 +225,7 @@ describe("restoring", () => {
     const id = await takeThenChange();
     const realUpdate = db.module.update;
     let calls = 0;
-    jest.spyOn(db.module, "update").mockImplementation((ref, values) => {
+    vi.spyOn(db.module, "update").mockImplementation((ref, values) => {
       calls += 1;
       // the first update is the safety snapshot; the second is the restore
       return calls === 2 ? Promise.reject(new Error("")) : realUpdate(ref, values);
@@ -242,7 +242,7 @@ describe("restoring", () => {
     const id = await takeThenChange();
     const realUpdate = db.module.update;
     let calls = 0;
-    jest.spyOn(db.module, "update").mockImplementation((ref, values) => {
+    vi.spyOn(db.module, "update").mockImplementation((ref, values) => {
       calls += 1;
       return calls === 2 ? Promise.reject(new Error("PERMISSION_DENIED")) : realUpdate(ref, values);
     });
@@ -282,9 +282,9 @@ describe("previewing", () => {
     db.setData("snapshots/empty", { note: "x" });
     await expect(previewSnapshot("empty")).resolves.toEqual({ ok: false, error: "That restore point is empty." });
 
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
     await expect(previewSnapshot("x")).resolves.toEqual({ ok: false, error: "Could not read that restore point." });
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
     await expect(previewSnapshot("x")).resolves.toEqual({ ok: false, error: "offline" });
   });
 });
@@ -300,7 +300,7 @@ describe("listing", () => {
 
   test("nothing saved, or a failed read, is an empty list", async () => {
     await expect(listSnapshots()).resolves.toEqual([]);
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
     await expect(listSnapshots()).resolves.toEqual([]);
     expect(console.error).toHaveBeenCalledWith("Could not list restore points:", expect.any(Error));
   });
@@ -321,19 +321,19 @@ describe("listing", () => {
   });
 
   test("the live list of nothing is empty", () => {
-    const callback = jest.fn();
+    const callback = vi.fn();
     subscribeToSnapshots(callback);
     expect(callback).toHaveBeenLastCalledWith([]);
   });
 
   test("a failed live read goes to onError, never to the list", () => {
     const denied = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
+    vi.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
       fail(denied);
       return () => {};
     });
-    const callback = jest.fn();
-    const onError = jest.fn();
+    const callback = vi.fn();
+    const onError = vi.fn();
     subscribeToSnapshots(callback, onError);
     expect(onError).toHaveBeenCalledWith(denied);
     expect(callback).not.toHaveBeenCalled();
@@ -356,9 +356,9 @@ describe("judge names for the preview", () => {
   test("no judges is an empty map, and a failed read still gives one", async () => {
     db.setData("judges", null);
     await expect(readJudgeNames()).resolves.toEqual({ ok: true, names: {} });
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error(""));
     await expect(readJudgeNames()).resolves.toEqual({ ok: false, error: "Could not load judges.", names: {} });
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
     await expect(readJudgeNames()).resolves.toEqual({ ok: false, error: "offline", names: {} });
   });
 });

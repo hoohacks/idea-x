@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Tab, Tabs } from "@mui/material";
-import Layout from "../../Layout.js";
+import Layout from "../../Layout.jsx";
 import { PageHeader } from "../adminUi";
-import SchedulePreview from "./SchedulePreview.js";
-import FinalRoundPlanner from "./FinalRoundPlanner.js";
+import SchedulePreview from "./SchedulePreview.jsx";
+import FinalRoundPlanner from "./FinalRoundPlanner.jsx";
 import usePageTitle from "../../../usePageTitle";
 
 /**

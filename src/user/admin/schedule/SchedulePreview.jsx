@@ -6,11 +6,11 @@ import {
   Alert, Box, Button, Card, Checkbox, FormControlLabel, Snackbar, Stack, Typography,
 } from "@mui/material";
 import { database } from "../../../firebase.js";
-import Layout from "../../Layout.js";
-import { ConfirmDialog } from "../adminUi.js";
-import PlanGrid from "./PlanGrid.js";
-import TeamSlotDrawer from "./TeamSlotDrawer.js";
-import DriftPanel from "./DriftPanel.js";
+import Layout from "../../Layout.jsx";
+import { ConfirmDialog } from "../adminUi.jsx";
+import PlanGrid from "./PlanGrid.jsx";
+import TeamSlotDrawer from "./TeamSlotDrawer.jsx";
+import DriftPanel from "./DriftPanel.jsx";
 import { planSchedule } from "../../judge/planSchedule.js";
 import { subscribeDraft, saveDraft, clearDraft } from "../../judge/draftStore.js";
 import { applyEdit, undoEdit } from "../../judge/applyEdit.js";

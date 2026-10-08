@@ -26,7 +26,8 @@ export const ACCOUNTS = {
  */
 export const judge = (n) => ({ email: `judge${n}@example.com`, password: "testtest" });
 
-export const route = (path) => `/#${path.startsWith("/") ? path : `/${path}`}`;
+// relative, so it resolves under the base (/idea-x/) the app is served from
+export const route = (path) => `#${path.startsWith("/") ? path : `/${path}`}`;
 
 export async function goto(page, path) {
   await page.goto(route(path));

@@ -1,10 +1,10 @@
 /**
- * Assignments behaviour that pages.smoke.test.js does not pin down: a judge's
+ * Assignments behaviour that pages.smoke.test.jsx does not pin down: a judge's
  * assignments staying live while the page is open, and a failed final-round
  * read being told apart from an empty one.
  *
  * The firebase/database mock below is path-aware, unlike the generic stub in
- * pages.smoke.test.js, because these tests need to (a) push a second value
+ * pages.smoke.test.jsx, because these tests need to (a) push a second value
  * down the same `onValue` subscription to prove the page is actually live,
  * and (b) fail one specific path without failing every other read on the
  * page.
@@ -16,7 +16,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "../../theme";
 import { AuthContext } from "../../App";
 
-jest.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../firebase", () => ({ database: {} }));
 
 // One in-memory subscriber list per database path, so a test can push a new
 // value down the exact listener the component registered and assert the
@@ -39,15 +39,13 @@ const failListenersByPath = {};
 // "queue" mode defers each call's resolution to the test, which can then
 // resolve two overlapping calls in whichever order it chooses -- modeling two
 // in-flight network reads that land out of sequence. Names start with "mock"
-// so the jest.mock factory below is allowed to close over them.
+// to mark them as closed over by the vi.mock factory below.
 const mockGetMode = { current: "default" };
 const mockGetQueue = [];
 
-// create-react-app's `resetMocks: true` strips the implementation off every
-// jest.fn before each test (see the comment in pages.smoke.test.js), so
-// these are plain functions rather than jest.fn(impl) -- there is nothing
-// for resetMocks to strip.
-jest.mock("firebase/database", () => ({
+// Plain functions rather than vi.fn(impl), so `mockReset: true`
+// (vite.config.mjs) has nothing to reset: they behave the same in every test.
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: async (r) => {
     if (mockGetMode.current === "queue") {
@@ -76,11 +74,11 @@ jest.mock("firebase/database", () => ({
   serverTimestamp: () => 0,
 }));
 
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: { uid: "judge-1", email: "judge@example.com" } }),
 }));
 
-const Assignments = require("./Assignments").default;
+const Assignments = (await import("./Assignments")).default;
 
 const baseAuth = {
   userCredential: { user: { uid: "judge-1", email: "judge@example.com" } },
@@ -88,8 +86,8 @@ const baseAuth = {
   userTypes: ["judge"],
   loadingAuth: false,
   loadingUserData: false,
-  refreshUserData: jest.fn(),
-  handleLogin: jest.fn(),
+  refreshUserData: vi.fn(),
+  handleLogin: vi.fn(),
   token: null,
 };
 

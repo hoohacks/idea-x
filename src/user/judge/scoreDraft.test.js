@@ -11,11 +11,11 @@ const KEY = "ideathon:scoreDraft:v1:first:t1:j1";
 beforeEach(() => window.localStorage.clear());
 
 test("a draft is saved under its judge, team and round, with the time", () => {
-  jest.spyOn(Date, "now").mockReturnValue(1234);
+  vi.spyOn(Date, "now").mockReturnValue(1234);
   expect(saveDraft(target, { problem: 7, notes: "half done" })).toBe(true);
   expect(JSON.parse(window.localStorage.getItem(KEY))).toEqual({ values: { problem: 7, notes: "half done" }, savedAt: 1234 });
   expect(loadDraft(target)).toEqual({ problem: 7, notes: "half done" });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 test("each judge, team and round has its own draft", () => {

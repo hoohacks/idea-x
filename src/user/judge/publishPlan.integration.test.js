@@ -4,13 +4,13 @@
  * check. publishPlan.test.js covers the same steps against scripted reads; this
  * pins what lands and every message an organizer sees on the way.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../testing/fakeDatabase");
-const { planSchedule } = require("./planSchedule");
-const { publishPlan } = require("./publishPlan");
+const db = await import("../../testing/fakeDatabase");
+const { planSchedule } = await import("./planSchedule");
+const { publishPlan } = await import("./publishPlan");
 
 const seed = () => ({
   admins: { "admin-1": true },
@@ -26,9 +26,9 @@ const seed = () => ({
 
 beforeEach(() => {
   db.reset(seed());
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const built = async (options) => (await planSchedule(options)).plan;
 const log = () => Object.values(db.getData("adminLog"))[0];
@@ -142,7 +142,7 @@ describe("refusals", () => {
 
   test("no restore point, no publish", async () => {
     const plan = await built();
-    jest.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
+    vi.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
     await expect(publishPlan(plan)).resolves.toEqual({
       ok: false,
       error: "Could not create a restore point, so nothing was changed. Could not update the restore point list. Nothing was saved.",
@@ -159,7 +159,7 @@ describe("refusals", () => {
     db.setData("admins", { "admin-1": true });
     const realUpdate = db.module.update;
     let calls = 0;
-    jest.spyOn(db.module, "update").mockImplementation((ref, values) => {
+    vi.spyOn(db.module, "update").mockImplementation((ref, values) => {
       calls += 1;
       return calls === 2 ? Promise.reject(new Error("")) : realUpdate(ref, values);
     });

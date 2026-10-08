@@ -13,10 +13,10 @@ import { audienceLabel, readDismissed, rememberDismissed, visibleAnnouncements }
 import AnnouncementBanner from "../../AnnouncementBanner";
 import AnnouncementsCard from "./AnnouncementsCard";
 
-jest.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-const db = require("../../../testing/fakeDatabase");
+vi.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+const db = await import("../../../testing/fakeDatabase");
 
 const at = (hhmm) => new Date(`2026-10-25T${hhmm}:00-04:00`).getTime();
 const announcements = {

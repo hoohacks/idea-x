@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert, Button } from "@mui/material";
-import { ConfirmDialog } from "../adminUi.js";
+import { ConfirmDialog } from "../adminUi.jsx";
 
 /**
  * What moved since the plan was built, surfaced right where the organizer is

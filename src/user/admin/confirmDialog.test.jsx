@@ -10,7 +10,7 @@ import { ConfirmDialog } from "./adminUi";
 const props = {
   open: true, title: "Publish the schedule?",
   consequences: ["A restore point will be taken.", "Every assignment will be replaced."],
-  confirmLabel: "Publish", onConfirm: jest.fn(), onCancel: jest.fn(),
+  confirmLabel: "Publish", onConfirm: vi.fn(), onCancel: vi.fn(),
 };
 
 test("it lists what will happen", () => {
@@ -19,14 +19,14 @@ test("it lists what will happen", () => {
 });
 
 test("without a phrase, confirming is immediate", () => {
-  const onConfirm = jest.fn();
+  const onConfirm = vi.fn();
   render(<ConfirmDialog {...props} onConfirm={onConfirm} />);
   userEvent.click(screen.getByRole("button", { name: "Publish" }));
   expect(onConfirm).toHaveBeenCalled();
 });
 
 test("with a phrase, confirming is refused until it matches", () => {
-  const onConfirm = jest.fn();
+  const onConfirm = vi.fn();
   render(<ConfirmDialog {...props} typeToConfirm="HooHacks Ideathon" onConfirm={onConfirm} />);
   const button = screen.getByRole("button", { name: "Publish" });
   expect(button).toBeDisabled();
@@ -43,16 +43,16 @@ test("with a phrase, confirming is refused until it matches", () => {
 
 test("closing and reopening the dialog resets the typed phrase", () => {
   const { rerender } = render(
-    <ConfirmDialog {...props} typeToConfirm="HooHacks Ideathon" onConfirm={jest.fn()} />
+    <ConfirmDialog {...props} typeToConfirm="HooHacks Ideathon" onConfirm={vi.fn()} />
   );
   userEvent.type(screen.getByLabelText(/type/i), "HooHacks Ideathon");
   expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
 
   rerender(
-    <ConfirmDialog {...props} open={false} typeToConfirm="HooHacks Ideathon" onConfirm={jest.fn()} />
+    <ConfirmDialog {...props} open={false} typeToConfirm="HooHacks Ideathon" onConfirm={vi.fn()} />
   );
   rerender(
-    <ConfirmDialog {...props} open typeToConfirm="HooHacks Ideathon" onConfirm={jest.fn()} />
+    <ConfirmDialog {...props} open typeToConfirm="HooHacks Ideathon" onConfirm={vi.fn()} />
   );
 
   expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();

@@ -1,7 +1,7 @@
 /**
  * task-9-context.md's controller ruling: no browser to drive by hand, so this
  * exercises the page against a stubbed Firebase and a fake auth context,
- * copying the pattern from src/pages.smoke.test.js -- `App.js` (which
+ * copying the pattern from src/pages.smoke.test.jsx -- `App.jsx` (which
  * `AuthContext` comes from) transitively imports nearly every page in the
  * app, so the same full mock set that file uses is copied here rather than
  * a trimmed-down guess at what SchedulePreview alone needs.
@@ -20,49 +20,49 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "../../../theme";
 import { AuthContext } from "../../../App";
 
-// ---- Firebase stubs, copied from src/pages.smoke.test.js -----------------
+// ---- Firebase stubs, copied from src/pages.smoke.test.jsx -----------------
 
-jest.mock("../../../firebase", () => ({
+vi.mock("../../../firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "admin-1", email: "admin@example.com" } },
 }));
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: jest.fn(async () => ({ exists: () => false, val: () => null })),
-  set: jest.fn(async () => {}),
-  update: jest.fn(async () => {}),
-  push: jest.fn(() => ({ key: "new-id" })),
+  get: vi.fn(async () => ({ exists: () => false, val: () => null })),
+  set: vi.fn(async () => {}),
+  update: vi.fn(async () => {}),
+  push: vi.fn(() => ({ key: "new-id" })),
   onValue: (_ref, cb) => {
     cb({ exists: () => false, val: () => null });
     return () => {};
   },
   query: (r) => r,
-  orderByChild: jest.fn(),
-  equalTo: jest.fn(),
-  limitToLast: jest.fn(),
+  orderByChild: vi.fn(),
+  equalTo: vi.fn(),
+  limitToLast: vi.fn(),
   serverTimestamp: () => 0,
 }));
 
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: { uid: "admin-1", email: "admin@example.com" } }),
-  sendPasswordResetEmail: jest.fn(async () => {}),
-  signInWithEmailAndPassword: jest.fn(async () => ({ user: { uid: "u1" } })),
-  createUserWithEmailAndPassword: jest.fn(async () => ({ user: { uid: "u1" } })),
+  sendPasswordResetEmail: vi.fn(async () => {}),
+  signInWithEmailAndPassword: vi.fn(async () => ({ user: { uid: "u1" } })),
+  createUserWithEmailAndPassword: vi.fn(async () => ({ user: { uid: "u1" } })),
   onAuthStateChanged: () => () => {},
   browserLocalPersistence: {},
 }));
 
-jest.mock("firebase/storage", () => ({
+vi.mock("firebase/storage", () => ({
   getStorage: () => ({}),
-  ref: jest.fn(),
-  uploadBytesResumable: jest.fn(),
-  getDownloadURL: jest.fn(async () => "https://example.com/deck.pdf"),
+  ref: vi.fn(),
+  uploadBytesResumable: vi.fn(),
+  getDownloadURL: vi.fn(async () => "https://example.com/deck.pdf"),
 }));
 
-jest.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
-jest.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
+vi.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
+vi.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
 
 // roles.js (hasRole, requireAdmin, ...) is left real -- hasRole is pure and
 // Nav (rendered by Layout) needs it to work, and requireAdmin is never
@@ -71,29 +71,29 @@ jest.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
 
 // ---- The modules this page owns its actions through -----------------------
 
-const mockSubscribeDraft = jest.fn();
-const mockSaveDraft = jest.fn();
-const mockClearDraft = jest.fn();
-const mockReadDraft = jest.fn();
+const mockSubscribeDraft = vi.fn();
+const mockSaveDraft = vi.fn();
+const mockClearDraft = vi.fn();
+const mockReadDraft = vi.fn();
 
-jest.mock("../../judge/draftStore.js", () => ({
+vi.mock("../../judge/draftStore.js", () => ({
   subscribeDraft: (...args) => mockSubscribeDraft(...args),
   saveDraft: (...args) => mockSaveDraft(...args),
   clearDraft: (...args) => mockClearDraft(...args),
   readDraft: (...args) => mockReadDraft(...args),
 }));
 
-jest.mock("../../judge/planSchedule.js", () => ({ planSchedule: jest.fn() }));
-jest.mock("../../judge/publishPlan.js", () => ({ publishPlan: jest.fn() }));
-jest.mock("../../judge/scheduleConfig.js", () => ({
-  readScheduleMeta: jest.fn(async () => null),
+vi.mock("../../judge/planSchedule.js", () => ({ planSchedule: vi.fn() }));
+vi.mock("../../judge/publishPlan.js", () => ({ publishPlan: vi.fn() }));
+vi.mock("../../judge/scheduleConfig.js", () => ({
+  readScheduleMeta: vi.fn(async () => null),
 }));
 
-const SchedulePreview = require("./SchedulePreview").default;
-const DriftPanel = require("./DriftPanel").default;
-const { readScheduleMeta } = require("../../judge/scheduleConfig.js");
-const { publishPlan } = require("../../judge/publishPlan.js");
-const { get: mockGet } = require("firebase/database");
+const SchedulePreview = (await import("./SchedulePreview")).default;
+const DriftPanel = (await import("./DriftPanel")).default;
+const { readScheduleMeta } = await import("../../judge/scheduleConfig.js");
+const { publishPlan } = await import("../../judge/publishPlan.js");
+const { get: mockGet } = await import("firebase/database");
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -143,11 +143,10 @@ beforeEach(() => {
   mockClearDraft.mockResolvedValue({ ok: true });
   mockReadDraft.mockResolvedValue(null);
   readScheduleMeta.mockResolvedValue(null);
-  // create-react-app's `resetMocks: true` strips the implementation off
-  // every jest.fn before each test, including the one the firebase/database
-  // factory above defines inline -- see draftStore.test.js's note on the
-  // same behaviour. Re-established here since openPublishConfirm's own
-  // `get(ref(database, "config/eventName"))` call needs it.
+  // `mockReset: true` (vite.config.mjs) wipes what each test set on a mock,
+  // including the firebase/database `get` above. Re-established here since
+  // openPublishConfirm's own `get(ref(database, "config/eventName"))` call
+  // needs it.
   mockGet.mockResolvedValue({ exists: () => false, val: () => null });
 });
 
@@ -258,8 +257,8 @@ test("DriftPanel renders a separate repair control for each blocking item on the
     ],
     advisory: [],
   };
-  const onRepair = jest.fn();
-  const onRebuild = jest.fn();
+  const onRepair = vi.fn();
+  const onRebuild = vi.fn();
 
   renderPage(<DriftPanel drift={drift} onRepair={onRepair} onRebuild={onRebuild} />);
 
@@ -306,9 +305,9 @@ test("the Drop repair opens a confirmation instead of dropping immediately", () 
     }],
     advisory: [],
   };
-  const onRepair = jest.fn();
+  const onRepair = vi.fn();
 
-  renderPage(<DriftPanel drift={drift} onRepair={onRepair} onRebuild={jest.fn()} />);
+  renderPage(<DriftPanel drift={drift} onRepair={onRepair} onRebuild={vi.fn()} />);
 
   userEvent.click(screen.getByRole("button", { name: "Drop" }));
   expect(onRepair).not.toHaveBeenCalled();

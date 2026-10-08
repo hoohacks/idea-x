@@ -13,39 +13,38 @@
  */
 
 /** Re-import the module with a given environment, since the flag is read once. */
-function windowWith(value) {
-  jest.resetModules();
-  const previous = process.env.REACT_APP_REGISTRATION_OPEN;
-  if (value === undefined) delete process.env.REACT_APP_REGISTRATION_OPEN;
-  else process.env.REACT_APP_REGISTRATION_OPEN = value;
+async function windowWith(value) {
+  vi.resetModules();
+  const previous = import.meta.env.VITE_REGISTRATION_OPEN;
+  vi.stubEnv("VITE_REGISTRATION_OPEN", value);
 
-  const mod = require("./registrationWindow");
-  process.env.REACT_APP_REGISTRATION_OPEN = previous;
+  const mod = await import("./registrationWindow");
+  vi.stubEnv("VITE_REGISTRATION_OPEN", previous);
   return mod;
 }
 
 describe("which way it fails", () => {
-  test("nothing set is closed", () => {
-    expect(windowWith(undefined).REGISTRATION_OPEN).toBe(false);
+  test("nothing set is closed", async () => {
+    expect((await windowWith(undefined)).REGISTRATION_OPEN).toBe(false);
   });
 
-  test("an empty value is closed", () => {
-    expect(windowWith("").REGISTRATION_OPEN).toBe(false);
+  test("an empty value is closed", async () => {
+    expect((await windowWith("")).REGISTRATION_OPEN).toBe(false);
   });
 
-  test("anything other than the exact word is closed", () => {
+  test("anything other than the exact word is closed", async () => {
     for (const value of ["1", "yes", "TRUE", "True", "open", "false"]) {
-      expect(windowWith(value).REGISTRATION_OPEN).toBe(false);
+      expect((await windowWith(value)).REGISTRATION_OPEN).toBe(false);
     }
   });
 
-  test("only the exact word opens it", () => {
-    expect(windowWith("true").REGISTRATION_OPEN).toBe(true);
+  test("only the exact word opens it", async () => {
+    expect((await windowWith("true")).REGISTRATION_OPEN).toBe(true);
   });
 });
 
-describe("the way in while the doors are shut", () => {
-  const { isStaffEntrance } = require("./registrationWindow");
+describe("the way in while the doors are shut", async () => {
+  const { isStaffEntrance } = await import("./registrationWindow");
 
   test("the parameter lets an organizer reach the sign-in form", () => {
     expect(isStaffEntrance("?staff")).toBe(true);

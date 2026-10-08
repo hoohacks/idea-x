@@ -9,12 +9,12 @@
  * judge 0 on the first team and judges 1 and 2 on the second, so the first team
  * is seen by one judge only.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../testing/fakeDatabase");
-const { planSchedule } = require("./planSchedule");
+const db = await import("../../testing/fakeDatabase");
+const { planSchedule } = await import("./planSchedule");
 
 const judge = (firstName, extra = {}) => ({ firstName, isRound1Judge: true, ...extra });
 
@@ -26,8 +26,8 @@ const event = ({ teams, judges, config = {} }) =>
     judges,
   });
 
-beforeEach(() => jest.spyOn(console, "error").mockImplementation(() => {}));
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
+afterEach(() => vi.restoreAllMocks());
 
 describe("a thin schedule", () => {
   beforeEach(() =>
@@ -255,7 +255,7 @@ describe("refusals", () => {
   test("an unexpected failure is reported, not thrown", async () => {
     event({ teams: {}, judges: {} });
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams" ? Promise.reject(new Error("")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams" ? Promise.reject(new Error("")) : realGet(ref)));
     await expect(planSchedule()).resolves.toMatchObject({ ok: false, error: "Something went wrong planning the schedule." });
   });
 });

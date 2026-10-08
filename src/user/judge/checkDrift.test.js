@@ -4,26 +4,26 @@
 // generateSchedule.test.js and planSchedule.test.js do, and additionally
 // requires planSchedule to pin the one invariant that matters most: that
 // readLiveBasis and planSchedule never disagree about who is in scope.
-jest.mock("../../firebase", () => ({ database: {}, auth: {} }));
+vi.mock("../../firebase", () => ({ database: {}, auth: {} }));
 
-const mockGet = jest.fn();
+const mockGet = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 // only requireAdmin is stubbed: the rest of the module is plain helpers this
 // code genuinely uses, and replacing them wholesale made a name render as
 // "personName is not a function" the first time one was added
-jest.mock("../../roles.js", () => ({
-  ...jest.requireActual("../../roles.js"),
-  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+vi.mock("../../roles.js", async () => ({
+  ...await vi.importActual("../../roles.js"),
+  requireAdmin: vi.fn(async () => ({ uid: "admin-1" })),
 }));
 
-const { checkDrift, readLiveBasis } = require("./checkDrift");
-const { planSchedule } = require("./planSchedule");
-const { requireAdmin } = require("../../roles.js");
+const { checkDrift, readLiveBasis } = await import("./checkDrift");
+const { planSchedule } = await import("./planSchedule");
+const { requireAdmin } = await import("../../roles.js");
 
 const basis = {
   teamIds: ["t1", "t2"], judgeIds: ["j0", "j1"],

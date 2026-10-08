@@ -12,7 +12,7 @@
  * gated where the real one is slow. Getting either wrong makes this file pass
  * while proving nothing, so both are spelled out.
  */
-jest.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../firebase", () => ({ database: {} }));
 
 /** The one shared value both callers are racing over. */
 const mockStore = { value: null };
@@ -20,7 +20,7 @@ const mockStore = { value: null };
 /** Holds the first N reads open, so both callers read before either writes. */
 const mockGate = { waiting: [], held: 0, hold: 0 };
 
-jest.mock("firebase/database", () => {
+vi.mock("firebase/database", () => {
   const snapshotOfNow = () => {
     // a read returns the value as it was, not a live view of it
     const value = mockStore.value;
@@ -56,16 +56,16 @@ jest.mock("firebase/database", () => {
   };
 });
 
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../roles.js", () => ({
-  ...jest.requireActual("../../roles.js"),
-  requireAdmin: jest.fn(),
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../roles.js", async () => ({
+  ...await vi.importActual("../../roles.js"),
+  requireAdmin: vi.fn(),
 }));
-jest.mock("../admin/adminAction.js", () => ({ resolveName: jest.fn(async () => "Ada") }));
+vi.mock("../admin/adminAction.js", () => ({ resolveName: vi.fn(async () => "Ada") }));
 
-const { saveDraft } = require("./draftStore");
-const { saveFinalDraft } = require("./finalDraftStore");
-const { requireAdmin } = require("../../roles.js");
+const { saveDraft } = await import("./draftStore");
+const { saveFinalDraft } = await import("./finalDraftStore");
+const { requireAdmin } = await import("../../roles.js");
 
 const stored = (extra) => ({
   version: 3,

@@ -14,21 +14,21 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-jest.mock("./firebase", () => ({ database: {}, storage: {}, auth: {} }));
-jest.mock("firebase/database", () => ({
+vi.mock("./firebase", () => ({ database: {}, storage: {}, auth: {} }));
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: jest.fn(async () => ({ exists: () => false, val: () => null })),
+  get: vi.fn(async () => ({ exists: () => false, val: () => null })),
   onValue: () => () => {},
 }));
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: null }),
   onAuthStateChanged: () => () => {},
-  signInWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: vi.fn(),
   browserLocalPersistence: {},
 }));
 
-const { AuthContext, NavDrawerProvider, ProtectedRoute } = require("./App");
-const Layout = require("./user/Layout").default;
+const { AuthContext, NavDrawerProvider, ProtectedRoute } = await import("./App");
+const Layout = (await import("./user/Layout")).default;
 
 const SIGNED_IN = { user: { uid: "u1" } };
 
@@ -173,12 +173,12 @@ describe("every admin route is actually guarded", () => {
    * The tests above prove ProtectedRoute redirects correctly. They cannot prove
    * a given route was wrapped in it -- and forgetting the wrapper on a new admin
    * page is the mistake that renders the whole control panel to anyone who
-   * types the URL. This reads App.js the way schema.test.js reads the rules
+   * types the URL. This reads App.jsx the way schema.test.js reads the rules
    * file: it catches a missing guard, not a wrong one.
    */
   const fs = require("fs");
   const path = require("path");
-  const APP = fs.readFileSync(path.join(process.cwd(), "src", "App.js"), "utf8");
+  const APP = fs.readFileSync(path.join(process.cwd(), "src", "App.jsx"), "utf8");
 
   /**
    * Slice out the <Route path="admin"> branch and look only inside it. Matching

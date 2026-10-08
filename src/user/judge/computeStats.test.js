@@ -1,4 +1,4 @@
-const { computeStats } = require("./computeStats");
+const { computeStats } = await import("./computeStats");
 
 /** Two batches, three rooms, four judges. j3 is never assigned. */
 const plan = () => ({

@@ -127,7 +127,7 @@ test("the organizer pages do not run off the side of a phone", async ({ page }) 
 });
 
 test("the public forms fit a phone, since that is how most people register", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByText("Student registration")).toBeVisible();
   await expectNoSidewaysScroll(page);
   await expectNoZoomOnFocus(page);
@@ -152,7 +152,7 @@ test("the public forms fit a phone, since that is how most people register", asy
  * form the whole event depends on.
  */
 test("a focused field is never hidden behind the pinned submit bar", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByText("Student registration")).toBeVisible();
 
   for (const label of [/Password/, /Email address/, /Major or intended major/]) {
@@ -193,7 +193,7 @@ test("the room sheets scroll the table, not the page", async ({ page }) => {
 /**
  * A tap on the menu during the loading window used to be swallowed: the guard's
  * frame is replaced by the page's own when the role arrives, and the drawer
- * went with it. The deterministic version of this is in protectedRoute.test.js;
+ * went with it. The deterministic version of this is in protectedRoute.test.jsx;
  * this is the same thing through a real browser, where the window is real.
  */
 test("the menu still opens if it is tapped before the page has resolved", async ({ page }) => {

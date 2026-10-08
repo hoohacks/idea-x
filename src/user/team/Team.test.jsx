@@ -1,5 +1,5 @@
 /**
- * Team.js's save behaviour: a teammate's stale form must never overwrite a
+ * Team.jsx's save behaviour: a teammate's stale form must never overwrite a
  * submission it never saw.
  *
  * The idea name, problem statement and target industry are seeded from the
@@ -21,7 +21,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-jest.mock("../../firebase", () => ({
+vi.mock("../../firebase", () => ({
   database: {},
   auth: { currentUser: { uid: "me" } },
   storage: {},
@@ -31,20 +31,20 @@ jest.mock("../../firebase", () => ({
 // this test cares about, and all of which would need their own scaffolding
 // to render. Standing in for it keeps this test about the save behaviour,
 // not the chrome around it.
-jest.mock("../Layout", () => ({
+vi.mock("../Layout", () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,
 }));
 
-// A real AuthContext without the rest of App.js -- App.js pulls in every
+// A real AuthContext without the rest of App.jsx -- App.jsx pulls in every
 // page in the site, none of which this test needs just to read `userData`
-// off the context Team.js consumes.
-jest.mock("../../App", () => ({
+// off the context Team.jsx consumes.
+vi.mock("../../App", async () => ({
   __esModule: true,
-  AuthContext: require("react").createContext(null),
+  AuthContext: (await import("react")).createContext(null),
 }));
 
-/** A tiny in-memory "database", keyed by the same path strings Team.js uses. */
+/** A tiny in-memory "database", keyed by the same path strings Team.jsx uses. */
 const store = {};
 
 const snap = (value) => ({
@@ -54,11 +54,10 @@ const snap = (value) => ({
 
 let teamSnapshotCallback = null;
 
-// These are plain functions, not jest.fn() wrappers -- react-scripts's Jest
-// config sets `resetMocks: true`, which strips any implementation given to a
-// jest.fn() before every single test (the first one included). A plain
-// closure over `store` has no such implementation to strip.
-jest.mock("firebase/database", () => ({
+// These are plain functions, not vi.fn() wrappers: `mockReset: true`
+// (vite.config.mjs) resets mocks between tests, and a plain closure over
+// `store` has nothing to reset.
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: async ({ path }) => snap(store[path]),
   set: async ({ path }, value) => {
@@ -85,14 +84,14 @@ jest.mock("firebase/database", () => ({
   },
 }));
 
-jest.mock("firebase/storage", () => ({
+vi.mock("firebase/storage", () => ({
   ref: (_storage, path) => ({ path }),
   uploadBytesResumable: () => ({ on: () => {}, snapshot: { ref: {} } }),
   getDownloadURL: async () => "https://example.com/new-deck.pdf",
 }));
 
-const { AuthContext } = require("../../App");
-const Team = require("./Team").default;
+const { AuthContext } = await import("../../App");
+const Team = (await import("./Team")).default;
 
 /** Pushes the current team value to the live subscription, the way onValue
  *  fires again after any write anywhere on the team -- a teammate's save
@@ -112,7 +111,7 @@ function renderTeam() {
   const userData = { teamId: "t1" };
   return render(
     <MemoryRouter>
-      <AuthContext.Provider value={{ userData, refreshUserData: jest.fn() }}>
+      <AuthContext.Provider value={{ userData, refreshUserData: vi.fn() }}>
         <Team />
       </AuthContext.Provider>
     </MemoryRouter>
@@ -276,7 +275,7 @@ describe("the submission deadline", () => {
     });
   };
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   test("with time to spare, the form says when it closes and how long is left", async () => {
     store["config/submissionsCloseAt"] = Date.now() + (2 * 60 + 5) * 60_000 + 30_000;
@@ -300,15 +299,14 @@ describe("the submission deadline", () => {
   });
 
   test("the form closes by itself when the deadline passes, without a reload", async () => {
-    // this Jest takes the timer flavour, not options, so the clock is set apart
-    jest.useFakeTimers("modern");
-    jest.setSystemTime(new Date("2026-10-25T14:59:50-04:00"));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-25T14:59:50-04:00"));
     store["config/submissionsCloseAt"] = new Date("2026-10-25T15:00:00-04:00").getTime();
     await openTeam();
     expect(screen.getByLabelText(/idea name/i)).toBeInTheDocument();
 
     act(() => {
-      jest.advanceTimersByTime(16_000);
+      vi.advanceTimersByTime(16_000);
     });
     expect(screen.queryByLabelText(/idea name/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Submissions closed at 3:00 PM\./)).toBeInTheDocument();

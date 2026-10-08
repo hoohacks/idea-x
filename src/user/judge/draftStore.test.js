@@ -1,11 +1,11 @@
-jest.mock("../../firebase", () => ({ database: {}, auth: {} }));
-const mockUpdate = jest.fn();
-const mockGet = jest.fn();
-jest.mock("firebase/database", () => ({
+vi.mock("../../firebase", () => ({ database: {}, auth: {} }));
+const mockUpdate = vi.fn();
+const mockGet = vi.fn();
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...a) => mockGet(...a),
   update: (...a) => mockUpdate(...a),
-  onValue: jest.fn(() => jest.fn()),
+  onValue: vi.fn(() => vi.fn()),
   // single-writer tests only; concurrency lives in draftConcurrency.test.js
   runTransaction: async (reference, callback) => {
     const snap = await mockGet(reference);
@@ -19,14 +19,14 @@ jest.mock("firebase/database", () => ({
   },
   serverTimestamp: () => 1700000000000,
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
-jest.mock("../admin/adminAction.js", () => ({ resolveName: async () => "Sam" }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("../admin/adminAction.js", () => ({ resolveName: async () => "Sam" }));
 
-const { readDraft, saveDraft, clearDraft } = require("./draftStore");
-const { requireAdmin } = require("../../roles.js");
-const { applyEdit } = require("./applyEdit");
-const { computeStats } = require("./computeStats");
+const { readDraft, saveDraft, clearDraft } = await import("./draftStore");
+const { requireAdmin } = await import("../../roles.js");
+const { applyEdit } = await import("./applyEdit");
+const { computeStats } = await import("./computeStats");
 
 const plan = (over = {}) => ({
   assignments: {}, basis: { teamIds: [], judgeIds: [], rooms: [], batchCount: 3, batchTimes: {}, target: 3 },
@@ -39,7 +39,7 @@ const plan = (over = {}) => ({
  * bottom-up, so a container that only becomes empty once its own children
  * are stripped -- e.g. `basis.batchTimes: {}` -- is stripped too.
  *
- * Every other test in this file mocks `update` with a bare `jest.fn()`, which
+ * Every other test in this file mocks `update` with a bare `vi.fn()`, which
  * records whatever object it was called with verbatim -- it never actually
  * serialises anything, so it cannot reveal what RTDB does to an empty
  * container. That is how `judges: []` on a freshly-placed team survived
@@ -63,10 +63,8 @@ function stripEmptyRTDB(value) {
 }
 
 /**
- * create-react-app sets `resetMocks: true`, which strips the implementation
- * off every jest.fn before each test -- so `requireAdmin`'s mocked resolution
- * from the jest.mock factory above is gone by the time the first test runs
- * unless it is re-established here. See adminAction.test.js for the same note.
+ * `mockReset: true` (vite.config.mjs) wipes every mock's calls and anything a
+ * test set on it, so each test starts from the implementations set here.
  */
 beforeEach(() => {
   mockUpdate.mockReset(); mockUpdate.mockResolvedValue(undefined);
@@ -161,7 +159,7 @@ test("a non-admin's clear is refused and writes nothing", async () => {
 });
 
 // ---- Finding 1: an empty `judges: []` (and an empty `basis.batchTimes`)
-// must survive a real RTDB round trip, not just the bare-jest.fn() one every
+// must survive a real RTDB round trip, not just the bare-vi.fn() one every
 // other test in this file exercises. `moveTeam` deliberately places a team
 // with `judges: []` before anyone is assigned to it (applyEdit.js) -- RTDB
 // drops that empty array on write, so the key is entirely ABSENT on the way

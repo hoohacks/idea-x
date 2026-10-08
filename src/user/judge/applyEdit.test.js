@@ -1,5 +1,5 @@
-const { applyEdit, undoEdit } = require("./applyEdit");
-const { computeStats } = require("./computeStats");
+const { applyEdit, undoEdit } = await import("./applyEdit");
+const { computeStats } = await import("./computeStats");
 
 const base = () => ({
   assignments: {

@@ -1,6 +1,6 @@
 /**
  * The scanner's role-resolution and check-in-target decision, pulled out of
- * Scan.js so it can be tested without a camera or a database.
+ * Scan.jsx so it can be tested without a camera or a database.
  *
  * Roles are additive (roles.js): one uid can hold both a competitor and a
  * judge record. The bug this guards against is that the scanner used to
@@ -10,15 +10,15 @@
  * exactly that flag, so that judge was silently dropped from panel
  * allocation while the scanner told the organizer "Checked in".
  */
-jest.mock("../../firebase", () => ({ database: {} }));
-jest.mock("firebase/database", () => ({
+vi.mock("../../firebase", () => ({ database: {} }));
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
-  get: jest.fn(),
-  update: jest.fn(),
+  get: vi.fn(),
+  update: vi.fn(),
 }));
-jest.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
+vi.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
 
-const { resolveCheckIn } = require("./Scan");
+const { resolveCheckIn } = await import("./Scan");
 
 describe("resolveCheckIn", () => {
   test("nobody holds that code", () => {

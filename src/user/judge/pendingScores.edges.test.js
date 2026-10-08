@@ -22,8 +22,8 @@ const stored = () => JSON.parse(window.localStorage.getItem(STORAGE_KEY));
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 test("the queue's storage key never changes, or a deploy would orphan cards already queued on devices", () => {
@@ -74,7 +74,7 @@ describe("what is in the queue", () => {
 
 describe("queueing a card", () => {
   test("stores it with an id, a revision, the time, and no attempts yet", () => {
-    jest.spyOn(Date, "now").mockReturnValue(1000);
+    vi.spyOn(Date, "now").mockReturnValue(1000);
     expect(enqueue(card())).toBe(true);
     expect(stored()).toEqual([
       {
@@ -106,7 +106,7 @@ describe("queueing a card", () => {
     enqueue(card({ teamId: "other" }));
     const realGet = Storage.prototype.getItem;
     let reads = 0;
-    jest.spyOn(Storage.prototype, "getItem").mockImplementation(function getItem(key) {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(function getItem(key) {
       reads += 1;
       // the second read is the re-check right before the write: land another tab's card first
       if (key === STORAGE_KEY && reads === 2) {
@@ -123,7 +123,7 @@ describe("queueing a card", () => {
   test("under contention that never stops it still queues the card after a few tries", () => {
     const realGet = Storage.prototype.getItem;
     let reads = 0;
-    const get = jest.spyOn(Storage.prototype, "getItem").mockImplementation(function getItem(key) {
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(function getItem(key) {
       if (key !== STORAGE_KEY) return realGet.call(this, key);
       reads += 1;
       return JSON.stringify([{ ...card({ teamId: `noise${reads}` }), id: `n${reads}` }]);
@@ -136,7 +136,7 @@ describe("queueing a card", () => {
   });
 
   test("a device that refuses storage reports it", () => {
-    jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("QuotaExceededError");
     });
     expect(enqueue(card())).toBe(false);
@@ -145,7 +145,7 @@ describe("queueing a card", () => {
 
 describe("listening", () => {
   test("hears every change until it stops, and one bad listener does not silence the rest", () => {
-    const heard = jest.fn();
+    const heard = vi.fn();
     const broken = subscribeToPending(() => {
       throw new Error("broken");
     });
@@ -162,7 +162,7 @@ describe("listening", () => {
 
 describe("flushing", () => {
   test("an empty queue sends nothing", async () => {
-    const write = jest.fn();
+    const write = vi.fn();
     await expect(flushPending(write)).resolves.toEqual({ synced: 0, failed: 0 });
     expect(write).not.toHaveBeenCalled();
   });
@@ -171,7 +171,7 @@ describe("flushing", () => {
     enqueue(card());
     enqueue(card({ teamId: "t2" }));
     enqueue(card({ teamId: "t3" }));
-    const write = jest.fn(async (entry) => {
+    const write = vi.fn(async (entry) => {
       if (entry.teamId === "t2") throw new Error("offline");
       if (entry.teamId === "t3") throw "socket closed";
     });
@@ -201,7 +201,7 @@ describe("flushing", () => {
   test("only that judge's cards, when asked", async () => {
     enqueue(card());
     enqueue(card({ judgeUid: "j2" }));
-    const write = jest.fn(async () => {});
+    const write = vi.fn(async () => {});
     await flushPending(write, { judgeUid: "j2" });
     expect(write).toHaveBeenCalledTimes(1);
     expect(stored().map((e) => e.judgeUid)).toEqual(["j1"]);
@@ -210,29 +210,29 @@ describe("flushing", () => {
 
 describe("the deadline", () => {
   test("a write that answers in time passes its result through and leaves no timer", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await expect(withTimeout(Promise.resolve("done"), 50)).resolves.toBe("done");
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   test("a write that does not answer is given up on at the deadline, not before", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     let settled = false;
     const pending = withTimeout(new Promise(() => {}), 100).catch((error) => {
       settled = true;
       return error.message;
     });
-    jest.advanceTimersByTime(99);
+    vi.advanceTimersByTime(99);
     await Promise.resolve();
     expect(settled).toBe(false);
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     await expect(pending).resolves.toBe("timed-out");
   });
 
   test("defaults to the submit timeout", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const pending = withTimeout(new Promise(() => {})).catch((error) => error.message);
-    jest.advanceTimersByTime(SUBMIT_TIMEOUT_MS);
+    vi.advanceTimersByTime(SUBMIT_TIMEOUT_MS);
     await expect(pending).resolves.toBe("timed-out");
   });
 });

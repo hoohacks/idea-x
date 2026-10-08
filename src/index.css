@@ -1,7 +1,7 @@
 /*
  * The two things the MUI theme cannot express, plus the base reset.
  *
- * Everything else lives in theme.js. Resist adding page styles here: a global
+ * Everything else lives in theme.jsx. Resist adding page styles here: a global
  * element selector is how the old pages ended up fighting each other.
  */
 

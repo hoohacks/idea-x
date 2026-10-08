@@ -4,11 +4,11 @@
  * pure remapping in depth; this reads back what each operation wrote and pins
  * every summary and refusal.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../../testing/fakeDatabase");
+const db = await import("../../../testing/fakeDatabase");
 const {
   remapChanges,
   roomsInUse,
@@ -19,8 +19,8 @@ const {
   addRoom,
   renameRoom,
   removeRoom,
-} = require("./roomsService");
-const { decodeChanges } = require("../adminAction");
+} = await import("./roomsService");
+const { decodeChanges } = await import("../adminAction");
 
 beforeEach(() => {
   db.reset({

@@ -6,30 +6,30 @@
  * name copied into teams/{id}/schedule and into every assigned judge's own
  * copy. Removing a room therefore has to touch all of them or none.
  */
-jest.mock("../../../firebase", () => ({ database: {}, auth: {} }));
-const mockUpdate = jest.fn(async () => {});
-const mockGet = jest.fn(async () => ({ exists: () => false, val: () => null }));
+vi.mock("../../../firebase", () => ({ database: {}, auth: {} }));
+const mockUpdate = vi.fn(async () => {});
+const mockGet = vi.fn(async () => ({ exists: () => false, val: () => null }));
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "entry-1" }),
   serverTimestamp: () => 0,
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 // only requireAdmin is stubbed; the rest of the module is plain helpers
-jest.mock("../../../roles.js", () => ({
-  ...jest.requireActual("../../../roles.js"),
-  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+vi.mock("../../../roles.js", async () => ({
+  ...await vi.importActual("../../../roles.js"),
+  requireAdmin: vi.fn(async () => ({ uid: "admin-1" })),
 }));
 
-const { roomsInUse, remapChanges, moveCollisions, listRooms, removeRoom } = require("./roomsService");
-const { requireAdmin } = require("../../../roles.js");
+const { roomsInUse, remapChanges, moveCollisions, listRooms, removeRoom } = await import("./roomsService");
+const { requireAdmin } = await import("../../../roles.js");
 
 /**
- * create-react-app sets `resetMocks: true`, which strips the implementation off
- * every jest.fn before each test. Every implementation has to be re-established.
+ * `mockReset: true` (vite.config.mjs) wipes every mock's calls and anything a
+ * test set on it, so each test starts from the implementations set here.
  */
 beforeEach(() => {
   mockUpdate.mockReset();

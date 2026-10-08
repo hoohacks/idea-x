@@ -10,19 +10,19 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import JudgingProgress from "./JudgingProgress";
 import { renderPage } from "../../testing/renderPage";
 
-jest.mock("../../firebase", () => ({
+vi.mock("../../firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "admin-1", email: "admin@example.com" } },
 }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-const db = require("../../testing/fakeDatabase");
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+const db = await import("../../testing/fakeDatabase");
 
 // the three one-team edits are stubbed, so these check the page asks for the
 // right one; what each writes is tested in judge/assignmentEdits.test.js
-const mockEdits = { assign: jest.fn(), unassign: jest.fn(), swap: jest.fn() };
-jest.mock("../judge/assignmentEdits", () => ({
-  ...jest.requireActual("../judge/assignmentEdits"),
+const mockEdits = { assign: vi.fn(), unassign: vi.fn(), swap: vi.fn() };
+vi.mock("../judge/assignmentEdits", async () => ({
+  ...await vi.importActual("../judge/assignmentEdits"),
   assignJudgeToTeam: (...a) => mockEdits.assign(...a),
   unassignJudgeFromTeam: (...a) => mockEdits.unassign(...a),
   swapJudges: (...a) => mockEdits.swap(...a),

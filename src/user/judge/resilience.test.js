@@ -82,7 +82,7 @@ describe("the outbox survives what the dialog does not", () => {
   });
 
   test("subscribers are told when the queue changes", () => {
-    const seen = jest.fn();
+    const seen = vi.fn();
     const stop = subscribeToPending(seen);
     enqueue(entry());
     expect(seen).toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe("enqueue racing a second tab", () => {
 
     const realReadJson = localStore.readJson;
     let storageReads = 0;
-    const spy = jest.spyOn(localStore, "readJson").mockImplementation((key, fallback) => {
+    const spy = vi.spyOn(localStore, "readJson").mockImplementation((key, fallback) => {
       const result = realReadJson(key, fallback);
       if (key === STORAGE_KEY) {
         storageReads += 1;
@@ -138,7 +138,7 @@ describe("enqueue racing a second tab", () => {
 describe("flushing", () => {
   test("a successful send clears the entry", async () => {
     enqueue(entry());
-    const write = jest.fn(async () => {});
+    const write = vi.fn(async () => {});
 
     const result = await flushPending(write, { judgeUid: "judge-1" });
 
@@ -149,7 +149,7 @@ describe("flushing", () => {
 
   test("a failed send keeps the card and counts the attempt", async () => {
     enqueue(entry());
-    const write = jest.fn(async () => {
+    const write = vi.fn(async () => {
       throw new Error("offline");
     });
 
@@ -164,7 +164,7 @@ describe("flushing", () => {
 
   test("retrying is safe to do repeatedly", async () => {
     enqueue(entry());
-    const write = jest.fn(async () => {
+    const write = vi.fn(async () => {
       throw new Error("still offline");
     });
 
@@ -181,7 +181,7 @@ describe("flushing", () => {
     enqueue(entry({ teamId: "bad" }));
     enqueue(entry({ teamId: "good-2" }));
 
-    const write = jest.fn(async (e) => {
+    const write = vi.fn(async (e) => {
       if (e.teamId === "bad") throw new Error("nope");
     });
 
@@ -192,7 +192,7 @@ describe("flushing", () => {
   });
 
   test("an empty queue does no work", async () => {
-    const write = jest.fn();
+    const write = vi.fn();
     expect(await flushPending(write)).toEqual({ synced: 0, failed: 0 });
     expect(write).not.toHaveBeenCalled();
   });
@@ -200,7 +200,7 @@ describe("flushing", () => {
   test("only the named judge's cards are sent", async () => {
     enqueue(entry());
     enqueue(entry({ judgeUid: "judge-2", teamId: "team-2" }));
-    const write = jest.fn(async () => {});
+    const write = vi.fn(async () => {});
 
     await flushPending(write, { judgeUid: "judge-1" });
 
@@ -273,7 +273,7 @@ describe("localStore never throws", () => {
   });
 
   test("a browser refusing storage degrades to no-draft, not an exception", () => {
-    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("QuotaExceededError");
     });
 
@@ -300,7 +300,7 @@ describe("a flush racing the judge", () => {
     enqueue(entry({ score: { ...card, problem: 1 } }));
 
     let land;
-    const write = jest.fn(() => new Promise((resolve) => { land = resolve; }));
+    const write = vi.fn(() => new Promise((resolve) => { land = resolve; }));
 
     const flush = flushPending(write, { judgeUid: "judge-1" });
     await Promise.resolve();
@@ -324,7 +324,7 @@ describe("a flush racing the judge", () => {
     enqueue(entry());
 
     const settle = [];
-    const write = jest.fn(() => new Promise((resolve) => { settle.push(resolve); }));
+    const write = vi.fn(() => new Promise((resolve) => { settle.push(resolve); }));
 
     const first = flushPending(write, { judgeUid: "judge-1" });
     const second = flushPending(write, { judgeUid: "judge-1" });
@@ -341,7 +341,7 @@ describe("a flush racing the judge", () => {
     enqueue(entry());
 
     const settle = [];
-    const write = jest.fn(() => new Promise((resolve) => { settle.push(resolve); }));
+    const write = vi.fn(() => new Promise((resolve) => { settle.push(resolve); }));
 
     const first = flushPending(write, { judgeUid: "judge-1" });
     await Promise.resolve();

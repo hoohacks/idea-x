@@ -4,11 +4,11 @@
  * names written onto each card, and the refusals and repairs that
  * assignmentEdits.test.js (which mocks the database) cannot see land.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   findConflict,
   findOpenSlots,
@@ -16,7 +16,7 @@ const {
   assignJudgeToTeam,
   unassignJudgeFromTeam,
   swapJudges,
-} = require("./assignmentEdits");
+} = await import("./assignmentEdits");
 
 const schedule = (extra = {}) => ({
   teamName: "Lantern",
@@ -207,7 +207,7 @@ describe("adding, removing and swapping", () => {
   });
 
   test("the roster commits by transaction without applying locally first", async () => {
-    const transaction = jest.spyOn(db.module, "runTransaction");
+    const transaction = vi.spyOn(db.module, "runTransaction");
     await assignJudgeToTeam({ judgeUid: "j4", teamId: "t1" });
     expect(transaction).toHaveBeenCalledWith(expect.objectContaining({ path: "teams/t1/schedule" }), expect.any(Function), {
       applyLocally: false,
@@ -224,7 +224,7 @@ describe("adding, removing and swapping", () => {
 
   test("an entry removed while choosing is reported as removed, not as someone else's edit", async () => {
     const real = db.module.runTransaction;
-    const transaction = jest.spyOn(db.module, "runTransaction").mockImplementation(async (ref, updater, options) => {
+    const transaction = vi.spyOn(db.module, "runTransaction").mockImplementation(async (ref, updater, options) => {
       db.setData("teams/t1/schedule", null);
       return real(ref, updater, options);
     });

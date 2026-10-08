@@ -7,10 +7,10 @@
  * Hence the tests about quoting, about a card from an unassigned judge still
  * appearing, and about Excel's habit of executing a cell that starts with `=`.
  */
-jest.mock("../../firebase", () => ({ database: {}, auth: {} }));
-jest.mock("firebase/database", () => ({
+vi.mock("../../firebase", () => ({ database: {}, auth: {} }));
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: jest.fn(async () => ({ exists: () => false, val: () => null })),
+  get: vi.fn(async () => ({ exists: () => false, val: () => null })),
 }));
 
 import {

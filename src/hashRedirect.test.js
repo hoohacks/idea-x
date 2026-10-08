@@ -40,10 +40,11 @@ describe("locally, where the app is served from the root", () => {
   });
 });
 
-describe("in development, where the server answers on the root", () => {
-  // PUBLIC_URL is /idea-x here too, but localhost:3000 serves
-  // the app from /. Prepending the base anyway pointed at a directory that only
-  // resolves through the dev server's index.html fallback.
+describe("outside the base, where a fallback server can still serve the app", () => {
+  // The base is /idea-x in development as well as production, but a server
+  // that falls back to index.html can serve the bundle from anywhere.
+  // Prepending the base anyway points at a directory that only resolves
+  // through that fallback.
   const at = (pathname, extra = {}) =>
     hashTargetFor({ pathname, base: "/idea-x", ...extra });
 
@@ -81,7 +82,7 @@ describe("in production, where it is served from a subdirectory", () => {
   });
 });
 
-describe("reading the base out of package.json's homepage", () => {
+describe("normalising the base", () => {
   test("a full URL contributes only its path", () => {
     expect(basePath("https://hoohacks.github.io/idea-x"))
       .toBe("/idea-x");
@@ -92,14 +93,13 @@ describe("reading the base out of package.json's homepage", () => {
       .toBe("/idea-x");
   });
 
-  test("no homepage at all has no base", () => {
+  test("an empty base is no base", () => {
     expect(basePath("")).toBe("");
   });
 
-  test("development gets the same base as production, because CRA derives both from homepage", () => {
-    // react-scripts sets PUBLIC_URL to paths.publicUrlOrPath.slice(0, -1), and
-    // in development that is the homepage's *pathname* -- not an empty string
-    expect(basePath("/idea-x")).toBe("/idea-x");
+  test("Vite's base, which ends in a slash, loses it", () => {
+    // import.meta.env.BASE_URL is "/idea-x/" in development and production alike
+    expect(basePath("/idea-x/")).toBe("/idea-x");
   });
 });
 
@@ -126,39 +126,37 @@ describe("the edges", () => {
     expect(basePath("/apps/https://x")).toBe("/apps/https://x");
   });
 
-  test("with no argument the build's PUBLIC_URL is used, or nothing", () => {
-    const saved = process.env.PUBLIC_URL;
+  test("with no argument the build's base is used, and the root is no base", () => {
+    const saved = import.meta.env.BASE_URL;
     try {
-      process.env.PUBLIC_URL = "https://hoohacks.github.io/idea-x/";
+      vi.stubEnv("BASE_URL", "/idea-x/");
       expect(basePath()).toBe("/idea-x");
-      delete process.env.PUBLIC_URL;
+      vi.stubEnv("BASE_URL", "/");
       expect(basePath()).toBe("");
     } finally {
-      if (saved === undefined) delete process.env.PUBLIC_URL;
-      else process.env.PUBLIC_URL = saved;
+      vi.stubEnv("BASE_URL", saved);
     }
   });
 });
 
-describe("redirecting the browser", () => {
-  const { redirectToHashRoute } = require("./hashRedirect");
-  const saved = process.env.PUBLIC_URL;
+describe("redirecting the browser", async () => {
+  const { redirectToHashRoute } = await import("./hashRedirect");
+  const saved = import.meta.env.BASE_URL;
   beforeEach(() => {
-    process.env.PUBLIC_URL = "/idea-x";
+    vi.stubEnv("BASE_URL", "/idea-x/");
   });
   afterEach(() => {
-    if (saved === undefined) delete process.env.PUBLIC_URL;
-    else process.env.PUBLIC_URL = saved;
+    vi.stubEnv("BASE_URL", saved);
   });
 
   test("replaces a path-shaped URL with its hash route, and says where", () => {
-    const location = { pathname: "/idea-x/judge-registration", search: "?ref=email", hash: "", replace: jest.fn() };
+    const location = { pathname: "/idea-x/judge-registration", search: "?ref=email", hash: "", replace: vi.fn() };
     expect(redirectToHashRoute(location)).toBe("/idea-x/#/judge-registration?ref=email");
     expect(location.replace).toHaveBeenCalledWith("/idea-x/#/judge-registration?ref=email");
   });
 
   test("leaves a hash route alone", () => {
-    const location = { pathname: "/idea-x/", search: "", hash: "#/login", replace: jest.fn() };
+    const location = { pathname: "/idea-x/", search: "", hash: "#/login", replace: vi.fn() };
     expect(redirectToHashRoute(location)).toBeNull();
     expect(location.replace).not.toHaveBeenCalled();
   });

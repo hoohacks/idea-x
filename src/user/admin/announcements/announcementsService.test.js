@@ -3,21 +3,21 @@
  * over an in-memory database: what is refused, what is stored, and what the
  * log says about it.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../../testing/fakeDatabase");
-const { postAnnouncement, takeDownAnnouncement } = require("./announcementsService");
-const { decodeChanges } = require("../adminAction");
+const db = await import("../../../testing/fakeDatabase");
+const { postAnnouncement, takeDownAnnouncement } = await import("./announcementsService");
+const { decodeChanges } = await import("../adminAction");
 
 const NOW = Date.UTC(2026, 9, 25, 16, 0, 0);
 
 beforeEach(() => {
-  jest.useFakeTimers().setSystemTime(new Date(NOW));
+  vi.useFakeTimers().setSystemTime(new Date(NOW));
   db.reset({ admins: { "admin-1": true }, judges: { "admin-1": { firstName: "Ada" } } });
 });
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 const onlyLogEntry = () => {
   const entries = Object.values(db.getData("adminLog") ?? {});

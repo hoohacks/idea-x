@@ -62,8 +62,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          CI: false
-          REACT_APP_REGISTRATION_OPEN: ${{ vars.REGISTRATION_OPEN }}
+          VITE_REGISTRATION_OPEN: ${{ vars.REGISTRATION_OPEN }}
 
       - name: Say which way the doors are
         run: |

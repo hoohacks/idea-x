@@ -9,29 +9,29 @@
  */
 const mockAuth = { currentUser: { uid: "admin-1" } };
 const mockEmulator = { on: false };
-jest.mock("../../../firebase.js", () => ({
+vi.mock("../../../firebase.js", () => ({
   database: {},
   auth: mockAuth,
   get USING_EMULATOR() {
     return mockEmulator.on;
   },
 }));
-jest.mock("../../../firebaseConfig.js", () => ({ firebaseConfig: { projectId: "demo" } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/app", () => ({ initializeApp: jest.fn(), deleteApp: jest.fn() }));
-jest.mock("firebase/auth", () => ({
-  getAuth: jest.fn(),
-  createUserWithEmailAndPassword: jest.fn(),
-  sendPasswordResetEmail: jest.fn(),
-  signOut: jest.fn(),
-  connectAuthEmulator: jest.fn(),
+vi.mock("../../../firebaseConfig.js", () => ({ firebaseConfig: { projectId: "demo" } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/app", () => ({ initializeApp: vi.fn(), deleteApp: vi.fn() }));
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  createUserWithEmailAndPassword: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
+  signOut: vi.fn(),
+  connectAuthEmulator: vi.fn(),
 }));
 
-const db = require("../../../testing/fakeDatabase");
-const firebaseApp = require("firebase/app");
-const firebaseAuth = require("firebase/auth");
-const people = require("./peopleService");
-const { decodeChanges } = require("../adminAction");
+const db = await import("../../../testing/fakeDatabase");
+const firebaseApp = await import("firebase/app");
+const firebaseAuth = await import("firebase/auth");
+const people = await import("./peopleService");
+const { decodeChanges } = await import("../adminAction");
 
 const NOW = Date.UTC(2026, 9, 25, 15, 0, 0);
 
@@ -46,10 +46,10 @@ const grace = {
 };
 
 beforeEach(() => {
-  jest.useFakeTimers().setSystemTime(new Date(NOW));
+  vi.useFakeTimers().setSystemTime(new Date(NOW));
   mockAuth.currentUser = { uid: "admin-1" };
   mockEmulator.on = false;
-  delete process.env.REACT_APP_EMULATOR_HOST;
+  vi.stubEnv("VITE_EMULATOR_HOST", undefined);
   db.reset({
     admins: { "admin-1": true, "admin-2": true },
     judges: { "admin-1": { firstName: "Org", lastName: "One" }, grace },
@@ -72,11 +72,11 @@ beforeEach(() => {
   firebaseAuth.createUserWithEmailAndPassword.mockResolvedValue({ user: { uid: "new-uid" } });
   firebaseAuth.signOut.mockResolvedValue(undefined);
   firebaseAuth.sendPasswordResetEmail.mockResolvedValue(undefined);
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const logEntries = () => Object.values(db.getData("adminLog") ?? {});
@@ -316,7 +316,7 @@ describe("the archive", () => {
   test("nothing archived, no uid, or a failed read is an empty list", async () => {
     await expect(people.listArchived("bo")).resolves.toEqual([]);
     await expect(people.listArchived("")).resolves.toEqual([]);
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("denied"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("denied"));
     await expect(people.listArchived("ada")).resolves.toEqual([]);
     expect(console.error).toHaveBeenCalledWith("Could not read the archive:", expect.any(Error));
   });
@@ -437,7 +437,7 @@ describe("creating an account", () => {
     mockEmulator.on = true;
     await people.createPerson(valid);
     expect(firebaseAuth.connectAuthEmulator).toHaveBeenCalledWith(expect.anything(), "http://127.0.0.1:9099", { disableWarnings: true });
-    process.env.REACT_APP_EMULATOR_HOST = "10.0.0.5";
+    vi.stubEnv("VITE_EMULATOR_HOST", "10.0.0.5");
     await people.createPerson(valid);
     expect(firebaseAuth.connectAuthEmulator).toHaveBeenLastCalledWith(expect.anything(), "http://10.0.0.5:9099", { disableWarnings: true });
   });
@@ -515,9 +515,9 @@ describe("attaching a record to an existing login", () => {
   });
 
   test("a failed transaction passes its message on, or a fallback", async () => {
-    jest.spyOn(db.module, "runTransaction").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "runTransaction").mockRejectedValueOnce(new Error("offline"));
     await expect(people.attachRecord({ uid: "u9", role: "judge" })).resolves.toEqual({ ok: false, error: "offline" });
-    jest.spyOn(db.module, "runTransaction").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "runTransaction").mockRejectedValueOnce(new Error(""));
     await expect(people.attachRecord({ uid: "u9", role: "judge" })).resolves.toEqual({ ok: false, error: "The record could not be saved." });
   });
 });

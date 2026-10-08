@@ -9,10 +9,10 @@ import { readJson, writeJson, removeKey, isAvailable } from "./localStore";
 const PROBE = "__ideathon_probe__";
 
 beforeEach(() => window.localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const refuse = (method) =>
-  jest.spyOn(Storage.prototype, method).mockImplementation(() => {
+  vi.spyOn(Storage.prototype, method).mockImplementation(() => {
     throw new Error("QuotaExceededError");
   });
 
@@ -57,7 +57,7 @@ describe("with storage that refuses", () => {
 
   test("a write that throws after the probe passed reports failure", () => {
     const real = Storage.prototype.setItem;
-    jest.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(key, value) {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(key, value) {
       if (key !== PROBE) throw new Error("QuotaExceededError");
       return real.call(this, key, value);
     });
@@ -71,7 +71,7 @@ describe("with storage that refuses", () => {
 
   test("a removal that throws is swallowed", () => {
     const real = Storage.prototype.removeItem;
-    const remove = jest.spyOn(Storage.prototype, "removeItem").mockImplementation(function removeItem(key) {
+    const remove = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(function removeItem(key) {
       if (key !== PROBE) throw new Error("SecurityError");
       return real.call(this, key);
     });
@@ -81,7 +81,7 @@ describe("with storage that refuses", () => {
 
   test("with no storage at all, removal does not even try", () => {
     refuse("setItem");
-    const remove = jest.spyOn(Storage.prototype, "removeItem");
+    const remove = vi.spyOn(Storage.prototype, "removeItem");
     expect(() => removeKey("k")).not.toThrow();
     expect(remove).not.toHaveBeenCalled();
   });

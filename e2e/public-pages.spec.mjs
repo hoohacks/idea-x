@@ -12,7 +12,7 @@ import { goto, expectPagePainted } from "./helpers.mjs";
  */
 
 test("the competitor form is the front door", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
   await expectPagePainted(page);
   await expect(page.getByText("Student registration")).toBeVisible();
 });
@@ -28,7 +28,7 @@ test("the judge form is a different form, not the same one in other words", asyn
 
 test("the tidy URL without the hash still reaches the judge form", async ({ page }) => {
   // this is the link people paste into a message
-  await page.goto("/judge-registration");
+  await page.goto("judge-registration");
 
   await expect(page).toHaveURL(/#\/judge-registration/);
   await expect(page.getByText("Judge and mentor sign-up")).toBeVisible();
@@ -38,7 +38,7 @@ test("a deep path without the hash is rewritten rather than dropped", async ({ p
   // signed out, so the route is then bounced to login by ProtectedRoute -- the
   // point is that the path survived the rewrite instead of matching "/" and
   // silently serving the registration form
-  await page.goto("/user/admin/schedule");
+  await page.goto("user/admin/schedule");
   await expect(page).toHaveURL(/#\/(user\/admin\/schedule|login)/);
   await expect(page.getByText("Student registration")).toHaveCount(0);
 });

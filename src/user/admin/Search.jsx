@@ -21,7 +21,7 @@ import { PageHeader, FilterBar, FilterChips, FilterGroups, SearchField, StateTog
 import CompetitorEditDrawer from "./records/CompetitorEditDrawer";
 import usePageTitle from "../../usePageTitle";
 
-// dietary values are meant to be the small fixed lowercase set Registration.js
+// dietary values are meant to be the small fixed lowercase set Registration.jsx
 // writes ("none", "vegetarian", ...), but peopleService.blankCompetitor used
 // to default new walk-in records to "None" -- a capital N -- and that
 // capitalized copy does not repair itself once it is in the database.

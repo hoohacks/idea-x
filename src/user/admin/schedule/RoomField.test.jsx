@@ -6,7 +6,7 @@ import RoomField from "./RoomField";
  * rather than in the field. Undo, a drift repair and another organizer's edit
  * all change the plan underneath it, and each one has to reach the box.
  */
-function setup(room = "Rice 011", onCommit = jest.fn(async () => true)) {
+function setup(room = "Rice 011", onCommit = vi.fn(async () => true)) {
   const view = render(<RoomField room={room} onCommit={onCommit} />);
   return { ...view, onCommit, input: () => screen.getByLabelText("Room") };
 }
@@ -50,18 +50,18 @@ test("an undone edit puts the old room back in the box", () => {
   fireEvent.change(input(), { target: { value: "Old Cabell 100" } });
   fireEvent.blur(input());
   // the edit lands, so the parent re-renders carrying the new room
-  rerender(<RoomField room="Old Cabell 100" onCommit={jest.fn()} />);
+  rerender(<RoomField room="Old Cabell 100" onCommit={vi.fn()} />);
   expect(input().value).toBe("Old Cabell 100");
 
   // undo: the plan's room reverts, so the field must follow it
-  rerender(<RoomField room="Rice 011" onCommit={jest.fn()} />);
+  rerender(<RoomField room="Rice 011" onCommit={vi.fn()} />);
   expect(input().value).toBe("Rice 011");
 });
 
 test("a refused edit puts the plan's room back, rather than showing a lie", async () => {
   // applyFinalEdit refuses an empty room. The plan keeps the room it had, so a
   // box still showing the rejected text claims a room the final round is not in.
-  const onCommit = jest.fn(async () => false);
+  const onCommit = vi.fn(async () => false);
   const { input } = setup("Rice 011", onCommit);
 
   fireEvent.change(input(), { target: { value: "   " } });
@@ -73,13 +73,13 @@ test("a refused edit puts the plan's room back, rather than showing a lie", asyn
 test("a room changed elsewhere reaches the box without being typed in", () => {
   // a drift repair, or another organizer editing the same draft
   const { input, rerender } = setup("Rice 011");
-  rerender(<RoomField room="Minor 125" onCommit={jest.fn()} />);
+  rerender(<RoomField room="Minor 125" onCommit={vi.fn()} />);
   expect(input().value).toBe("Minor 125");
 });
 
 test("an in-progress edit is not clobbered by an unrelated re-render", () => {
   const { input, rerender } = setup("Rice 011");
   fireEvent.change(input(), { target: { value: "Old Cab" } });
-  rerender(<RoomField room="Rice 011" onCommit={jest.fn()} />);
+  rerender(<RoomField room="Rice 011" onCommit={vi.fn()} />);
   expect(input().value).toBe("Old Cab");
 });

@@ -11,13 +11,13 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import Search from "./Search";
 import { renderPage } from "../../testing/renderPage";
 
-jest.mock("../../firebase", () => ({
+vi.mock("../../firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "admin-1", email: "admin@example.com" } },
 }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-const db = require("../../testing/fakeDatabase");
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+const db = await import("../../testing/fakeDatabase");
 
 const people = {
   c1: {

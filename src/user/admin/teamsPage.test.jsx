@@ -9,19 +9,19 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import TeamSearch from "./TeamSearch";
 import { renderPage } from "../../testing/renderPage";
 
-jest.mock("../../firebase", () => ({
+vi.mock("../../firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "admin-1", email: "admin@example.com" } },
 }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-const db = require("../../testing/fakeDatabase");
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+const db = await import("../../testing/fakeDatabase");
 
 // the one write on this page with consequences is stubbed, so the test sees
 // exactly what it was asked to delete
-const mockDeleteScore = jest.fn();
-jest.mock("./danger/dangerZone", () => ({
-  ...jest.requireActual("./danger/dangerZone"),
+const mockDeleteScore = vi.fn();
+vi.mock("./danger/dangerZone", async () => ({
+  ...await vi.importActual("./danger/dangerZone"),
   deleteScore: (...args) => mockDeleteScore(...args),
 }));
 

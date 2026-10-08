@@ -42,8 +42,8 @@ describe("useSyncedForm", () => {
   };
   const state = (getByTestId) => JSON.parse(getByTestId("state").textContent);
 
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   test("typing updates values, and a checkbox stores checked rather than its value", () => {
     const { container, getByTestId } = render(<Form initial={initial} />);
@@ -90,9 +90,9 @@ describe("useSyncedForm", () => {
   });
 
   test.each([
-    ["the first sweep after paint", () => jest.advanceTimersByTime(16)],
-    ["the 300ms sweep", () => jest.advanceTimersByTime(300)],
-    ["the 1.2s sweep", () => jest.advanceTimersByTime(1200)],
+    ["the first sweep after paint", () => vi.advanceTimersByTime(16)],
+    ["the 300ms sweep", () => vi.advanceTimersByTime(300)],
+    ["the 1.2s sweep", () => vi.advanceTimersByTime(1200)],
   ])("a late fill is caught by %s", (_label, advance) => {
     const { container, getByTestId } = render(<Form initial={initial} />);
     fillBehindReactsBack(container, "email", "late@fill.com");
@@ -102,12 +102,12 @@ describe("useSyncedForm", () => {
 
   test("the 300ms and 1.2s sweeps each run on their own", () => {
     const { container, getByTestId } = render(<Form initial={initial} />);
-    act(() => jest.advanceTimersByTime(50));
+    act(() => vi.advanceTimersByTime(50));
     fillBehindReactsBack(container, "email", "second@sweep.com");
-    act(() => jest.advanceTimersByTime(300));
+    act(() => vi.advanceTimersByTime(300));
     expect(state(getByTestId).email).toBe("second@sweep.com");
     fillBehindReactsBack(container, "first", "Third");
-    act(() => jest.advanceTimersByTime(900));
+    act(() => vi.advanceTimersByTime(900));
     expect(state(getByTestId).first).toBe("Third");
   });
 
@@ -134,7 +134,7 @@ describe("useSyncedForm", () => {
 
   test("a field that stops its events bubbling is still collected, because the form listens first", () => {
     const { container, getByTestId } = render(<Form initial={initial} />);
-    act(() => jest.advanceTimersByTime(2000));
+    act(() => vi.advanceTimersByTime(2000));
     const email = container.querySelector('[name="email"]');
     ["animationstart", "change", "focusin"].forEach((type) => email.addEventListener(type, (e) => e.stopPropagation()));
 
@@ -152,7 +152,7 @@ describe("useSyncedForm", () => {
 
   test("some other animation starting does not collect", () => {
     const { container, getByTestId } = render(<Form initial={initial} />);
-    act(() => jest.advanceTimersByTime(2000));
+    act(() => vi.advanceTimersByTime(2000));
     const email = fillBehindReactsBack(container, "email", "fade@x.io");
     act(() => {
       email.dispatchEvent(Object.assign(new Event("animationstart", { bubbles: true }), { animationName: "fadeIn" }));
@@ -163,14 +163,14 @@ describe("useSyncedForm", () => {
   test("after unmount no sweep or listener runs", () => {
     const { container, unmount } = render(<Form initial={initial} />);
     const form = container.querySelector("form");
-    const removed = jest.spyOn(form, "removeEventListener");
+    const removed = vi.spyOn(form, "removeEventListener");
     unmount();
     expect(removed.mock.calls.map(([type, , capture]) => [type, capture])).toEqual([
       ["animationstart", true],
       ["change", true],
       ["focusin", true],
     ]);
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   test("setValue sets one field and keeps collect in step", () => {
@@ -192,7 +192,7 @@ describe("useSyncedForm", () => {
     }
     render(<NoForm />);
     expect(hook.collect()).toEqual({ a: "x" });
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
@@ -210,8 +210,8 @@ describe("focusField", () => {
   test("focuses the named field without jumping, and scrolls it to the middle", () => {
     const ref = setup('<input name="email" />');
     const input = ref.current.querySelector("input");
-    input.scrollIntoView = jest.fn();
-    const focus = jest.spyOn(input, "focus");
+    input.scrollIntoView = vi.fn();
+    const focus = vi.spyOn(input, "focus");
     focusField(ref, "email");
     expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(input.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });

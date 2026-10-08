@@ -10,32 +10,32 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import TeamEditDrawer from "./TeamEditDrawer";
 import { renderPage } from "../../../testing/renderPage";
 
-jest.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-const db = require("../../../testing/fakeDatabase");
+vi.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+const db = await import("../../../testing/fakeDatabase");
 
 const mock = {
-  renameTeam: jest.fn(),
-  overrideTeamSlot: jest.fn(),
-  setTeamSubmitted: jest.fn(),
-  forceIntoFinalRound: jest.fn(),
-  listRooms: jest.fn(),
-  findOpenSlots: jest.fn(),
-  scheduleTeamIntoBatch: jest.fn(),
-  deleteTeam: jest.fn(),
+  renameTeam: vi.fn(),
+  overrideTeamSlot: vi.fn(),
+  setTeamSubmitted: vi.fn(),
+  forceIntoFinalRound: vi.fn(),
+  listRooms: vi.fn(),
+  findOpenSlots: vi.fn(),
+  scheduleTeamIntoBatch: vi.fn(),
+  deleteTeam: vi.fn(),
 };
-jest.mock("./recordEdits", () => ({ renameTeam: (...a) => mock.renameTeam(...a) }));
-jest.mock("../danger/dangerZone", () => ({
+vi.mock("./recordEdits", () => ({ renameTeam: (...a) => mock.renameTeam(...a) }));
+vi.mock("../danger/dangerZone", () => ({
   overrideTeamSlot: (...a) => mock.overrideTeamSlot(...a),
   setTeamSubmitted: (...a) => mock.setTeamSubmitted(...a),
   forceIntoFinalRound: (...a) => mock.forceIntoFinalRound(...a),
 }));
-jest.mock("../rooms/roomsService", () => ({ listRooms: (...a) => mock.listRooms(...a) }));
-jest.mock("../../judge/assignmentEdits", () => ({
+vi.mock("../rooms/roomsService", () => ({ listRooms: (...a) => mock.listRooms(...a) }));
+vi.mock("../../judge/assignmentEdits", () => ({
   findOpenSlots: (...a) => mock.findOpenSlots(...a),
   scheduleTeamIntoBatch: (...a) => mock.scheduleTeamIntoBatch(...a),
 }));
-jest.mock("../people/peopleService", () => ({ deleteTeam: (...a) => mock.deleteTeam(...a) }));
+vi.mock("../people/peopleService", () => ({ deleteTeam: (...a) => mock.deleteTeam(...a) }));
 
 const scheduled = {
   name: "Lantern",
@@ -60,8 +60,8 @@ beforeEach(() => {
       j2: { firstName: "Sam", lastName: "Whitaker", isFinalRoundJudge: true, checkedIn: false },
     },
   });
-  onClose = jest.fn();
-  onResult = jest.fn();
+  onClose = vi.fn();
+  onResult = vi.fn();
 });
 
 const open = (team = scheduled) =>

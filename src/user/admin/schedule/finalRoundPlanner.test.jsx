@@ -12,24 +12,24 @@ import FinalRoundPlanner from "./FinalRoundPlanner";
 import { renderPage } from "../../../testing/renderPage";
 import { buildFinalPlan } from "../../judge/finalRoundPlan";
 
-jest.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("../../../firebase.js", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-const db = require("../../../testing/fakeDatabase");
+vi.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("../../../firebase.js", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+const db = await import("../../../testing/fakeDatabase");
 
 const mock = {
-  planFinalRound: jest.fn(),
-  publishFinalRound: jest.fn(),
-  saveFinalDraft: jest.fn(),
-  clearFinalDraft: jest.fn(),
+  planFinalRound: vi.fn(),
+  publishFinalRound: vi.fn(),
+  saveFinalDraft: vi.fn(),
+  clearFinalDraft: vi.fn(),
 };
 let pushDraft = () => {};
-jest.mock("../../judge/finalRoundService.js", () => ({
-  ...jest.requireActual("../../judge/finalRoundService.js"),
+vi.mock("../../judge/finalRoundService.js", async () => ({
+  ...await vi.importActual("../../judge/finalRoundService.js"),
   planFinalRound: (...a) => mock.planFinalRound(...a),
   publishFinalRound: (...a) => mock.publishFinalRound(...a),
 }));
-jest.mock("../../judge/finalDraftStore.js", () => ({
+vi.mock("../../judge/finalDraftStore.js", () => ({
   subscribeFinalDraft: (callback) => {
     pushDraft = callback;
     return () => {};

@@ -9,7 +9,7 @@ import {
   subscribeToSnapshots, restoreSnapshot, captureSnapshot, previewSnapshot, readJudgeNames,
   JUDGING_PATHS,
 } from "../snapshots";
-import { ConfirmDialog, Section } from "../adminUi.js";
+import { ConfirmDialog, Section } from "../adminUi.jsx";
 import { diffSnapshot } from "./snapshotDiff";
 
 /**
@@ -111,7 +111,7 @@ export default function RestorePointsSection({ onResult }) {
   // Reads the snapshot's payload and the live values for its paths, so the
   // dialog can show what a restore would actually change before anyone
   // commits to it. Judge names are a one-shot read issued here rather than a
-  // subscription kept open in Control.js -- a permanently open /judges
+  // subscription kept open in Control.jsx -- a permanently open /judges
   // listener is the wrong price for a dialog almost nobody opens. If that
   // read fails, the fallback below (`judgeNames[uid] ?? uid`) renders the uid
   // instead -- naming who loses a score is a nicety, not the reason this

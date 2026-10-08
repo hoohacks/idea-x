@@ -8,7 +8,7 @@
  * hidden behind something.
  *
  * The flag is mocked as a getter rather than re-imported per test.
- * `jest.resetModules()` would give each page its own copy of React while this
+ * `vi.resetModules()` would give each page its own copy of React while this
  * file keeps the original, and two Reacts means every hook throws.
  */
 import { render, screen, cleanup } from "@testing-library/react";
@@ -17,8 +17,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 
 let mockOpen = false;
-jest.mock("./registrationWindow", () => {
-  const actual = jest.requireActual("./registrationWindow");
+vi.mock("./registrationWindow", async () => {
+  const actual = await vi.importActual("./registrationWindow");
   return {
     ...actual,
     // read at render time, so a test can move it between renders
@@ -28,43 +28,43 @@ jest.mock("./registrationWindow", () => {
   };
 });
 
-jest.mock("./firebase", () => ({
+vi.mock("./firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: null },
   USING_EMULATOR: false,
 }));
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: jest.fn(async () => ({ exists: () => false, val: () => null })),
-  set: jest.fn(),
-  update: jest.fn(),
-  push: jest.fn(() => ({ key: "x" })),
+  get: vi.fn(async () => ({ exists: () => false, val: () => null })),
+  set: vi.fn(),
+  update: vi.fn(),
+  push: vi.fn(() => ({ key: "x" })),
   onValue: (_r, cb) => {
     cb({ exists: () => false, val: () => null });
     return () => {};
   },
   serverTimestamp: () => 0,
 }));
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: null }),
-  createUserWithEmailAndPassword: jest.fn(),
-  signInWithEmailAndPassword: jest.fn(),
-  sendPasswordResetEmail: jest.fn(),
+  createUserWithEmailAndPassword: vi.fn(),
+  signInWithEmailAndPassword: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
   onAuthStateChanged: () => () => {},
   browserLocalPersistence: {},
 }));
-jest.mock("firebase/storage", () => ({
+vi.mock("firebase/storage", () => ({
   getStorage: () => ({}),
-  ref: jest.fn(),
-  uploadBytesResumable: jest.fn(),
-  getDownloadURL: jest.fn(),
+  ref: vi.fn(),
+  uploadBytesResumable: vi.fn(),
+  getDownloadURL: vi.fn(),
 }));
 
-const { AuthContext } = require("./App");
-const Registration = require("./Registration").default;
-const JudgeRegistration = require("./JudgeRegistration").default;
-const Login = require("./Login").default;
+const { AuthContext } = await import("./App");
+const Registration = (await import("./Registration")).default;
+const JudgeRegistration = (await import("./JudgeRegistration")).default;
+const Login = (await import("./Login")).default;
 
 const auth = {
   userCredential: null,
@@ -72,8 +72,8 @@ const auth = {
   userTypes: [],
   loadingAuth: false,
   loadingUserData: false,
-  handleLogin: jest.fn(),
-  refreshUserData: jest.fn(),
+  handleLogin: vi.fn(),
+  refreshUserData: vi.fn(),
   token: null,
 };
 

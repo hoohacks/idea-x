@@ -14,29 +14,29 @@ import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 
-jest.mock("./firebase", () => ({ database: {}, storage: {}, auth: {} }));
+vi.mock("./firebase", () => ({ database: {}, storage: {}, auth: {} }));
 
-const mockCreateUser = jest.fn(async () => ({ user: { uid: "new-uid" } }));
-const mockDbUpdate = jest.fn(async () => {});
+const mockCreateUser = vi.fn(async () => ({ user: { uid: "new-uid" } }));
+const mockDbUpdate = vi.fn(async () => {});
 
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: (...args) => mockCreateUser(...args),
 }));
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   update: (...args) => mockDbUpdate(...args),
   serverTimestamp: () => 1234,
 }));
 
-jest.mock("firebase/storage", () => ({
-  ref: jest.fn(),
-  uploadBytesResumable: jest.fn(),
-  getDownloadURL: jest.fn(async () => "https://example.com/cv.pdf"),
+vi.mock("firebase/storage", () => ({
+  ref: vi.fn(),
+  uploadBytesResumable: vi.fn(),
+  getDownloadURL: vi.fn(async () => "https://example.com/cv.pdf"),
 }));
 
-const Registration = require("./Registration").default;
-const JudgeRegistration = require("./JudgeRegistration").default;
+const Registration = (await import("./Registration")).default;
+const JudgeRegistration = (await import("./JudgeRegistration")).default;
 
 function renderPage(Component) {
   return render(
@@ -104,10 +104,8 @@ const JUDGE = {
   password: "correcthorse",
 };
 
-// create-react-app turns on jest's `resetMocks`, which strips the
-// implementation off every mock between tests -- not just the call log. The
-// implementations have to be put back each time or the second test onwards
-// gets `undefined` back from firebase.
+// `mockReset: true` (vite.config.mjs) wipes what a test set on a mock, not
+// just its call log, so the implementations are put back before each test.
 beforeEach(() => {
   mockCreateUser.mockReset().mockImplementation(async () => ({ user: { uid: "new-uid" } }));
   mockDbUpdate.mockReset().mockImplementation(async () => {});

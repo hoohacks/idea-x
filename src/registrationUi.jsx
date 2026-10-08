@@ -491,7 +491,7 @@ export function AuthCard({ title, subtitle, footer, children }) {
       <Stack alignItems="center" sx={{ textAlign: "center" }}>
         <Box
           component="img"
-          src={`${process.env.PUBLIC_URL ?? ""}/ideathon-bulb.png`}
+          src={`${import.meta.env.BASE_URL}ideathon-bulb.png`}
           alt=""
           aria-hidden
           sx={{ height: 44, width: "auto", display: "block" }}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAuth } from "./App.js";
+import { useAuth } from "./App.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,

@@ -16,10 +16,10 @@
  * transaction has nothing gating it, because the server guarantees no gap
  * between its read and its write.
  *
- * jest.mock's factory may only reference variables named `mock*` -- hence the
- * naming below, not a style choice.
+ * The `mock*` names below mark what the vi.mock factories close over, a habit
+ * from Jest, which refused anything else.
  */
-jest.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../firebase", () => ({ database: {} }));
 
 /** `{ snapshotIndex: {...}, snapshots: {...} }`, the whole fake database. */
 const mockDb = { snapshotIndex: {}, snapshots: {} };
@@ -47,7 +47,7 @@ function mockApplyUpdate(updates) {
   }
 }
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (reference) => {
     if (reference.path === "snapshotIndex") {
@@ -84,19 +84,17 @@ jest.mock("firebase/database", () => ({
   },
 }));
 
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../roles.js", () => ({
-  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../roles.js", () => ({
+  requireAdmin: vi.fn(async () => ({ uid: "admin-1" })),
 }));
 
-const { captureSnapshot, KEEP_SNAPSHOTS } = require("./snapshots");
-const { requireAdmin } = require("../../roles.js");
+const { captureSnapshot, KEEP_SNAPSHOTS } = await import("./snapshots");
+const { requireAdmin } = await import("../../roles.js");
 
 /**
- * create-react-app sets `resetMocks: true`, which strips the implementation
- * off every jest.fn before each test -- so the implementation passed to
- * jest.fn() at declaration is gone by the time the first test runs and has
- * to be re-established here.
+ * `mockReset: true` (vite.config.mjs) wipes every mock's calls and anything a
+ * test set on it, so each test starts from the implementations set here.
  */
 beforeEach(() => {
   mockDb.snapshotIndex = {};

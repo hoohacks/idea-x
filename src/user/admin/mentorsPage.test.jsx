@@ -10,13 +10,13 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import Mentors from "./Mentors";
 import { renderPage } from "../../testing/renderPage";
 
-jest.mock("../../firebase", () => ({
+vi.mock("../../firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "admin-1", email: "admin@example.com" } },
 }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-const db = require("../../testing/fakeDatabase");
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+const db = await import("../../testing/fakeDatabase");
 
 const judges = {
   j1: {
@@ -189,6 +189,7 @@ describe("the heat strip down the outside of the shifts", () => {
 
   test("the rows themselves stay plain", () => {
     renderPage(<Mentors />);
-    expect(getComputedStyle(row("1:00 PM")).backgroundColor).not.toMatch(/rgb/);
+    // unset, or the transparent default that newer jsdom reports, as browsers do
+    expect(getComputedStyle(row("1:00 PM")).backgroundColor).toMatch(/^(|rgba\(0, 0, 0, 0\))$/);
   });
 });

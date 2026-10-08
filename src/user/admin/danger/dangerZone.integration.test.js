@@ -4,11 +4,11 @@
  * covers the same functions against scripted reads; this reads back what
  * landed and pins every summary and refusal an organizer sees.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../../testing/fakeDatabase");
+const db = await import("../../../testing/fakeDatabase");
 const {
   overrideSlotChanges,
   overrideTeamSlot,
@@ -16,8 +16,8 @@ const {
   setTeamSubmitted,
   clearSchedule,
   forceIntoFinalRound,
-} = require("./dangerZone");
-const { decodeChanges } = require("../adminAction");
+} = await import("./dangerZone");
+const { decodeChanges } = await import("../adminAction");
 
 const slot = (room, batch = 1, time = "5:00 PM") => ({ room, batch, time, judges: [{ judgeId: "j1" }] });
 
@@ -38,9 +38,9 @@ beforeEach(() => {
     scores: { first: { t1: { j1: { problem: 8, notes: "Good" } } } },
     config: { scheduleMeta: { generatedAt: 1 } },
   });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const logs = () => Object.values(db.getData("adminLog") ?? {}).map((e) => ({ ...e, changes: e.changes && decodeChanges(e.changes) }));
 const lastLog = () => logs()[logs().length - 1];
@@ -241,7 +241,7 @@ describe("clearing the schedule", () => {
 
   test("a schedule already cleared while the restore point saved changes nothing", async () => {
     const real = db.module.runTransaction;
-    jest.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
+    vi.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
       const result = await real(ref, updater, options);
       db.setData("teams", { t1: { name: "A" } });
       db.setData("judges", null);
@@ -255,7 +255,7 @@ describe("clearing the schedule", () => {
   });
 
   test("nothing is cleared when the restore point cannot be taken", async () => {
-    jest.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
+    vi.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
     await expect(clearSchedule()).resolves.toEqual({
       ok: false,
       error: "Could not create a restore point, so nothing was changed. Could not update the restore point list. Nothing was saved.",

@@ -18,4 +18,4 @@ Serve from `hoohacks.github.io/idea-x` with no custom domain.
   marketing site, which links here; a CNAME naming it would point Pages at that
   host and take this app offline.
 - Moving to a custom domain means changing four things together: DNS, the Pages
-  setting, `homepage` in `package.json`, and the base path in `public/404.html`.
+  setting, `base` in `vite.config.mjs`, and the base path in `public/404.html`.

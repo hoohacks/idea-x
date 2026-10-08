@@ -28,12 +28,10 @@ export function hashTargetFor({ pathname = "/", search = "", hash = "", base = "
   if (hash && hash !== "#") return null;
 
   // Only strip the base when the URL is actually under it -- and only put it
-  // back in that case. `PUBLIC_URL` is `/idea-x` in development
-  // as well as production (CRA takes it from `homepage` either way), but the
-  // dev server answers on `/`. Prepending it unconditionally sent
-  // localhost:3000/judge-registration to /idea-x/#/... : a
-  // directory that only resolves because the dev server falls back to
-  // index.html, with a phantom folder left in the address bar.
+  // back in that case. Vite serves both dev and production under /idea-x/, but
+  // a URL outside the base can still reach the bundle (a server that falls
+  // back to index.html), and prepending the base there would invent a phantom
+  // folder in the address bar.
   const underBase = Boolean(base) && pathname.startsWith(base);
 
   let path = underBase ? pathname.slice(base.length) : pathname;
@@ -45,8 +43,8 @@ export function hashTargetFor({ pathname = "/", search = "", hash = "", base = "
   return `${underBase ? base : ""}/#/${path}${search}`;
 }
 
-/** `homepage` in package.json is a full URL; only its path matters here. */
-export function basePath(publicUrl = process.env.PUBLIC_URL || "") {
+/** The base without its trailing slash; if given a full URL, only its path. */
+export function basePath(publicUrl = import.meta.env.BASE_URL || "") {
   return publicUrl.replace(/^https?:\/\/[^/]+/, "").replace(/\/+$/, "");
 }
 

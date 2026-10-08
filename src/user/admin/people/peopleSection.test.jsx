@@ -12,21 +12,21 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import PeopleSection from "./PeopleSection";
 import { renderPage } from "../../../testing/renderPage";
 
-jest.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
+vi.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
 
 const mockService = {
-  listPeople: jest.fn(),
-  setSoleRole: jest.fn(),
-  setOrganizer: jest.fn(),
-  deletePerson: jest.fn(),
-  sendReset: jest.fn(),
-  listArchived: jest.fn(),
-  restoreArchived: jest.fn(),
-  bulkSet: jest.fn(),
+  listPeople: vi.fn(),
+  setSoleRole: vi.fn(),
+  setOrganizer: vi.fn(),
+  deletePerson: vi.fn(),
+  sendReset: vi.fn(),
+  listArchived: vi.fn(),
+  restoreArchived: vi.fn(),
+  bulkSet: vi.fn(),
 };
-jest.mock("./peopleService", () => ({
-  ...jest.requireActual("./peopleService"),
+vi.mock("./peopleService", async () => ({
+  ...await vi.importActual("./peopleService"),
   listPeople: (...a) => mockService.listPeople(...a),
   setSoleRole: (...a) => mockService.setSoleRole(...a),
   setOrganizer: (...a) => mockService.setOrganizer(...a),
@@ -52,7 +52,7 @@ beforeEach(() => {
     mockService[name].mockResolvedValue({ ok: true });
   }
   mockService.listArchived.mockResolvedValue([]);
-  onResult = jest.fn();
+  onResult = vi.fn();
 });
 
 const open = async () => {

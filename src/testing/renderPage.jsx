@@ -16,8 +16,8 @@ export function renderPage(ui, { auth = {}, route = "/" } = {}) {
     userTypes: ["admin"],
     loadingAuth: false,
     loadingUserData: false,
-    refreshUserData: jest.fn(),
-    handleLogin: jest.fn(),
+    refreshUserData: vi.fn(),
+    handleLogin: vi.fn(),
     token: null,
     ...auth,
   };

@@ -10,6 +10,11 @@
 | Rules | `npm run test:rules` | the real rules engine, as different users | the app |
 | Browser | `npm run test:e2e` | a real browser, real rules, real routing, desktop and phone | nothing above it, but slow |
 
+The first three run on [Vitest](https://vitest.dev) in jsdom, configured in
+`vite.config.mjs`; the rules suite has its own config, `vitest.rules.config.mjs`,
+because it runs in Node against the emulator. `describe`, `test`, `expect` and
+`vi` are globals, as they were under Jest.
+
 CI runs all of them on every pull request, and the deploy runs the first four
 again before building.
 
@@ -19,22 +24,36 @@ its content sat below the fold; and the room sheets had no link to them.
 
 ## Page tests
 
-Page tests render a real admin page with `renderPage` (`src/testing/renderPage.js`),
+Page tests render a real admin page with `renderPage` (`src/testing/renderPage.jsx`),
 which supplies the theme, router and a signed-in account, over
 `fakeDatabase`, which stands in for `firebase/database`:
 
 ```js
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-const db = require("../../testing/fakeDatabase");
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+const db = await import("../../testing/fakeDatabase");
 beforeEach(() => db.reset({ judges: { j1: { firstName: "Priya" } } }));
 ```
 
 It answers live subscriptions, records every write, and can be told to refuse
 writes, so a page's error path is testable.
 
-Create React App sets `resetMocks: true`, which strips the implementation from
-every `jest.fn()` before each test. Set implementations in `beforeEach`, not at
-declaration.
+`mockReset: true` wipes every mock's calls, and anything a test set on it, before
+the next test. Set per-test implementations in `beforeEach`.
+
+A few things that differ from Jest and catch people out:
+
+- **Import the code under test with `await import()`, not `require()`.** `require`
+  bypasses `vi.mock` and cannot load JSX, so it either fails or quietly hands you
+  the real module.
+- **A mock factory must return every export the code reads.** A missing one
+  throws rather than reading as `undefined`. Spread the real module in when you
+  only mean to replace part of it:
+  `vi.mock("./x", async (importOriginal) => ({ ...(await importOriginal()), only: vi.fn() }))`.
+- **Build-time variables are stubbed with `vi.stubEnv`**, for example
+  `vi.stubEnv("VITE_REGISTRATION_OPEN", "true")`, then `vi.resetModules()` and a
+  fresh `await import()` for a module that reads one at load.
+- **Fake timers fake `setImmediate` too**, which jsdom's `FileReader` uses. Fake
+  only what the test needs: `vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })`.
 
 ## The browser suite
 

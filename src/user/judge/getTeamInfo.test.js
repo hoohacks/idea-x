@@ -5,12 +5,12 @@
  * filed under the wrong round, team or judge is a score that silently counts
  * for somebody else, so every write here is read back from that exact path.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "j1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   FIRST_ROUND,
   FINAL_ROUND,
@@ -21,8 +21,8 @@ const {
   getMyScoredTeamIds,
   getMyFinalRoundScoredTeamIds,
   getTeamSubmission,
-} = require("./getTeamInfo");
-const { listPending } = require("./pendingScores");
+} = await import("./getTeamInfo");
+const { listPending } = await import("./pendingScores");
 
 const score = { idea: 8, pitch: 7, flagged: false };
 
@@ -32,11 +32,11 @@ beforeEach(() => {
   db.reset({
     teams: { t1: { name: "Lantern", submission: { idea: "A lamp", deck: "https://deck" } }, t2: { name: "Circles" } },
   });
-  jest.spyOn(console, "warn").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 test("the two rounds are stored under 'first' and 'final'", () => {
@@ -79,20 +79,20 @@ describe("a judge submitting their own card", () => {
   });
 
   test("a non-Error rejection still gives a reason", async () => {
-    jest.spyOn(db.module, "set").mockImplementation(() => Promise.reject("socket closed"));
+    vi.spyOn(db.module, "set").mockImplementation(() => Promise.reject("socket closed"));
     const result = await submitScore({ round: FIRST_ROUND, teamId: "t1", teamName: "Lantern", score });
     expect(result).toEqual({ status: "queued", reason: "socket closed" });
   });
 
   test("a rejection with no error at all still queues the card", async () => {
-    jest.spyOn(db.module, "set").mockImplementation(() => Promise.reject(undefined));
+    vi.spyOn(db.module, "set").mockImplementation(() => Promise.reject(undefined));
     const result = await submitScore({ round: FIRST_ROUND, teamId: "t1", teamName: "Lantern", score });
     expect(result).toEqual({ status: "queued", reason: "undefined" });
   });
 
   test("when the device will not store it either, the judge is told to use paper", async () => {
     db.failWrites(1);
-    jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("QuotaExceededError");
     });
     await expect(submitScore({ round: FIRST_ROUND, teamId: "t1", teamName: "Lantern", score })).rejects.toThrow(
@@ -182,7 +182,7 @@ describe("which cards this judge has already filed", () => {
   });
 
   test("blank and repeated ids are ignored, and no ids asks nothing", async () => {
-    const get = jest.spyOn(db.module, "get");
+    const get = vi.spyOn(db.module, "get");
     expect([...(await getMyScoredTeamIds(["t1", "", null, "t1"]))]).toEqual(["t1"]);
     expect(get).toHaveBeenCalledTimes(1);
 
@@ -194,7 +194,7 @@ describe("which cards this judge has already filed", () => {
 
   test("one failed check costs only that team, not the whole set", async () => {
     const realGet = db.module.get;
-    jest
+    vi
       .spyOn(db.module, "get")
       .mockImplementation((ref) => (ref.path.includes("/t2/") ? Promise.reject(new Error("offline")) : realGet(ref)));
     db.setData("scores/first/t2/j1", score);
@@ -215,7 +215,7 @@ describe("a team's submission", () => {
 
   test("is null when the team has not submitted, or no team is given", async () => {
     await expect(getTeamSubmission("t2")).resolves.toBeNull();
-    const get = jest.spyOn(db.module, "get");
+    const get = vi.spyOn(db.module, "get");
     await expect(getTeamSubmission("")).resolves.toBeNull();
     expect(get).not.toHaveBeenCalled();
   });
@@ -223,12 +223,12 @@ describe("a team's submission", () => {
 
 describe("the legacy lookup by team name", () => {
   const answer = (value) =>
-    jest.spyOn(db.module, "get").mockResolvedValue({ exists: () => value !== null, val: () => value });
+    vi.spyOn(db.module, "get").mockResolvedValue({ exists: () => value !== null, val: () => value });
 
   test("returns the matching team's id", async () => {
-    const query = jest.spyOn(db.module, "query");
-    const equalTo = jest.spyOn(db.module, "equalTo");
-    const orderByChild = jest.spyOn(db.module, "orderByChild");
+    const query = vi.spyOn(db.module, "query");
+    const equalTo = vi.spyOn(db.module, "equalTo");
+    const orderByChild = vi.spyOn(db.module, "orderByChild");
     answer({ t1: { name: "Lantern" } });
     await expect(findTeamIdByName("Lantern")).resolves.toBe("t1");
     expect(query.mock.calls[0][0]).toEqual(expect.objectContaining({ path: "teams" }));
@@ -250,7 +250,7 @@ describe("the legacy lookup by team name", () => {
 
   test("an account not allowed to search teams gets null, not an error", async () => {
     const denied = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "get").mockRejectedValue(denied);
+    vi.spyOn(db.module, "get").mockRejectedValue(denied);
     await expect(findTeamIdByName("Lantern")).resolves.toBeNull();
     expect(console.warn).toHaveBeenCalledWith("Team name lookup is not permitted for this account:", denied);
   });

@@ -18,7 +18,7 @@ describe("when a page throws", () => {
   let consoleError;
   beforeEach(() => {
     // React logs the caught error itself; the test asserts behaviour, not noise
-    consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => consoleError.mockRestore());
 

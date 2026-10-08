@@ -11,12 +11,12 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import PaperScoreDialog from "./PaperScoreDialog";
 import { renderPage } from "../../../testing/renderPage";
 
-jest.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
+vi.mock("../../../firebase", () => ({ database: {}, storage: {}, auth: { currentUser: { uid: "admin-1" } } }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
 
-const mockWrite = jest.fn();
-jest.mock("../../judge/getTeamInfo", () => ({
-  ...jest.requireActual("../../judge/getTeamInfo"),
+const mockWrite = vi.fn();
+vi.mock("../../judge/getTeamInfo", async () => ({
+  ...await vi.importActual("../../judge/getTeamInfo"),
   writeScoreOnBehalf: (...args) => mockWrite(...args),
 }));
 
@@ -31,8 +31,8 @@ let onSaved;
 beforeEach(() => {
   mockWrite.mockReset();
   mockWrite.mockResolvedValue(undefined);
-  onClose = jest.fn();
-  onSaved = jest.fn();
+  onClose = vi.fn();
+  onSaved = vi.fn();
 });
 
 const open = (props = {}) =>

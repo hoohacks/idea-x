@@ -5,20 +5,20 @@
  * stop a generation), while batch count, times and panel size fall back to the
  * built-in constants whenever the stored value is missing or unusable.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 
-const db = require("../../testing/fakeDatabase");
-const { fetchRooms, fetchBatchConfig, displayName, readScheduleMeta } = require("./scheduleConfig");
-const { BATCH_COUNT, BATCH_TIMES, TARGET_JUDGES_PER_TEAM } = require("./schedulePlan");
+const db = await import("../../testing/fakeDatabase");
+const { fetchRooms, fetchBatchConfig, displayName, readScheduleMeta } = await import("./scheduleConfig");
+const { BATCH_COUNT, BATCH_TIMES, TARGET_JUDGES_PER_TEAM } = await import("./schedulePlan");
 
 const builtIn = { batchCount: BATCH_COUNT, batchTimes: BATCH_TIMES, target: TARGET_JUDGES_PER_TEAM };
 
 beforeEach(() => {
   db.reset({});
-  jest.spyOn(console, "warn").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe("rooms", () => {
   test("are read from config/judgingRooms, as a list or a keyed set", async () => {
@@ -40,7 +40,7 @@ describe("rooms", () => {
 
   test("a failed read is an empty list too", async () => {
     const error = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(error);
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(error);
     await expect(fetchRooms()).resolves.toEqual([]);
     expect(console.warn).toHaveBeenCalledWith("Could not read config/judgingRooms:", error);
   });
@@ -84,7 +84,7 @@ describe("batch config", () => {
 
   test("a failed read gives the built-in values", async () => {
     const error = new Error("offline");
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(error);
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(error);
     await expect(fetchBatchConfig()).resolves.toEqual(builtIn);
     expect(console.warn).toHaveBeenCalledWith("Could not read the batch config, using the built-in values:", error);
   });

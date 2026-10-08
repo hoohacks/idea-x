@@ -16,50 +16,50 @@ import { AuthContext } from "./App";
 
 // ---- Firebase stubs -------------------------------------------------------
 
-jest.mock("./firebase", () => ({
+vi.mock("./firebase", () => ({
   database: {},
   storage: {},
   auth: { currentUser: { uid: "judge-1", email: "judge@example.com" } },
 }));
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
-  get: jest.fn(async () => ({ exists: () => false, val: () => null })),
-  set: jest.fn(async () => {}),
-  update: jest.fn(async () => {}),
-  push: jest.fn(() => ({ key: "new-team" })),
+  get: vi.fn(async () => ({ exists: () => false, val: () => null })),
+  set: vi.fn(async () => {}),
+  update: vi.fn(async () => {}),
+  push: vi.fn(() => ({ key: "new-team" })),
   onValue: (_ref, cb) => {
     cb({ exists: () => false, val: () => null });
     return () => {};
   },
   query: (r) => r,
-  orderByChild: jest.fn(),
-  equalTo: jest.fn(),
-  limitToLast: jest.fn(),
+  orderByChild: vi.fn(),
+  equalTo: vi.fn(),
+  limitToLast: vi.fn(),
   serverTimestamp: () => 0,
 }));
 
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: { uid: "judge-1", email: "judge@example.com" } }),
-  sendPasswordResetEmail: jest.fn(async () => {}),
-  signInWithEmailAndPassword: jest.fn(async () => ({ user: { uid: "u1" } })),
-  createUserWithEmailAndPassword: jest.fn(async () => ({ user: { uid: "u1" } })),
+  sendPasswordResetEmail: vi.fn(async () => {}),
+  signInWithEmailAndPassword: vi.fn(async () => ({ user: { uid: "u1" } })),
+  createUserWithEmailAndPassword: vi.fn(async () => ({ user: { uid: "u1" } })),
   onAuthStateChanged: () => () => {},
   browserLocalPersistence: {},
 }));
 
-jest.mock("firebase/storage", () => ({
+vi.mock("firebase/storage", () => ({
   getStorage: () => ({}),
-  ref: jest.fn(),
-  uploadBytesResumable: jest.fn(),
-  getDownloadURL: jest.fn(async () => "https://example.com/deck.pdf"),
+  ref: vi.fn(),
+  uploadBytesResumable: vi.fn(),
+  getDownloadURL: vi.fn(async () => "https://example.com/deck.pdf"),
 }));
 
 // react-zxing wants a camera
-jest.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
+vi.mock("react-zxing", () => ({ useZxing: () => ({ ref: { current: null } }) }));
 
 // chart.js draws to a canvas, which jsdom does not implement
-jest.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
+vi.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
 
 // Assignments' "Resume draft" test needs readDraft to resolve a real draft --
 // the generic firebase stub above always reads as not-exists, which is right
@@ -67,9 +67,9 @@ jest.mock("react-chartjs-2", () => ({ Line: () => null, Bar: () => null }));
 // (rendered by the "schedule preview" test below) imports subscribeDraft,
 // saveDraft and clearDraft from this same module, so those are left as the
 // real implementation rather than replaced with undefined.
-const mockReadDraft = jest.fn();
-jest.mock("./user/judge/draftStore", () => ({
-  ...jest.requireActual("./user/judge/draftStore"),
+const mockReadDraft = vi.fn();
+vi.mock("./user/judge/draftStore", async () => ({
+  ...await vi.importActual("./user/judge/draftStore"),
   readDraft: (...args) => mockReadDraft(...args),
 }));
 
@@ -81,8 +81,8 @@ const baseAuth = {
   userTypes: [],
   loadingAuth: false,
   loadingUserData: false,
-  refreshUserData: jest.fn(),
-  handleLogin: jest.fn(),
+  refreshUserData: vi.fn(),
+  handleLogin: vi.fn(),
   token: null,
 };
 
@@ -100,32 +100,31 @@ function renderPage(Component, authOverrides = {}) {
 
 // ---- Pages ----------------------------------------------------------------
 
-const Home = require("./user/Home").default;
-const Profile = require("./user/Profile").default;
-const CheckIn = require("./user/CheckIn").default;
-const Team = require("./user/team/Team").default;
-const CreateTeam = require("./user/team/CreateTeam").default;
-const JoinTeam = require("./user/team/NewJoinTeam").default;
-const Assignments = require("./user/judge/Assignments").default;
-const Search = require("./user/admin/Search").default;
-const JudgeSearch = require("./user/admin/JudgeSearch").default;
-const Mentors = require("./user/admin/Mentors").default;
-const TeamSearch = require("./user/admin/TeamSearch").default;
-const JudgingProgress = require("./user/admin/JudgingProgress").default;
-const Registration = require("./Registration").default;
-const JudgeRegistration = require("./JudgeRegistration").default;
-const SchedulePreview = require("./user/admin/schedule/SchedulePreview").default;
-const SchedulePlanner = require("./user/admin/schedule/SchedulePlanner").default;
-const Metrics = require("./RegisteredAtDisplay").default;
-const Scan = require("./user/admin/Scan").default;
-const Control = require("./user/admin/Control").default;
-const Login = require("./Login").default;
-const ForgotPassword = require("./ForgotPassword").default;
+const Home = (await import("./user/Home")).default;
+const Profile = (await import("./user/Profile")).default;
+const CheckIn = (await import("./user/CheckIn")).default;
+const Team = (await import("./user/team/Team")).default;
+const CreateTeam = (await import("./user/team/CreateTeam")).default;
+const JoinTeam = (await import("./user/team/NewJoinTeam")).default;
+const Assignments = (await import("./user/judge/Assignments")).default;
+const Search = (await import("./user/admin/Search")).default;
+const JudgeSearch = (await import("./user/admin/JudgeSearch")).default;
+const Mentors = (await import("./user/admin/Mentors")).default;
+const TeamSearch = (await import("./user/admin/TeamSearch")).default;
+const JudgingProgress = (await import("./user/admin/JudgingProgress")).default;
+const Registration = (await import("./Registration")).default;
+const JudgeRegistration = (await import("./JudgeRegistration")).default;
+const SchedulePreview = (await import("./user/admin/schedule/SchedulePreview")).default;
+const SchedulePlanner = (await import("./user/admin/schedule/SchedulePlanner")).default;
+const Metrics = (await import("./RegisteredAtDisplay")).default;
+const Scan = (await import("./user/admin/Scan")).default;
+const Control = (await import("./user/admin/Control")).default;
+const Login = (await import("./Login")).default;
+const ForgotPassword = (await import("./ForgotPassword")).default;
 
 describe("pages render without crashing", () => {
-  // create-react-app's `resetMocks: true` strips the implementation off
-  // every jest.fn before each test, so the module-level mock above needs
-  // re-establishing here.
+  // `mockReset: true` (vite.config.mjs) wipes what a test set on a mock, so
+  // the module-level mock above is re-established before each one.
   beforeEach(() => {
     mockReadDraft.mockReset();
     mockReadDraft.mockResolvedValue(null);

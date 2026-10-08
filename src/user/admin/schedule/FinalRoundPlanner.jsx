@@ -5,7 +5,7 @@ import {
   Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   Divider, IconButton, MenuItem, Snackbar, Stack, TextField, Tooltip, Typography,
 } from "@mui/material";
-import { ConfirmDialog } from "../adminUi.js";
+import { ConfirmDialog } from "../adminUi.jsx";
 import { ref, onValue } from "firebase/database";
 import { database } from "../../../firebase.js";
 import {
@@ -16,7 +16,7 @@ import {
 } from "../../judge/finalDraftStore.js";
 import { applyFinalEdit, undoFinalEdit } from "../../judge/applyFinalEdit.js";
 import { slotsOf, slotLabel, finalStats } from "../../judge/finalRoundPlan.js";
-import RoomField from "./RoomField.js";
+import RoomField from "./RoomField.jsx";
 
 /**
  * Planning the final round, the way the first round is planned.

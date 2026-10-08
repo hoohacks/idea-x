@@ -1,4 +1,4 @@
-// RegisteredAtDisplay.js
+// RegisteredAtDisplay.jsx
 
 import { onValue, ref } from "firebase/database";
 import React, { useEffect, useMemo, useState } from "react";

@@ -68,11 +68,11 @@ import { hasRole } from "./roles";
 
 // The bar is white, so this is the ink cut of the logo: the original is crimson
 // and white on transparency, and on white its bulb and "thon" disappear.
-export const LOGO_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo-ink.png`;
+export const LOGO_SRC = `${import.meta.env.BASE_URL}ideathon-logo-ink.png`;
 // the original cut, crimson and white, for the one place the bar sits on a
 // dark photo rather than on white
-const LOGO_ON_DARK_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-logo.png`;
-const BULB_SRC = `${process.env.PUBLIC_URL ?? ""}/ideathon-bulb.png`;
+const LOGO_ON_DARK_SRC = `${import.meta.env.BASE_URL}ideathon-logo.png`;
+const BULB_SRC = `${import.meta.env.BASE_URL}ideathon-bulb.png`;
 const LOGO_RATIO = 768 / 227;
 
 /** Width of the desktop rail; `Layout` pads the page by the same amount. */

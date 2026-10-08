@@ -4,12 +4,12 @@
  * wording, and the read, clear and live subscription. draftStore.test.js and
  * draftConcurrency.test.js cover the version race against scripted reads.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../testing/fakeDatabase");
-const { readDraft, saveDraft, clearDraft, subscribeDraft } = require("./draftStore");
+const db = await import("../../testing/fakeDatabase");
+const { readDraft, saveDraft, clearDraft, subscribeDraft } = await import("./draftStore");
 
 const PATH = "scheduleDraft";
 const plan = (overrides = {}) => ({
@@ -22,9 +22,9 @@ const plan = (overrides = {}) => ({
 
 beforeEach(() => {
   db.reset({ admins: { "admin-1": true }, judges: { "admin-1": { firstName: "Ada", lastName: "Byron" } } });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe("saving and reading back", () => {
   test("a first save stamps who made it, and reads back as the same plan", async () => {
@@ -68,7 +68,7 @@ describe("saving and reading back", () => {
   });
 
   test("the save is a transaction that is not applied locally first", async () => {
-    const transaction = jest.spyOn(db.module, "runTransaction");
+    const transaction = vi.spyOn(db.module, "runTransaction");
     await saveDraft(plan());
     expect(transaction).toHaveBeenCalledWith(expect.objectContaining({ path: PATH }), expect.any(Function), { applyLocally: false });
   });
@@ -141,7 +141,7 @@ describe("refusals", () => {
   test("losing the race at the write names whoever won, or not", async () => {
     const real = db.module.runTransaction;
     const race = (winner) =>
-      jest.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
+      vi.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
         db.setData(PATH, winner);
         return real(ref, updater, options);
       });
@@ -174,14 +174,14 @@ describe("refusals", () => {
 
   test("a failed save or clear is reported in words, or with the reason given", async () => {
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === PATH ? Promise.reject(new Error("")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === PATH ? Promise.reject(new Error("")) : realGet(ref)));
     await expect(saveDraft(plan())).resolves.toEqual({ ok: false, error: "The draft could not be saved." });
     expect(console.error).toHaveBeenCalledWith("Could not save the schedule draft:", expect.any(Error));
 
-    jest.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
+    vi.spyOn(db.module, "update").mockRejectedValueOnce(new Error(""));
     await expect(clearDraft()).resolves.toEqual({ ok: false, error: "The draft could not be cleared." });
     expect(console.error).toHaveBeenCalledWith("Could not clear the schedule draft:", expect.any(Error));
-    jest.spyOn(db.module, "update").mockRejectedValueOnce(new Error("PERMISSION_DENIED"));
+    vi.spyOn(db.module, "update").mockRejectedValueOnce(new Error("PERMISSION_DENIED"));
     await expect(clearDraft()).resolves.toEqual({ ok: false, error: "PERMISSION_DENIED" });
   });
 });
@@ -205,11 +205,11 @@ describe("clearing and watching", () => {
 
   test("a failed watch delivers null, and logs it", () => {
     const denied = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
+    vi.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
       fail(denied);
       return () => {};
     });
-    const callback = jest.fn();
+    const callback = vi.fn();
     subscribeDraft(callback);
     expect(callback).toHaveBeenCalledWith(null);
     expect(console.error).toHaveBeenCalledWith("Could not watch the schedule draft:", denied);
