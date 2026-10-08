@@ -3,10 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * The layer every other test in this repo cannot reach.
  *
- * The unit tests mock the database, so no test above this one can see a permission
- * denial. It renders into jsdom, which has no viewport, so no test above this
- * one can see a page pushed below the fold. And it imports components
- * directly, so no test above this one can see a route that nothing links to.
+ * The unit tests mock the database, so no test above this one can see a
+ * permission denial. They render into jsdom, which has no viewport, so no test
+ * above this one can see a page pushed below the fold. And they import
+ * components directly, so no test above this one can see a route that nothing
+ * links to.
  * Every one of those shipped a real bug this project has since fixed.
  *
  * These specs drive a real browser against the real app talking to the Firebase

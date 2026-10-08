@@ -13,7 +13,7 @@
 The first three run on [Vitest](https://vitest.dev) in jsdom, configured in
 `vite.config.mjs`; the rules suite has its own config, `vitest.rules.config.mjs`,
 because it runs in Node against the emulator. `describe`, `test`, `expect` and
-`vi` are globals, as they were under Jest.
+`vi` are globals, so test files do not import them.
 
 CI runs all of them on every pull request, and the deploy runs the first four
 again before building.
@@ -42,9 +42,10 @@ the next test. Set per-test implementations in `beforeEach`.
 
 A few things that differ from Jest and catch people out:
 
-- **Import the code under test with `await import()`, not `require()`.** `require`
-  bypasses `vi.mock` and cannot load JSX, so it either fails or quietly hands you
-  the real module.
+- **Never `require()` app code or a mocked package.** Use `import`, or
+  `await import()` where the order matters (after a `vi.stubEnv`, say).
+  `require` bypasses `vi.mock` and cannot load JSX, so it either fails or quietly
+  hands you the real module.
 - **A mock factory must return every export the code reads.** A missing one
   throws rather than reading as `undefined`. Spread the real module in when you
   only mean to replace part of it:

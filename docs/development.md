@@ -13,8 +13,9 @@ npm run start:emulator   # terminal 3: the app, on local data
 ```
 
 The app is at http://localhost:3000/idea-x/, the same base path as the live
-site. Sign in as `admin@example.com` / `testtest`. Judges are `judge1@example.com` and
-up, competitors `competitor1@example.com` and up, with the same password.
+site. Sign in as `admin@example.com` / `testtest`. Judges are
+`judge1@example.com` and up, competitors `competitor1@example.com` and up, with
+the same password.
 
 `npm start` (without `:emulator`) talks to the **live** project. Use it only when
 you mean to. Both start commands open registration locally, whatever the deploy

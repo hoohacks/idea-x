@@ -143,10 +143,9 @@ beforeEach(() => {
   mockClearDraft.mockResolvedValue({ ok: true });
   mockReadDraft.mockResolvedValue(null);
   readScheduleMeta.mockResolvedValue(null);
-  // `mockReset: true` (vite.config.mjs) wipes what each test set on a mock,
-  // including the firebase/database `get` above. Re-established here since
-  // openPublishConfirm's own `get(ref(database, "config/eventName"))` call
-  // needs it.
+  // `mockReset: true` (vite.config.mjs) wipes what a test set on a mock, so
+  // the firebase/database `get` is pinned here too: openPublishConfirm's own
+  // `get(ref(database, "config/eventName"))` call needs it.
   mockGet.mockResolvedValue({ exists: () => false, val: () => null });
 });
 

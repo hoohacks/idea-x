@@ -67,10 +67,13 @@ why it is not security.
 
 ## Deploying from a laptop
 
-`npm run deploy` builds and pushes `build/` to `gh-pages` directly, without the
-tests or the Discord notice. It is for when Actions is unavailable. Set
-`VITE_REGISTRATION_OPEN=true` in the environment if registration should be open,
-or the build you push will close it.
+`npm run deploy` builds and pushes `build/` to `gh-pages` from your machine,
+skipping the tests, the rules reminder and the Discord notice, so prefer the
+workflow. Registration is closed in that build unless you open it:
+
+```
+npx cross-env VITE_REGISTRATION_OPEN=true npm run deploy
+```
 
 ## The address
 
