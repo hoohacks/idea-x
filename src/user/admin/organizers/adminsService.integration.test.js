@@ -3,14 +3,14 @@
  * the real audit log and admin check: what is written, what the feed says, and
  * the two revokes that must never go through, word for word.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "a1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../../testing/fakeDatabase");
-const { listAdmins, grantAdmin, revokeAdmin, revokeGuard } = require("./adminsService");
-const { decodeChanges } = require("../adminAction");
+const db = await import("../../../testing/fakeDatabase");
+const { listAdmins, grantAdmin, revokeAdmin, revokeGuard } = await import("./adminsService");
+const { decodeChanges } = await import("../adminAction");
 
 beforeEach(() => {
   mockCurrentUser.value = { uid: "a1" };

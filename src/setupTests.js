@@ -11,4 +11,4 @@ import '@testing-library/jest-dom';
 //
 // `registrationWindow.test.js` overrides this deliberately, with resetModules,
 // to prove which way the flag fails.
-process.env.REACT_APP_REGISTRATION_OPEN = "true";
+vi.stubEnv("VITE_REGISTRATION_OPEN", "true");

@@ -57,19 +57,17 @@ describe("score rules match the code", () => {
     }
   );
 
-  test("SCORE_FIELDS agrees with the validated ranges", () => {
+  test("SCORE_FIELDS agrees with the validated ranges", async () => {
     // required lazily so the firebase import chain is not pulled in at module load
-    const { SCORE_FIELDS, SCORE_MAX_TOTAL } = jest.requireActual(
-      "./user/judge/scoreRubric"
-    );
+    const { SCORE_FIELDS, SCORE_MAX_TOTAL } = await vi.importActual("./user/judge/scoreRubric");
     expect(SCORE_FIELDS).toEqual(EXPECTED_RANGES);
     expect(SCORE_MAX_TOTAL).toBe(40);
   });
 
-  test("the rubric the judge sees is the rubric that is scored", () => {
+  test("the rubric the judge sees is the rubric that is scored", async () => {
     // one definition, so the dialog cannot offer a criterion the aggregate
     // ignores, or a range the rules reject
-    const { RUBRIC, SCORE_FIELDS } = jest.requireActual("./user/judge/scoreRubric");
+    const { RUBRIC, SCORE_FIELDS } = await vi.importActual("./user/judge/scoreRubric");
     const fromRubric = Object.fromEntries(
       Object.entries(RUBRIC).map(([field, spec]) => [field, spec.range])
     );

@@ -8,12 +8,12 @@
  * drift or an empty/unjudged plan, and that the payload actually written
  * matches what the plan decided.
  */
-jest.mock("../../firebase", () => ({ database: {}, auth: {} }));
+vi.mock("../../firebase", () => ({ database: {}, auth: {} }));
 
-const mockUpdate = jest.fn();
-const mockGet = jest.fn();
+const mockUpdate = vi.fn();
+const mockGet = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
@@ -34,18 +34,18 @@ jest.mock("firebase/database", () => ({
     return { committed: true, snapshot: { val: () => next, exists: () => true } };
   },
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 // only requireAdmin is stubbed: the rest of the module is plain helpers this
 // code genuinely uses, and replacing them wholesale made a name render as
 // "personName is not a function" the first time one was added
-jest.mock("../../roles.js", () => ({
-  ...jest.requireActual("../../roles.js"),
-  requireAdmin: jest.fn(async () => ({ uid: "admin-1" })),
+vi.mock("../../roles.js", async () => ({
+  ...await vi.importActual("../../roles.js"),
+  requireAdmin: vi.fn(async () => ({ uid: "admin-1" })),
 }));
 
-const { publishPlan } = require("./publishPlan");
-const { planSchedule } = require("./planSchedule");
-const { requireAdmin } = require("../../roles.js");
+const { publishPlan } = await import("./publishPlan");
+const { planSchedule } = await import("./planSchedule");
+const { requireAdmin } = await import("../../roles.js");
 
 /**
  * First-round cards, as { teamId: { judgeUid: card } }. Module-level and reset

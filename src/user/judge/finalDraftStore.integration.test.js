@@ -5,11 +5,11 @@
  * the read, clear and live subscription. finalDraftStore.test.js covers the
  * version race against scripted reads.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   FINAL_DRAFT_PATH,
   encodeDraft,
@@ -18,7 +18,7 @@ const {
   saveFinalDraft,
   clearFinalDraft,
   subscribeFinalDraft,
-} = require("./finalDraftStore");
+} = await import("./finalDraftStore");
 
 const judge = (id) => ({ judgeId: id, judgeName: id.toUpperCase() });
 const plan = (overrides = {}) => ({
@@ -38,9 +38,9 @@ const plan = (overrides = {}) => ({
 
 beforeEach(() => {
   db.reset({ admins: { "admin-1": true }, judges: { "admin-1": { firstName: "Ada", lastName: "Byron" } } });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 test("the draft lives at finalRoundDraft", () => {
   expect(FINAL_DRAFT_PATH).toBe("finalRoundDraft");
@@ -135,7 +135,7 @@ describe("saving", () => {
   });
 
   test("the save is a transaction that is not applied locally first", async () => {
-    const transaction = jest.spyOn(db.module, "runTransaction");
+    const transaction = vi.spyOn(db.module, "runTransaction");
     await saveFinalDraft(plan());
     expect(transaction).toHaveBeenCalledWith(expect.objectContaining({ path: FINAL_DRAFT_PATH }), expect.any(Function), {
       applyLocally: false,
@@ -168,7 +168,7 @@ describe("saving", () => {
   test("losing the race at the write names whoever won, or not", async () => {
     const real = db.module.runTransaction;
     const race = (winner) =>
-      jest.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
+      vi.spyOn(db.module, "runTransaction").mockImplementationOnce(async (ref, updater, options) => {
         db.setData(FINAL_DRAFT_PATH, winner);
         return real(ref, updater, options);
       });
@@ -193,7 +193,7 @@ describe("saving", () => {
 
     db.setData("admins", { "admin-1": true });
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === FINAL_DRAFT_PATH ? Promise.reject(new Error("")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === FINAL_DRAFT_PATH ? Promise.reject(new Error("")) : realGet(ref)));
     await expect(saveFinalDraft(plan())).resolves.toEqual({ ok: false, error: "The draft could not be saved." });
     expect(console.error).toHaveBeenCalledWith("Could not save the final round draft:", expect.any(Error));
   });
@@ -241,11 +241,11 @@ describe("reading, clearing and watching", () => {
 
   test("a failed watch delivers null, and logs it", () => {
     const denied = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
+    vi.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
       fail(denied);
       return () => {};
     });
-    const callback = jest.fn();
+    const callback = vi.fn();
     subscribeFinalDraft(callback);
     expect(callback).toHaveBeenCalledWith(null);
     expect(console.error).toHaveBeenCalledWith("Failed to subscribe to the final round draft:", denied);

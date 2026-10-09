@@ -173,7 +173,7 @@ export const EVENT = {
 /**
  * The schools offered on the registration form.
  *
- * Here rather than in Registration.js because the attendee export has to print
+ * Here rather than in Registration.jsx because the attendee export has to print
  * these too, and a second copy of the list is how an export ends up saying
  * "professional" where the form said "School of Continuing & Professional
  * Studies".

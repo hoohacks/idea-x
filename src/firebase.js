@@ -7,7 +7,7 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { firebaseConfig } from "./firebaseConfig";
 
 /**
- * Point the whole app at the local emulators when REACT_APP_USE_EMULATOR is set.
+ * Point the whole app at the local emulators when VITE_USE_EMULATOR is set.
  *
  * Without this there was no way to exercise the app end to end at all: every
  * `npm start` talked to the live project, so rehearsing a schedule generation,
@@ -15,13 +15,13 @@ import { firebaseConfig } from "./firebaseConfig";
  * The automated suites covered the rules and the arithmetic; the one thing they
  * could not cover was a person clicking through the actual day.
  *
- * `npm run start:emulator` sets the flag. It is read at build time by Create
- * React App, so a production bundle cannot accidentally carry it -- the
- * deployed site has no branch that can reach a localhost emulator.
+ * `npm run start:emulator` sets the flag. Vite compiles it in at build time,
+ * so a production bundle cannot accidentally carry it -- the deployed site has
+ * no branch that can reach a localhost emulator.
  */
-export const USING_EMULATOR = process.env.REACT_APP_USE_EMULATOR === "true";
+export const USING_EMULATOR = import.meta.env.VITE_USE_EMULATOR === "true";
 
-const EMULATOR_HOST = process.env.REACT_APP_EMULATOR_HOST || "127.0.0.1";
+const EMULATOR_HOST = import.meta.env.VITE_EMULATOR_HOST || "127.0.0.1";
 
 /**
  * The emulator namespace, which is NOT derived from firebaseConfig.

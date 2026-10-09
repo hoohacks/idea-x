@@ -23,7 +23,7 @@
  * they are unchanged — somebody who forced an account into existence would hold
  * no role and see nothing.
  */
-export const REGISTRATION_OPEN = process.env.REACT_APP_REGISTRATION_OPEN === "true";
+export const REGISTRATION_OPEN = import.meta.env.VITE_REGISTRATION_OPEN === "true";
 
 /**
  * The way in while the doors are shut.

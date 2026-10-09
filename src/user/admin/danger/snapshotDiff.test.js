@@ -1,4 +1,4 @@
-const { diffSnapshot } = require("./snapshotDiff");
+const { diffSnapshot } = await import("./snapshotDiff");
 
 const entries = (obj) =>
   Object.entries(obj).map(([path, value]) => ({ path, value: JSON.stringify(value) }));

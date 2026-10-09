@@ -8,11 +8,11 @@
  * would against the database, and a test can both click through a page and read
  * back what it wrote.
  *
- * Use it from a test file with a factory that requires it, since jest.mock
- * factories may not close over module scope:
+ * Use it from a test file with a factory that imports it, since vi.mock
+ * factories are hoisted above the file's own imports:
  *
- *   jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
- *   const db = require("../../testing/fakeDatabase");
+ *   vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
+ *   const db = await import("../../testing/fakeDatabase");
  *   beforeEach(() => db.reset({ judges: { j1: { firstName: "Ada" } } }));
  *
  * Deliberately small: no queries, no transactions, no security rules. Rules are

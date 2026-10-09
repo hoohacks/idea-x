@@ -6,7 +6,7 @@
  * The photos are cropped from the originals to the team and their cheque, and
  * compressed for the web; the full-size files are not in the repo.
  */
-const photo = (file) => `${process.env.PUBLIC_URL ?? ""}/photos/${file}`;
+const photo = (file) => `${import.meta.env.BASE_URL}photos/${file}`;
 
 export const PAST_WINNERS_YEAR = 2025;
 

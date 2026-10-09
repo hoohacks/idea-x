@@ -7,13 +7,13 @@
  * them in the final round's excludedJudges, where they permanently block a
  * finalist from being judged by anyone.
  */
-jest.mock("../../../firebase", () => ({ database: {}, auth: { currentUser: { uid: "admin-1" } }, USING_EMULATOR: false }));
+vi.mock("../../../firebase", () => ({ database: {}, auth: { currentUser: { uid: "admin-1" } }, USING_EMULATOR: false }));
 
-const mockUpdate = jest.fn();
-const mockGet = jest.fn();
-const mockRunTransaction = jest.fn();
+const mockUpdate = vi.fn();
+const mockGet = vi.fn();
+const mockRunTransaction = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
@@ -21,22 +21,22 @@ jest.mock("firebase/database", () => ({
   runTransaction: (...args) => mockRunTransaction(...args),
   serverTimestamp: () => 1700000000000,
 }));
-jest.mock("firebase/auth", () => ({
+vi.mock("firebase/auth", () => ({
   getAuth: () => ({ currentUser: { uid: "admin-1" } }),
-  createUserWithEmailAndPassword: jest.fn(),
-  sendPasswordResetEmail: jest.fn(),
-  signOut: jest.fn(),
-  connectAuthEmulator: jest.fn(),
+  createUserWithEmailAndPassword: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
+  signOut: vi.fn(),
+  connectAuthEmulator: vi.fn(),
 }));
-jest.mock("firebase/app", () => ({ initializeApp: jest.fn(), deleteApp: jest.fn() }));
-jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("firebase/app", () => ({ initializeApp: vi.fn(), deleteApp: vi.fn() }));
+vi.mock("../../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
 
 const {
   removalChanges, listPeople, matchesQuery, blankJudge, blankCompetitor,
   setSoleRole, setOrganizer, describeSwitch, deletePerson, bulkSet, deleteTeam,
   listArchived, restoreArchived, attachRecord,
-} = require("./peopleService");
-const { requireAdmin } = require("../../../roles.js");
+} = await import("./peopleService");
+const { requireAdmin } = await import("../../../roles.js");
 
 const WORLD = {
   admins: { "admin-1": true, "admin-2": true },
@@ -672,8 +672,8 @@ describe("blank records", () => {
   });
 
   test("a new competitor's dietary default matches what every reader compares against", () => {
-    // Registration.js writes "none", Profile.js lists ["none", ...], and
-    // Search.js only renders a dietary chip when the value is not "none" --
+    // Registration.jsx writes "none", Profile.jsx lists ["none", ...], and
+    // Search.jsx only renders a dietary chip when the value is not "none" --
     // a capitalized default here slips past all three and flags a walk-in to
     // catering as having a restriction called "None"
     expect(blankCompetitor({ firstName: "New" }).dietaryRestriction).toBe("none");

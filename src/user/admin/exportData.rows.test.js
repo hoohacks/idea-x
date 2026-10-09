@@ -7,10 +7,10 @@
  * exactly the quietly-wrong file these exports exist to avoid. It also covers
  * the database read and the browser download.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   loadEventData,
   scheduleRows,
@@ -23,7 +23,7 @@ const {
   downloadCsv,
   downloadJson,
   stamp,
-} = require("./exportData");
+} = await import("./exportData");
 
 const at = Date.UTC(2026, 9, 25, 21, 5, 0);
 
@@ -279,8 +279,8 @@ describe("csv", () => {
 });
 
 describe("reading the event", () => {
-  beforeEach(() => jest.useFakeTimers().setSystemTime(new Date(at)));
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers().setSystemTime(new Date(at)));
+  afterEach(() => vi.useRealTimers());
 
   test("reads each part from its own node", async () => {
     db.reset({
@@ -321,21 +321,23 @@ describe("downloading", () => {
   let clicked;
   let blobs;
   beforeEach(() => {
-    jest.useFakeTimers();
+    // setTimeout only: jsdom's FileReader fires onload from setImmediate, and
+    // faking that too would leave the reads below waiting forever
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     clicked = [];
     blobs = [];
-    URL.createObjectURL = jest.fn((blob) => {
+    URL.createObjectURL = vi.fn((blob) => {
       blobs.push(blob);
       return `blob:${blobs.length}`;
     });
-    URL.revokeObjectURL = jest.fn();
-    jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function click() {
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function click() {
       clicked.push({ href: this.href, download: this.download, attached: document.body.contains(this) });
     });
   });
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   const read = (blob, how) =>
@@ -367,9 +369,9 @@ describe("downloading", () => {
   test("the object URL is released a second later, not at once", () => {
     downloadJson("x.json", {});
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:1");
   });
 });

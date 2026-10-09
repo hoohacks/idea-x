@@ -8,12 +8,12 @@
  *
  * Scores use only the `problem` criterion, so a card of N is worth 4N out of 40.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "admin-1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
+const db = await import("../../testing/fakeDatabase");
 const {
   FINAL_ROUND_ROOM,
   DEFAULT_FINAL_ROUND_SIZE,
@@ -28,7 +28,7 @@ const {
   deactivateFinalRound,
   subscribeToFinalRoundActive,
   subscribeToFinalRoundStandings,
-} = require("./finalRoundService");
+} = await import("./finalRoundService");
 
 const card = (problem, extra = {}) => ({ problem, ...extra });
 
@@ -61,9 +61,9 @@ const seed = () => ({
 beforeEach(() => {
   mockCurrentUser.value = { uid: "admin-1" };
   db.reset(seed());
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 test("the defaults", () => {
   expect(FINAL_ROUND_ROOM).toBe("Rice 011");
@@ -79,7 +79,7 @@ describe("reading and ranking", () => {
   });
 
   test("a team node with no cards loads as an empty set", async () => {
-    jest.spyOn(db.module, "get").mockResolvedValueOnce({ exists: () => true, val: () => ({ t1: null }) });
+    vi.spyOn(db.module, "get").mockResolvedValueOnce({ exists: () => true, val: () => ({ t1: null }) });
     await expect(loadFirstRoundScores()).resolves.toEqual({ t1: {} });
   });
 
@@ -292,7 +292,7 @@ describe("planning", () => {
 
     db.setData("admins", { "admin-1": true });
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams" ? Promise.reject(new Error("")) : realGet(ref)));
+    vi.spyOn(db.module, "get").mockImplementation((ref) => (ref.path === "teams" ? Promise.reject(new Error("")) : realGet(ref)));
     await expect(planFinalRound()).resolves.toEqual({
       ok: false,
       error: "Something went wrong planning the final round.",
@@ -330,7 +330,7 @@ describe("the live basis", () => {
   });
 
   test("a null team record counts as not submitted", async () => {
-    jest.spyOn(db.module, "get").mockImplementation(async (ref) => ({
+    vi.spyOn(db.module, "get").mockImplementation(async (ref) => ({
       exists: () => ref.path === "teams",
       val: () => (ref.path === "teams" ? { tX: null } : null),
     }));
@@ -459,7 +459,7 @@ describe("publishing", () => {
 
   test("nothing is published when the restore point cannot be taken", async () => {
     const { plan } = await planFinalRound();
-    jest.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
+    vi.spyOn(db.module, "runTransaction").mockResolvedValue({ committed: false });
     await expect(publishFinalRound(plan)).resolves.toEqual({
       ok: false,
       error:
@@ -483,7 +483,7 @@ describe("publishing", () => {
     db.setData("admins", { "admin-1": true });
     const realUpdate = db.module.update;
     let calls = 0;
-    jest.spyOn(db.module, "update").mockImplementation((ref, values) => {
+    vi.spyOn(db.module, "update").mockImplementation((ref, values) => {
       calls += 1;
       return calls === 2 ? Promise.reject(new Error("")) : realUpdate(ref, values);
     });
@@ -503,7 +503,7 @@ describe("closing the round", () => {
 
   test("archives the standings and clears every slot and assignment with the flag", async () => {
     const standings = db.getData("finalRound/teams");
-    jest.spyOn(Date, "now").mockReturnValue(1234);
+    vi.spyOn(Date, "now").mockReturnValue(1234);
     await expect(deactivateFinalRound()).resolves.toEqual({ ok: true });
 
     const finalRound = db.getData("finalRound");
@@ -558,12 +558,12 @@ describe("subscriptions", () => {
 
   test("a denied read reports inactive and no standings, with the reason", () => {
     const denied = new Error("PERMISSION_DENIED");
-    jest.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
+    vi.spyOn(db.module, "onValue").mockImplementation((_ref, _ok, fail) => {
       fail(denied);
       return () => {};
     });
-    const active = jest.fn();
-    const standings = jest.fn();
+    const active = vi.fn();
+    const standings = vi.fn();
     subscribeToFinalRoundActive(active);
     subscribeToFinalRoundStandings(standings);
     expect(active).toHaveBeenCalledWith({ active: false, error: "PERMISSION_DENIED" });

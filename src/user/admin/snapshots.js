@@ -309,7 +309,7 @@ export async function previewSnapshot(id) {
 
 /**
  * Judge display names, read once when a preview dialog opens rather than
- * kept subscribed in Control.js -- a permanently open /judges listener is
+ * kept subscribed in Control.jsx -- a permanently open /judges listener is
  * the wrong price for a dialog almost nobody opens.
  *
  * Always returns `names` (empty on failure), so a caller can use it directly

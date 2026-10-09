@@ -60,9 +60,20 @@ a closed site. To open them, set the repository variable `REGISTRATION_OPEN` to
 `true` (Settings, Secrets and variables, Actions, Variables), then run Deploy. No
 code change is needed.
 
-This is a build-time flag, not a database setting. See
+The deploy workflow hands it to the build as `VITE_REGISTRATION_OPEN`. This is a
+build-time flag, not a database setting. See
 [ADR 0005](decisions/0005-registration-window-is-a-build-flag.md) for why, and for
 why it is not security.
+
+## Deploying from a laptop
+
+`npm run deploy` builds and pushes `build/` to `gh-pages` from your machine,
+skipping the tests, the rules reminder and the Discord notice, so prefer the
+workflow. Registration is closed in that build unless you open it:
+
+```
+npx cross-env VITE_REGISTRATION_OPEN=true npm run deploy
+```
 
 ## The address
 

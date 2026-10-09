@@ -5,11 +5,11 @@
  * recordEdits.test.js covers the pure change builders; this covers the reads
  * each edit makes first and the write that follows.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../../testing/fakeDatabase");
+const db = await import("../../../testing/fakeDatabase");
 const {
   COMPETITOR_FIELDS,
   JUDGE_FIELDS,
@@ -19,8 +19,8 @@ const {
   moveCompetitorToTeam,
   moveMemberChanges,
   renameTeamChanges,
-} = require("./recordEdits");
-const { decodeChanges } = require("../adminAction");
+} = await import("./recordEdits");
+const { decodeChanges } = await import("../adminAction");
 
 const UID = "competitor-uid-123456";
 const JUDGE = "judge-uid-abcdefgh";

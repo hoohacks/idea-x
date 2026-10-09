@@ -14,18 +14,18 @@
  * sorted back on the way in, and `pool`, each panel and each edit's
  * `orderBefore` have to survive coming back absent.
  */
-jest.mock("../../firebase", () => ({ database: {} }));
-jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
-jest.mock("../admin/adminAction.js", () => ({ resolveName: jest.fn(async () => "Ada Lovelace") }));
+vi.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("../admin/adminAction.js", () => ({ resolveName: vi.fn(async () => "Ada Lovelace") }));
 
-const mockGet = jest.fn();
-const mockUpdate = jest.fn();
+const mockGet = vi.fn();
+const mockUpdate = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path: path ?? "" }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
-  onValue: jest.fn(),
+  onValue: vi.fn(),
   // single-writer tests only; concurrency lives in draftConcurrency.test.js
   runTransaction: async (reference, callback) => {
     const snap = await mockGet(reference);
@@ -39,12 +39,12 @@ jest.mock("firebase/database", () => ({
   },
   serverTimestamp: () => 1700000000000,
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
 const {
   saveFinalDraft, readFinalDraft, encodeDraft, decodeDraft, FINAL_DRAFT_PATH,
-} = require("./finalDraftStore");
-const { resolveName } = require("../admin/adminAction.js");
+} = await import("./finalDraftStore");
+const { resolveName } = await import("../admin/adminAction.js");
 
 const snap = (value) => ({ exists: () => value !== null && value !== undefined, val: () => value });
 const stored = (value) => mockGet.mockImplementation(async () => snap(value));
@@ -73,8 +73,8 @@ beforeEach(() => {
   mockGet.mockReset();
   mockUpdate.mockReset();
   mockUpdate.mockResolvedValue(undefined);
-  // create-react-app sets resetMocks, which wipes a factory's implementation
-  // before every test -- so it has to be re-established here, not once above
+  // `mockReset: true` (vite.config.mjs) wipes what a test set on a mock, so
+  // this is re-established before each test, not once above
   resolveName.mockReset();
   resolveName.mockResolvedValue("Ada Lovelace");
 });

@@ -11,11 +11,11 @@
  * judge on it. Miss one and that judge's card shows a panel that no longer
  * exists, on a phone, in a corridor, with no way to tell it is stale.
  */
-jest.mock("../../firebase", () => ({ database: {} }));
-jest.mock("../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
 
-const mockGet = jest.fn();
-const mockUpdate = jest.fn();
+const mockGet = vi.fn();
+const mockUpdate = vi.fn();
 
 /**
  * Holds a `get` open, so two concurrent callers can both read the roster
@@ -24,7 +24,7 @@ const mockUpdate = jest.fn();
  */
 const mockGate = { waiting: [], held: 0, hold: 0 };
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
@@ -48,7 +48,7 @@ jest.mock("firebase/database", () => ({
 
 const {
   assignJudgeToTeam, unassignJudgeFromTeam, swapJudges, findConflict,
-} = require("./assignmentEdits");
+} = await import("./assignmentEdits");
 
 const judge = (first) => ({ firstName: first, lastName: "J", isRound1Judge: true });
 

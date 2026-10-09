@@ -6,34 +6,32 @@
  * teamAssignments, because a judge cannot read the teams node. Renaming
  * without the fan-out leaves judges calling a team by a name nobody else uses.
  */
-jest.mock("../../../firebase", () => ({ database: {}, auth: {} }));
+vi.mock("../../../firebase", () => ({ database: {}, auth: {} }));
 
-const mockUpdate = jest.fn(async () => {});
-const mockGet = jest.fn(async () => ({ exists: () => false, val: () => null }));
+const mockUpdate = vi.fn(async () => {});
+const mockGet = vi.fn(async () => ({ exists: () => false, val: () => null }));
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "entry-1" }),
   serverTimestamp: () => 0,
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
-jest.mock("../../../roles.js", () => ({ requireAdmin: jest.fn(async () => ({ uid: "admin-1" })) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../roles.js", () => ({ requireAdmin: vi.fn(async () => ({ uid: "admin-1" })) }));
 
 const {
   renameTeamChanges,
   moveMemberChanges,
   editCompetitor,
   COMPETITOR_FIELDS,
-} = require("./recordEdits");
-const { requireAdmin } = require("../../../roles.js");
+} = await import("./recordEdits");
+const { requireAdmin } = await import("../../../roles.js");
 
 /**
- * create-react-app sets `resetMocks: true`, which strips the implementation off
- * every jest.fn before each test -- so an implementation passed to jest.fn() at
- * declaration is gone by the time the first test runs and the mock silently
- * returns undefined. Every implementation has to be re-established here.
+ * `mockReset: true` (vite.config.mjs) wipes every mock's calls and anything a
+ * test set on it, so each test starts from the implementations set here.
  */
 beforeEach(() => {
   mockUpdate.mockReset();

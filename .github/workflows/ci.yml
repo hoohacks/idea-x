@@ -62,11 +62,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # warnings do not fail the build; `npm run test:ci` above runs with
-          # CI=true, so lint problems still surface, just not as a hard failure
-          # on a branch someone is still working on
-          CI: false
 
   e2e:
     # The slowest suite here, and the only layer that can see a permission

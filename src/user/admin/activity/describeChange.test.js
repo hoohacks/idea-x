@@ -4,7 +4,7 @@
  * The feed is read while something is going wrong, so a change has to be
  * scannable without expanding it. Long values are summarised rather than dumped.
  */
-const { describeChange } = require("./describeChange");
+const { describeChange } = await import("./describeChange");
 
 describe("describing one change", () => {
   test("a scalar shows both values", () => {

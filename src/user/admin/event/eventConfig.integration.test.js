@@ -3,16 +3,16 @@
  * admin check: the bounds on each value, what is stored, and the summary each
  * leaves in the activity feed.
  */
-jest.mock("../../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../../testing/fakeDatabase").module);
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
+vi.mock("../../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../../testing/fakeDatabase")).module);
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "admin-1" } }) }));
 
-const db = require("../../../testing/fakeDatabase");
-const config = require("./eventConfig");
-const { decodeChanges } = require("../adminAction");
+const db = await import("../../../testing/fakeDatabase");
+const config = await import("./eventConfig");
+const { decodeChanges } = await import("../adminAction");
 
 beforeEach(() => db.reset({ admins: { "admin-1": true } }));
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const lastLog = () => {
   const entries = Object.values(db.getData("adminLog") ?? {});
@@ -41,7 +41,7 @@ describe("reading", () => {
   });
 
   test("a failed read falls back too", async () => {
-    jest.spyOn(db.module, "get").mockRejectedValue(new Error("denied"));
+    vi.spyOn(db.module, "get").mockRejectedValue(new Error("denied"));
     await expect(config.readEventConfig()).resolves.toMatchObject({ batchCount: 3, finalRoundRoom: "Rice 011" });
   });
 });

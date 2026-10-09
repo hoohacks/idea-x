@@ -10,21 +10,21 @@
  * expressed as what it really is: a rejection from one path while others
  * succeed.
  */
-jest.mock("../../firebase", () => ({ database: {} }));
+vi.mock("../../firebase", () => ({ database: {} }));
 
-const mockGet = jest.fn();
-const mockUpdate = jest.fn();
+const mockGet = vi.fn();
+const mockUpdate = vi.fn();
 
-jest.mock("firebase/database", () => ({
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   get: (...args) => mockGet(...args),
   update: (...args) => mockUpdate(...args),
   push: () => ({ key: "new-team" }),
 }));
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "me" } }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: { uid: "me" } }) }));
 
-const { joinTeam, MAX_TEAM_SIZE } = require("./teamMembership");
-const { memberIds, isMember } = require("./teamMembers");
+const { joinTeam, MAX_TEAM_SIZE } = await import("./teamMembership");
+const { memberIds, isMember } = await import("./teamMembers");
 
 /** The world as the rules actually expose it to somebody who is not a member. */
 function asNonMember({ name = "Lumen", denyWrite = false, competitor = { firstName: "Alex" } } = {}) {

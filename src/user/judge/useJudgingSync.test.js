@@ -11,8 +11,8 @@
  */
 import { renderHook } from "@testing-library/react";
 
-jest.mock("../../firebase", () => ({ database: {} }));
-jest.mock("firebase/database", () => ({
+vi.mock("../../firebase", () => ({ database: {} }));
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   onValue: (_ref, cb) => {
     cb({ val: () => true });
@@ -20,18 +20,18 @@ jest.mock("firebase/database", () => ({
   },
 }));
 
-const mockList = jest.fn(() => []);
-jest.mock("./pendingScores.js", () => ({
+const mockList = vi.fn(() => []);
+vi.mock("./pendingScores.js", () => ({
   listPending: (...args) => mockList(...args),
   subscribeToPending: () => () => {},
 }));
-jest.mock("./getTeamInfo.js", () => ({
-  syncPendingScores: jest.fn(async () => ({ synced: 0, failed: 0 })),
+vi.mock("./getTeamInfo.js", () => ({
+  syncPendingScores: vi.fn(async () => ({ synced: 0, failed: 0 })),
   FIRST_ROUND: "first",
   FINAL_ROUND: "final",
 }));
 
-const { useJudgingSync } = require("./useJudgingSync");
+const { useJudgingSync } = await import("./useJudgingSync");
 
 afterEach(() => {
   mockList.mockReset();

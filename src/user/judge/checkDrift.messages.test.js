@@ -6,11 +6,11 @@
  * messages and repair targets together, which is where an off-by-one room or
  * a name read from the wrong side would show.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 
-const db = require("../../testing/fakeDatabase");
-const { checkDrift, readLiveBasis } = require("./checkDrift");
+const db = await import("../../testing/fakeDatabase");
+const { checkDrift, readLiveBasis } = await import("./checkDrift");
 
 const basis = {
   teamIds: ["a", "b"],

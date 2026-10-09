@@ -4,13 +4,13 @@
  * depth against scripted reads; this covers creating and leaving, which had
  * no tests at all, and the join edges those scripted reads cannot reach.
  */
-jest.mock("../../firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("../../testing/fakeDatabase").module);
+vi.mock("../../firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("../../testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "me" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("../../testing/fakeDatabase");
-const { MAX_TEAM_SIZE, createTeam, joinTeam, leaveTeam } = require("./teamMembership");
+const db = await import("../../testing/fakeDatabase");
+const { MAX_TEAM_SIZE, createTeam, joinTeam, leaveTeam } = await import("./teamMembership");
 
 beforeEach(() => {
   mockCurrentUser.value = { uid: "me" };
@@ -18,9 +18,9 @@ beforeEach(() => {
     competitors: { me: { firstName: "Ada" } },
     teams: { "-abc": { name: "Lantern", members: { c1: true } } },
   });
-  jest.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 test("a team holds at most four", () => {
   expect(MAX_TEAM_SIZE).toBe(4);
@@ -151,7 +151,7 @@ describe("joining, the edges", () => {
 
   test("a read that is denied is treated as unknown, and the write decides", async () => {
     const realGet = db.module.get;
-    jest.spyOn(db.module, "get").mockImplementation((ref) =>
+    vi.spyOn(db.module, "get").mockImplementation((ref) =>
       ref.path.endsWith("/submitted") || ref.path.endsWith("/members") ? Promise.reject(new Error("PERMISSION_DENIED")) : realGet(ref)
     );
     await expect(joinTeam("-abc")).resolves.toMatchObject({ ok: true });
@@ -163,7 +163,7 @@ describe("joining, the edges", () => {
   });
 
   test("an unexpected failure is reported in words, and logged", async () => {
-    jest.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
+    vi.spyOn(db.module, "get").mockRejectedValueOnce(new Error("offline"));
     await expect(joinTeam("-abc")).resolves.toEqual({ ok: false, error: "Could not join that team. Please try again." });
     expect(console.error).toHaveBeenCalledWith("Error joining team:", expect.any(Error));
   });

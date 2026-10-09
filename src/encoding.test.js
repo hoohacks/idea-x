@@ -18,7 +18,7 @@ const path = require("path");
 const MOJIBAKE = /[À-ÿ][‐-›€ŒœŠšŸŽžƒˆ˜™]/;
 
 const ROOTS = ["src", "e2e", "scripts", "test"];
-const EXTENSIONS = [".js", ".mjs", ".json", ".css", ".html", ".md"];
+const EXTENSIONS = [".js", ".jsx", ".mjs", ".json", ".css", ".html", ".md"];
 
 function sourceFiles(dir) {
   const found = [];
@@ -66,8 +66,8 @@ test("a byte order mark never reaches a source file", () => {
   expect(withBom.map((file) => path.relative(repoRoot, file))).toEqual([]);
 });
 
-test("the event strings are the characters they are meant to be", () => {
-  const { EVENT } = require("./eventInfo");
+test("the event strings are the characters they are meant to be", async () => {
+  const { EVENT } = await import("./eventInfo");
 
   // plain hyphens, not three bytes of wreckage
   expect(EVENT.hours).toBe("10:00 AM - 7:00 PM");

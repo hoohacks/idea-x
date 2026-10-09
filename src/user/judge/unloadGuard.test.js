@@ -9,8 +9,8 @@
  */
 import { renderHook } from "@testing-library/react";
 
-jest.mock("../../firebase", () => ({ database: {} }));
-jest.mock("firebase/database", () => ({
+vi.mock("../../firebase", () => ({ database: {} }));
+vi.mock("firebase/database", () => ({
   ref: (_db, path) => ({ path }),
   onValue: (_ref, cb) => {
     cb({ val: () => true });
@@ -18,14 +18,17 @@ jest.mock("firebase/database", () => ({
   },
 }));
 
-const mockList = jest.fn(() => []);
-jest.mock("./pendingScores.js", () => ({
+const mockList = vi.fn(() => []);
+vi.mock("./pendingScores.js", () => ({
   listPending: (...args) => mockList(...args),
   subscribeToPending: () => () => {},
 }));
-jest.mock("./getTeamInfo.js", () => ({ syncPendingScores: jest.fn(async () => ({ synced: 0, failed: 0 })) }));
+vi.mock("./getTeamInfo.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  syncPendingScores: vi.fn(async () => ({ synced: 0, failed: 0 })),
+}));
 
-const { useJudgingSync } = require("./useJudgingSync");
+const { useJudgingSync } = await import("./useJudgingSync");
 
 function listenerCount() {
   return added.filter((name) => name === "beforeunload").length -
@@ -40,13 +43,17 @@ let removeSpy;
 beforeEach(() => {
   added = [];
   removed = [];
-  addSpy = jest.spyOn(window, "addEventListener").mockImplementation((name, fn, opts) => {
+  // the originals, called through: under Vitest `window` is Node's global with
+  // jsdom's methods bound onto it, so Window.prototype's cannot be borrowed
+  const realAdd = window.addEventListener;
+  const realRemove = window.removeEventListener;
+  addSpy = vi.spyOn(window, "addEventListener").mockImplementation((name, fn, opts) => {
     added.push(name);
-    return Window.prototype.addEventListener.call(window, name, fn, opts);
+    return realAdd.call(window, name, fn, opts);
   });
-  removeSpy = jest.spyOn(window, "removeEventListener").mockImplementation((name, fn, opts) => {
+  removeSpy = vi.spyOn(window, "removeEventListener").mockImplementation((name, fn, opts) => {
     removed.push(name);
-    return Window.prototype.removeEventListener.call(window, name, fn, opts);
+    return realRemove.call(window, name, fn, opts);
   });
 });
 

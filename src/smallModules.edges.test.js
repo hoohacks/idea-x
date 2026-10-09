@@ -4,18 +4,18 @@
  * picker's order, assignment lists, the staff link, past winners and the
  * restore-point diff.
  */
-jest.mock("./firebase.js", () => ({ database: {} }));
-jest.mock("firebase/database", () => require("./testing/fakeDatabase").module);
+vi.mock("./firebase.js", () => ({ database: {} }));
+vi.mock("firebase/database", async () => (await import("./testing/fakeDatabase")).module);
 const mockCurrentUser = { value: { uid: "u1" } };
-jest.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
+vi.mock("firebase/auth", () => ({ getAuth: () => ({ currentUser: mockCurrentUser.value }) }));
 
-const db = require("./testing/fakeDatabase");
-const { mergeRoleProfiles, personName, requireAdmin, isAdmin } = require("./roles");
-const { describeChange } = require("./user/admin/activity/describeChange");
-const { judgePickerOptions } = require("./user/judge/judgeRoles");
-const { assignmentList, rosterOf } = require("./user/judge/assignmentList");
-const { STAFF_PARAM, isStaffEntrance } = require("./registrationWindow");
-const { diffSnapshot } = require("./user/admin/danger/snapshotDiff");
+const db = await import("./testing/fakeDatabase");
+const { mergeRoleProfiles, personName, requireAdmin, isAdmin } = await import("./roles");
+const { describeChange } = await import("./user/admin/activity/describeChange");
+const { judgePickerOptions } = await import("./user/judge/judgeRoles");
+const { assignmentList, rosterOf } = await import("./user/judge/assignmentList");
+const { STAFF_PARAM, isStaffEntrance } = await import("./registrationWindow");
+const { diffSnapshot } = await import("./user/admin/danger/snapshotDiff");
 
 describe("merging a person's records", () => {
   test("a blank field never overwrites a filled one, whichever comes first", () => {
@@ -135,36 +135,27 @@ describe("the staff link", () => {
 });
 
 describe("past winners", () => {
-  test("each with its prize, photo and a description of the photo", () => {
-    jest.isolateModules(() => {
-      const saved = process.env.PUBLIC_URL;
-      process.env.PUBLIC_URL = "/idea-x";
-      try {
-        const { PAST_WINNERS, PAST_WINNERS_YEAR } = require("./winners");
-        expect(PAST_WINNERS_YEAR).toBe(2025);
-        expect(PAST_WINNERS).toEqual([
-          { team: "Behind the Plate", prize: "$700", src: "/idea-x/photos/winner-behind-the-plate.jpg", width: 900, height: 863, alt: "Behind the Plate holding their $700 cheque at Ideathon 2025" },
-          { team: "ClearCause", prize: "$450", src: "/idea-x/photos/winner-clearcause.jpg", width: 900, height: 656, alt: "ClearCause holding their $450 cheque at Ideathon 2025" },
-          { team: "Tempo", prize: "$250", src: "/idea-x/photos/winner-tempo.jpg", width: 900, height: 993, alt: "Tempo holding their $250 cheque at Ideathon 2025" },
-          { team: "Circles", prize: "$100", src: "/idea-x/photos/winner-circles.jpg", width: 900, height: 560, alt: "Circles holding their $100 cheque at Ideathon 2025" },
-        ]);
-      } finally {
-        if (saved === undefined) delete process.env.PUBLIC_URL;
-        else process.env.PUBLIC_URL = saved;
-      }
-    });
+  // the photo URLs are built once, when the module loads, so each test loads
+  // a fresh copy under the base it wants
+  const saved = import.meta.env.BASE_URL;
+  beforeEach(() => vi.resetModules());
+  afterEach(() => vi.stubEnv("BASE_URL", saved));
+
+  test("each with its prize, photo and a description of the photo", async () => {
+    vi.stubEnv("BASE_URL", "/idea-x/");
+    const { PAST_WINNERS, PAST_WINNERS_YEAR } = await import("./winners");
+    expect(PAST_WINNERS_YEAR).toBe(2025);
+    expect(PAST_WINNERS).toEqual([
+      { team: "Behind the Plate", prize: "$700", src: "/idea-x/photos/winner-behind-the-plate.jpg", width: 900, height: 863, alt: "Behind the Plate holding their $700 cheque at Ideathon 2025" },
+      { team: "ClearCause", prize: "$450", src: "/idea-x/photos/winner-clearcause.jpg", width: 900, height: 656, alt: "ClearCause holding their $450 cheque at Ideathon 2025" },
+      { team: "Tempo", prize: "$250", src: "/idea-x/photos/winner-tempo.jpg", width: 900, height: 993, alt: "Tempo holding their $250 cheque at Ideathon 2025" },
+      { team: "Circles", prize: "$100", src: "/idea-x/photos/winner-circles.jpg", width: 900, height: 560, alt: "Circles holding their $100 cheque at Ideathon 2025" },
+    ]);
   });
 
-  test("with no public URL the photos are served from the root", () => {
-    jest.isolateModules(() => {
-      const saved = process.env.PUBLIC_URL;
-      delete process.env.PUBLIC_URL;
-      try {
-        expect(require("./winners").PAST_WINNERS[0].src).toBe("/photos/winner-behind-the-plate.jpg");
-      } finally {
-        if (saved !== undefined) process.env.PUBLIC_URL = saved;
-      }
-    });
+  test("at the root base the photos are served from the root", async () => {
+    vi.stubEnv("BASE_URL", "/");
+    expect((await import("./winners")).PAST_WINNERS[0].src).toBe("/photos/winner-behind-the-plate.jpg");
   });
 });
 

@@ -27,9 +27,11 @@ npm run seed             # terminal 2: fill it with a plausible event
 npm run start:emulator   # terminal 3: the app, on local data
 ```
 
+You need Node 22 (see `.nvmrc`), and JDK 17 or newer for the emulators. The app
+runs at http://localhost:3000/idea-x/.
+
 Sign in as `admin@example.com` / `testtest`. Judges are `judge1@example.com` and
-up, competitors `competitor1@example.com` and up, with the same password. The
-emulators need JDK 17 or newer.
+up, competitors `competitor1@example.com` and up, with the same password.
 
 `npm start` without `:emulator` talks to the **live** project.
 

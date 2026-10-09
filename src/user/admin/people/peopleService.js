@@ -68,8 +68,8 @@ export function blankCompetitor({ firstName = "", lastName = "", email = "" } = 
     schoolYear: "",
     uvaSchool: "",
     resume: "",
-    // lowercase, to match every reader: Registration.js writes "none",
-    // Profile.js lists ["none", ...], and Search.js's chip and dietary filter
+    // lowercase, to match every reader: Registration.jsx writes "none",
+    // Profile.jsx lists ["none", ...], and Search.jsx's chip and dietary filter
     // both compare against "none". A capitalized default here used to slip a
     // record past all three -- catering saw a dietary flag reading "None" on
     // every walk-in an organizer added by hand, and the filter split one
@@ -540,7 +540,7 @@ export async function createPerson({ role, firstName, lastName, email, password,
     secondary = initializeApp(firebaseConfig, `admin-create-${Date.now()}`);
     const secondaryAuth = getAuth(secondary);
     if (USING_EMULATOR) {
-      const host = process.env.REACT_APP_EMULATOR_HOST || "127.0.0.1";
+      const host = import.meta.env.VITE_EMULATOR_HOST || "127.0.0.1";
       connectAuthEmulator(secondaryAuth, `http://${host}:9099`, { disableWarnings: true });
     }
 
