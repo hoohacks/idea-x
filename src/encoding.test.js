@@ -18,7 +18,7 @@ const path = require("path");
 const MOJIBAKE = /[À-ÿ][‐-›€ŒœŠšŸŽžƒˆ˜™]/;
 
 const ROOTS = ["src", "e2e", "scripts", "test"];
-const EXTENSIONS = [".js", ".mjs", ".json", ".css", ".html", ".md"];
+const EXTENSIONS = [".js", ".jsx", ".mjs", ".json", ".css", ".html", ".md"];
 
 function sourceFiles(dir) {
   const found = [];

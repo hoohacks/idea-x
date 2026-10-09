@@ -27,7 +27,7 @@ function sourceFiles(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) found.push(...sourceFiles(full));
-    else if (entry.name.endsWith(".js") && !entry.name.includes(".test.")) found.push(full);
+    else if (/\.jsx?$/.test(entry.name) && !entry.name.includes(".test.")) found.push(full);
   }
   return found;
 }
