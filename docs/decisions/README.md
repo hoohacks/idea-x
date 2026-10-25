@@ -20,3 +20,4 @@ one supersedes the old and says so.
 | 0009 | [No custom domain](0009-no-custom-domain.md) |
 | 0010 | [Two recovery mechanisms: undo and restore points](0010-two-recovery-mechanisms.md) |
 | 0011 | [Hash routing on GitHub Pages](0011-hash-routing.md) |
+| 0012 | [Resources are shown during the event](0012-resources-shown-during-the-event.md) |

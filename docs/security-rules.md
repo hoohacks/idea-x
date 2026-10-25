@@ -9,7 +9,7 @@ rules are what actually refuse ([ADR 0001](decisions/0001-rules-are-the-only-aut
 
 | Actor | Can |
 | --- | --- |
-| Anyone signed in | Read their own record, `config`, `/announcements`, `finalRound/active`, and any team's `name` |
+| Anyone signed in | Read their own record, `config`, `/announcements`, `/resources`, `finalRound/active`, and any team's `name` |
 | Competitor | Edit their own record except check-in; create a team; join or leave one that has **not** submitted; read their team; write their team's submission **while submissions are open and before the deadline** |
 | Judge | Read their own record and assignments; read the submissions of teams they are assigned; write and read back their own scores |
 | Organizer | Read `firstName`, `lastName`, `checkedIn`, `foodCheckIn` on `/competitors/{uid}` and `/judges/{uid}`; write `checkedIn` and `foodCheckIn` on `/competitors/{uid}` and `/judges/{uid}`; read `/organizers/{auth.uid}`. Denied access everywhere else |
@@ -29,6 +29,9 @@ rules are what actually refuse ([ADR 0001](decisions/0001-rules-are-the-only-aut
   Admins are not bound by either.
 - **Announcements** are posted by admins only, and the shape (text up to 280
   characters, one of three audiences) is held even for them.
+- **Resources** are links posted by admins only, readable by anyone signed in (the home
+  page decides when to show them). The shape (https link, title up to 80 characters,
+  optional description up to 140) is held even for admins.
 - **There is no team size cap in the rules, and there cannot be.** `numChildren()`
   is a client SDK method, and a rule calling it stops the whole file loading. The
   app's `MAX_TEAM_SIZE` is advisory.

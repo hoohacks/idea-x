@@ -23,6 +23,7 @@ Everything lives in one Firebase Realtime Database tree.
 /scores/{round}/{teamId}/{judgeUid}   the rubric, judgeUid, enteredBy, notes
 /finalRound                active, teams/{id} (standings, with panel), archive/{ts}
 /announcements/{id}        text audience postedAt active
+/resources/{id}            title url description? forJudges order createdAt
 /scheduleDraft             the schedule being planned; deleted on publish
 /finalRoundDraft           the final round being planned; deleted on publish
 /adminLog/{entryId}        what changed, with before and after
@@ -44,6 +45,7 @@ admin-only root grant, and `src/schema.test.js` asserts they stay that way.
 | `minJudgesPerTeam`, `maxJudgesPerTeam` | First-round panel size: min (default 3) is warned about, not enforced; max absent means no cap, so every judge is seated |
 | `finalRoundSize` | Finalists (default 4) |
 | `finalRoundTime`, `finalRoundSlotMinutes` | When the final round starts ("7:00 PM") and minutes per finalist. Read live: with both set, every "Slot N" is shown as a clock time |
+| `resourcesShowNow` | `true` shows the resource links on the home page outside event hours. Absent means they show from the event's start to the end of that day |
 | `rulesVersion` | The rules version deployed, recorded by the deploy workflow; see [security rules](security-rules.md#versioning) |
 
 Keys without a screen of their own are set from Control panel, Event setup,
