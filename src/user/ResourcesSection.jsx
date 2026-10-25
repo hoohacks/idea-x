@@ -68,6 +68,7 @@ export default function ResourcesSection({ userTypes, eventStart }) {
               target="_blank"
               rel="noopener noreferrer"
               sx={{
+                position: "relative",
                 display: "flex",
                 alignItems: "flex-start",
                 gap: 2,
@@ -115,10 +116,15 @@ export default function ResourcesSection({ userTypes, eventStart }) {
   );
 }
 
+// Pixels as strings: sx reads a bare 1 as 100%, which made this an invisible
+// box the width of the page and let the whole home page scroll sideways.
 const visuallyHidden = {
   position: "absolute",
-  width: 1,
-  height: 1,
+  width: "1px",
+  height: "1px",
+  margin: "-1px",
+  padding: 0,
+  border: 0,
   overflow: "hidden",
   clip: "rect(0 0 0 0)",
   whiteSpace: "nowrap",
