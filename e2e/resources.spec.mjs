@@ -43,6 +43,11 @@ test("a resource an organizer posts reaches competitors on their home page", asy
     await expect(card).toHaveAttribute("href", url);
     await expect(card).toHaveAttribute("target", "_blank");
     await expect(competitor.getByRole("heading", { name: "Resources" })).toBeVisible();
+
+    // the cards once carried a hidden label as wide as the page, and the whole
+    // home page scrolled sideways
+    const overflow = await competitor.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
   }
