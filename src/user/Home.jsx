@@ -11,6 +11,7 @@ import { database } from "../firebase";
 import { EVENT, EVENT_START, eventPhase } from "../eventInfo";
 import { tokens } from "../theme";
 import PitchCard, { useTeamPitch } from "./team/PitchCard";
+import ResourcesSection from "./ResourcesSection";
 
 // page title
 import usePageTitle from "../usePageTitle";
@@ -271,6 +272,8 @@ function Home() {
                         )}
                     </CardContent>
                 </Card>
+
+                <ResourcesSection userTypes={userTypes} eventStart={eventStart} />
 
                 {steps.length > 0 && (
                     <Box>

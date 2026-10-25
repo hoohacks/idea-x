@@ -13,10 +13,11 @@ import { describeSupply, BATCH_COUNT } from "../judge/schedulePlan.js";
  * before version 10 the database takes a team's submission whether or not
  * organizers have opened submissions or the deadline has passed -- only the
  * page hides the form -- and announcements cannot be posted at all, and before
- * version 11 the presentation waiver is not enforced, and before version 12
- * organizers cannot check people in.
+ * version 11 the presentation waiver is not enforced, before version 12
+ * organizers cannot check people in, and before version 13 competitors and
+ * judges cannot see the resources organizers post.
  */
-export const REQUIRED_RULES_VERSION = 12;
+export const REQUIRED_RULES_VERSION = 13;
 
 /**
  * Where the event has got to, and what an organizer should do next.
@@ -186,6 +187,7 @@ const RULES_GAPS = [
   [10, "the database does not enforce the submissions switch or deadline, and announcements cannot be posted"],
   [11, "the presentation waiver is not enforced"],
   [12, "organizers cannot check people in"],
+  [13, "competitors and judges cannot see resources"],
   [5, "restoring a restore point that contains scores fails and changes nothing"],
 ];
 
@@ -195,7 +197,7 @@ function joinGaps(gaps) {
 
 function rulesDetail(published) {
   if (!Number.isFinite(published)) {
-    return `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores may fail, the database does not enforce the submissions switch or deadline, announcements cannot be posted, the presentation waiver is not enforced, and organizers cannot check people in.`;
+    return `Nobody has recorded which version is deployed. Until ${REQUIRED_RULES_VERSION} is published, restoring a restore point that contains scores may fail, the database does not enforce the submissions switch or deadline, announcements cannot be posted, the presentation waiver is not enforced, organizers cannot check people in, and competitors and judges cannot see resources.`;
   }
   const gaps = RULES_GAPS.filter(([fixedIn]) => published < fixedIn).map(([, gap]) => gap);
   if (!gaps.length) {

@@ -5,6 +5,7 @@ import { onValue, ref } from "firebase/database";
 import { database } from "../../firebase";
 import { readEventState } from "./eventReadiness";
 import AnnouncementsCard from "./announcements/AnnouncementsCard";
+import ResourcesCard from "./resources/ResourcesCard";
 
 /**
  * How many teams still have score cards sitting under the team node.
@@ -164,6 +165,7 @@ export default function AdminHome() {
 
       {/* the day-of channel to everyone in the building */}
       <AnnouncementsCard />
+      <ResourcesCard />
 
       <Card>
         <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>

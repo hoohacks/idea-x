@@ -1,5 +1,5 @@
 {
-  // rulesVersion: 12 -- bump this, and REQUIRED_RULES_VERSION in
+  // rulesVersion: 13 -- bump this, and REQUIRED_RULES_VERSION in
   // src/user/admin/eventReadiness.js, when the app needs a change below. The
   // deploy workflow publishes this file and records this number at
   // config/rulesVersion; `npm test` fails if the two numbers disagree. See
@@ -37,6 +37,10 @@
       // compared with `now` by the submission rules, so it has to be a number
       "submissionsCloseAt": {
         ".validate": "newData.isNumber()"
+      },
+      // shows /resources on the home page outside event hours
+      "resourcesShowNow": {
+        ".validate": "newData.isBoolean()"
       }
     },
 
@@ -51,6 +55,24 @@
         "audience": { ".validate": "newData.val() === 'everyone' || newData.val() === 'competitors' || newData.val() === 'judges'" },
         "postedAt": { ".validate": "newData.isNumber()" },
         "active": { ".validate": "newData.isBoolean()" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    // Links organizers post for the day: the judging rubric, pitching advice.
+    // Readable by anyone signed in, like announcements -- the home page only
+    // shows them during the event, but that is presentation, not secrecy.
+    // Only admins write, through the root rule.
+    "resources": {
+      ".read": "auth != null",
+      "$id": {
+        ".validate": "newData.hasChildren(['title','url','forJudges','order','createdAt'])",
+        "title": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
+        "url": { ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 2000" },
+        "description": { ".validate": "newData.isString() && newData.val().length <= 140" },
+        "forJudges": { ".validate": "newData.isBoolean()" },
+        "order": { ".validate": "newData.isNumber()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
         "$other": { ".validate": false }
       }
     },
