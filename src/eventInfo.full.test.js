@@ -32,7 +32,7 @@ describe("the event's facts", () => {
       start: new Date("2026-10-25T14:00:00Z"),
       dateLabel: "Sunday, October 25, 2026",
       dayLabel: "October 25",
-      hours: "10:00 AM - 7:00 PM",
+      hours: "10:00 AM - 7:30 PM",
       judgingHours: "5:00 PM - 7:00 PM",
       venue: "Rice Hall",
       siteUrl: "https://ideathon.hoohacks.io",
@@ -40,8 +40,8 @@ describe("the event's facts", () => {
     });
   });
 
-  test("the day runs nine hours", () => {
-    expect(EVENT_DURATION_MS).toBe(9 * HOUR);
+  test("the day runs nine and a half hours", () => {
+    expect(EVENT_DURATION_MS).toBe(9.5 * HOUR);
   });
 
   test("graduation years run from this year's class to four years out", () => {
@@ -77,9 +77,9 @@ describe("which part of the day", () => {
   const start = new Date(EVENT_START);
   const at = (ms) => new Date(start.getTime() + ms);
 
-  test("the last millisecond is still during, and nine hours on is after", () => {
-    expect(eventPhase(start, at(9 * HOUR - 1))).toBe("during");
-    expect(eventPhase(start, at(9 * HOUR))).toBe("after");
+  test("the last millisecond is still during, and nine and a half hours on is after", () => {
+    expect(eventPhase(start, at(9.5 * HOUR - 1))).toBe("during");
+    expect(eventPhase(start, at(9.5 * HOUR))).toBe("after");
     expect(eventPhase(start, at(0))).toBe("during");
     expect(eventPhase(start, at(-1))).toBe("before");
   });

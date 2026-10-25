@@ -103,12 +103,12 @@ describe("which part of the day it is", () => {
   test("while it is running", () => {
     expect(eventPhase(start, at(0))).toBe("during");
     expect(eventPhase(start, at(5 * HOUR))).toBe("during");
-    // judging ends at 7pm, nine hours in
-    expect(eventPhase(start, at(9 * HOUR - 1))).toBe("during");
+    // the day ends at 7:30pm, nine and a half hours in
+    expect(eventPhase(start, at(9.5 * HOUR - 1))).toBe("during");
   });
 
   test("once it is over, and it stays over", () => {
-    expect(eventPhase(start, at(9 * HOUR))).toBe("after");
+    expect(eventPhase(start, at(9.5 * HOUR))).toBe("after");
     expect(eventPhase(start, at(24 * HOUR))).toBe("after");
     expect(eventPhase(start, at(365 * 24 * HOUR))).toBe("after");
   });

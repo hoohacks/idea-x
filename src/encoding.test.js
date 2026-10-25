@@ -70,6 +70,6 @@ test("the event strings are the characters they are meant to be", async () => {
   const { EVENT } = await import("./eventInfo");
 
   // plain hyphens, not three bytes of wreckage
-  expect(EVENT.hours).toBe("10:00 AM - 7:00 PM");
+  expect(EVENT.hours).toBe("10:00 AM - 7:30 PM");
   expect(EVENT.judgingHours).toBe("5:00 PM - 7:00 PM");
 });

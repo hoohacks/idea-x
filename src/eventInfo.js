@@ -39,7 +39,7 @@ const start = new Date(EVENT_START);
  * A duration rather than an end instant, because config/eventStart can move the
  * start without a deploy and an absolute end would be left behind.
  */
-export const EVENT_DURATION_MS = 9 * 60 * 60 * 1000; // 10:00 to 19:00
+export const EVENT_DURATION_MS = 9.5 * 60 * 60 * 1000; // 10:00 to 19:30
 
 /**
  * "before" | "during" | "after", for a given start and clock.
@@ -162,7 +162,7 @@ export const EVENT = {
     month: "long",
     day: "numeric",
   }),
-  hours: "10:00 AM - 7:00 PM",
+  hours: "10:00 AM - 7:30 PM",
   judgingHours: "5:00 PM - 7:00 PM",
   venue: "Rice Hall",
   siteUrl: "https://ideathon.hoohacks.io",
